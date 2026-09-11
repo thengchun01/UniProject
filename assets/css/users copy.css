@@ -1,0 +1,425 @@
+.page-actions{
+    margin-bottom:20px;
+}
+
+/* =========================
+   Modal Overlay
+========================= */
+
+.modal{
+
+    position:fixed;
+    inset:0; /* better than top/left/width/height */
+
+    display:none;
+
+    justify-content:center;
+    align-items:center;
+
+    background:rgba(255,255,255,.7);
+
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+
+    z-index:999999;
+
+    overflow:auto;
+
+    width: 100%;
+    height: 100vh;
+}
+
+body.modal-open{
+    overflow:hidden;
+}
+
+.modal.show{
+    display:flex;
+}
+
+
+/* =========================
+   Modal Box
+========================= */
+
+.modal-content{
+
+    width: min(500px, 90vw);
+
+    background: #ffffff;
+
+    color: #111111;
+
+    border: 1px solid #dcdcdc;
+
+    border-radius: 12px;
+
+    padding: 28px;
+
+    box-shadow:
+        0 20px 50px rgba(0,0,0,.12);
+
+    animation: modalShow .25s ease;
+}
+
+
+/* =========================
+   Header
+========================= */
+
+.modal-header{
+
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+
+    margin-bottom:24px;
+}
+
+.modal-header h2{
+
+    margin:0;
+
+    font-size:1.4rem;
+
+    font-weight:600;
+
+    color:#111111;
+}
+
+
+/* =========================
+   Close Button
+========================= */
+
+.close-btn{
+
+    width:36px;
+    height:36px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:transparent;
+
+    color:#555;
+
+    font-size:24px;
+
+    cursor:pointer;
+
+    transition:.2s;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-btn:hover{
+
+    background:#f5f5f5;
+
+    color:#000;
+}
+
+
+/* =========================
+   Form
+========================= */
+
+.form-group{
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:6px;
+
+    margin-bottom:18px;
+}
+
+.form-group label{
+
+    font-size:.95rem;
+
+    font-weight:500;
+
+    color:#222;
+}
+
+.form-group input,
+.form-group select{
+
+    width:100%;
+
+    padding:12px 14px;
+
+    border:1px solid #d0d0d0;
+
+    border-radius:8px;
+
+    background:#fff;
+
+    color:#111;
+
+    font-size:14px;
+
+    box-sizing:border-box;
+
+    transition:.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus{
+
+    outline:none;
+
+    border-color:#000;
+
+    box-shadow:
+        0 0 0 3px rgba(0,0,0,.08);
+}
+
+
+/* =========================
+   Submit Button
+========================= */
+
+#createUserForm button[type="submit"]{
+
+    width:100%;
+
+    padding:12px;
+
+    border:none;
+
+    border-radius:8px;
+
+    background:#111;
+
+    color:white;
+
+    font-weight:600;
+
+    cursor:pointer;
+
+    transition:.2s;
+}
+
+#createUserForm button[type="submit"]:hover{
+
+    background:#000;
+}
+
+
+/* =========================
+   Animation
+========================= */
+
+@keyframes modalShow{
+
+    from{
+        opacity:0;
+        transform:translateY(20px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* =========================
+   Slim Table Buttons
+========================= */
+
+.data-table button,
+.data-table a {
+    padding: 4px 10px;
+    font-size: 13px;
+    border: 1px solid #000;
+    background: #fff;
+    cursor: pointer;
+    text-decoration: none;
+    color: #000;
+    margin-right: 4px;
+}
+
+.data-table button:hover,
+.data-table a:hover {
+    background: #000;
+    color: #fff;
+}
+
+/* =========================
+   Modal Fix (important)
+========================= */
+
+.modal {
+    pointer-events: none;
+}
+
+.modal.show {
+    pointer-events: auto;
+}
+
+/* ensure clicks always register */
+.modal-content {
+    pointer-events: auto;
+}
+
+/* =========================
+   Toast Notification
+========================= */
+
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #111;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 9999999;
+    opacity: 0;
+    transform: translateY(-10px);
+    transition: 0.25s;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* =========================
+   Delete Modal Upgrade
+========================= */
+
+.delete-box {
+    text-align: center;
+    padding: 10px 0;
+}
+
+.delete-icon {
+    font-size: 40px;
+    margin-bottom: 10px;
+}
+
+.delete-title {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.delete-text {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 20px;
+}
+
+/* Delete Modal Header - ensure X button shows properly */
+#deleteModal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e5e5e5;
+}
+
+#deleteModal .modal-header h2 {
+    margin: 0;
+    font-size: 1.3rem;
+}
+
+#deleteModal .close-btn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    font-size: 24px;
+    cursor: pointer;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#deleteModal .close-btn:hover {
+    background: #f0f0f0;
+}
+/* Buttons row */
+.modal-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.btn-cancel {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #000;
+    background: #fff;
+    cursor: pointer;
+}
+
+.btn-danger {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #000;
+    background: #000;
+    color: #fff;
+    cursor: pointer;
+}
+
+.btn-cancel:hover {
+    background: #eee;
+}
+
+.btn-danger:hover {
+    background: #333;
+}
+
+/* Loading state for buttons */
+button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+#createSubmitBtn:disabled,
+#editSubmitBtn:disabled,
+.btn-danger:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+/* Toast notification styling */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #10b981;
+    color: #fff;
+    padding: 14px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    z-index: 9999999;
+    opacity: 0;
+    transform: translateX(30px);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    pointer-events: none;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* Ensure toast is clickable if needed */
+.toast {
+    pointer-events: none;
+}

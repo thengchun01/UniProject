@@ -1,0 +1,31 @@
+.section-title{
+    margin-bottom:20px;
+    font-size:32px;
+    text-align:center;
+}
+
+.account-page-content{
+    min-height:calc(100vh - 120px); /* adjust for navbar */
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+}
+
+.account-auth-card{
+    max-width:520px;
+    width:100%;
+    margin:0 auto;
+}
+
+.auth-panel{
+    border:2px solid #000;
+    padding:24px;
+    text-align:center;
+}
+
+.form-panel.compact{
+    display:grid;
+    gap:18px;
+    text-align:left;
+}

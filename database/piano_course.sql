@@ -1,0 +1,3 @@
+-- 0.3.6 replaces the old piano_course-only draft with the PSM database.
+-- Import database/psm_schema.sql for the current user, progress, MIDI library,
+-- and performance-session schema.

@@ -1,0 +1,293 @@
+/* ===============================
+   ACCOUNT DASHBOARD LAYOUT
+   account_log.css
+================================= */
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f5f6f8;
+}
+
+/* MAIN WRAPPER */
+.account-page-content {
+    max-width: 1200px;
+    margin: auto;
+    padding: 20px;
+}
+
+/* ===============================
+   HEADER SECTION
+================================= */
+
+.section-title {
+    font-size: 28px;
+    margin-bottom: 15px;
+}
+
+/* Account header row */
+.account-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid #e5e5e5;
+    margin-bottom: 15px;
+}
+
+.account-header h2 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.role-pill {
+    padding: 6px 12px;
+    border-radius: 20px;
+    background: #222;
+    color: #fff;
+    font-size: 13px;
+}
+
+/* ===============================
+   TOP SUMMARY CARDS
+================================= */
+
+.card-grid.account-summary {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid #eaeaea;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    transition: 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card h3 {
+    margin: 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.card strong {
+    font-size: 20px;
+    display: block;
+    margin-top: 8px;
+}
+
+/* ===============================
+   MIDDLE SECTION (ACCOUNT INFO + CARDS)
+================================= */
+
+.middle-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.info-box {
+    background: #fff;
+    padding: 18px;
+    border-radius: 12px;
+    border: 1px solid #eaeaea;
+}
+
+.info-box h2 {
+    margin-top: 0;
+}
+
+.info-box p {
+    margin: 8px 0;
+}
+
+/* mini cards */
+.mini-cards {
+    display: grid;
+    gap: 12px;
+}
+
+.mini-card {
+    background: #fff;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #eaeaea;
+}
+
+.mini-card h4 {
+    margin: 0;
+    font-size: 13px;
+    color: #777;
+}
+
+.mini-card p {
+    margin: 6px 0 0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+/* ===============================
+   TABLE SECTION (3 COLUMNS)
+================================= */
+
+.table-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 15px;
+    margin-top: 10px;
+}
+
+/* each panel */
+.table-box {
+    background: #fff;
+    border-radius: 12px;
+    padding: 15px;
+    border: 1px solid #eaeaea;
+    min-height: 300px;
+}
+
+.table-box h2 {
+    margin-top: 0;
+    font-size: 16px;
+}
+
+/* tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+th {
+    text-align: left;
+    padding: 8px;
+    background: #f1f1f1;
+    font-size: 12px;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+/* ===============================
+   AUTH (LOGIN / REGISTER)
+================================= */
+
+.auth-wrapper {
+    max-width: 420px;
+    margin: auto;
+    text-align: center;
+}
+
+.auth-tabs {
+    margin: 10px 0;
+}
+
+.auth-tabs a {
+    margin: 0 10px;
+    text-decoration: none;
+    color: #333;
+}
+
+.auth-tabs .active {
+    font-weight: bold;
+    border-bottom: 2px solid #000;
+}
+
+.auth-box {
+    background: #fff;
+    padding: 20px;
+    border-radius: 12px;
+    border: 1px solid #eaeaea;
+}
+
+.auth-box input {
+    width: 100%;
+    padding: 10px;
+    margin: 6px 0 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+}
+
+.auth-box button {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    background: #111;
+    color: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+/* button */
+.secondary-btn {
+    background: #fff;
+    color: #000;
+    border: 2px solid #000;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+    background: #000;
+    color: #fff;
+}
+
+/* ===============================
+   ALERTS
+================================= */
+
+.alert {
+    padding: 10px;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+
+.alert.success {
+    background: #e6f9ed;
+    color: #1b7f3a;
+}
+
+.alert.error {
+    background: #ffe6e6;
+    color: #b30000;
+}
+
+/* ===============================
+   RESPONSIVE
+================================= */
+
+@media (max-width: 900px) {
+    .card-grid.account-summary {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .middle-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .table-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .account-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+}

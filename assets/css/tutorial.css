@@ -1,0 +1,639 @@
+/* =========================================================
+   TUTORIAL PAGES - MINIMALIST THEME
+   Black / White / Purple (#7c3aed)
+========================================================= */
+
+/* ─── TUTORIAL HUB ─────────────────────────────── */
+
+.tutorial-page {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px;
+}
+
+.tutorial-hero {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.tutorial-hero .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    font-size: 13px;
+    color: var(--primary-color, #7c3aed);
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+.tutorial-hero h1 {
+    font-size: 42px;
+    margin: 0 0 12px;
+    color: var(--text-color, #111);
+}
+
+.tutorial-hero p {
+    color: #666;
+    font-size: 17px;
+    max-width: 520px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+/* ─── TUTORIAL CARD GRID ───────────────────────── */
+
+.tutorial-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.tutorial-card {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 14px;
+    padding: 24px 28px;
+    text-decoration: none;
+    color: var(--text-color, #111);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.tutorial-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--primary-color, #7c3aed);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.3s ease;
+}
+
+.tutorial-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(124, 58, 237, 0.12);
+    border-color: var(--primary-color, #7c3aed);
+}
+
+.tutorial-card:hover::before {
+    transform: scaleX(1);
+}
+
+.tutorial-card .card-number {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary-color, #7c3aed);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 8px;
+}
+
+.tutorial-card h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.tutorial-card p {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+    flex: 1;
+}
+
+.tutorial-card .card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid #eee;
+}
+
+.tutorial-card .difficulty-badge {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    color: #888;
+    background: #f5f5f5;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+.tutorial-card .progress-indicator {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--primary-color, #7c3aed);
+}
+
+.tutorial-card .progress-indicator.completed {
+    color: #22c55e;
+}
+
+.tutorial-card.locked {
+    opacity: 0.55;
+    pointer-events: none;
+    filter: grayscale(0.3);
+}
+
+.tutorial-card .locked-badge {
+    font-size: 11px;
+    font-weight: 700;
+    color: #c62828;
+    background: #ffebee;
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+
+
+/* ─── LESSON VIEWER ────────────────────────────── */
+
+.lesson-container {
+    display: flex;
+    min-height: calc(100vh - 80px);
+    background: var(--bg-color, #fcfcfc);
+}
+
+.lesson-sidebar {
+    width: 240px;
+    min-width: 240px;
+    background: #fff;
+    border-right: 1px solid #e8e8e8;
+    padding: 30px 20px;
+    position: sticky;
+    top: 80px;
+    height: calc(100vh - 80px);
+    overflow-y: auto;
+}
+
+.lesson-sidebar h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+    color: var(--text-color, #111);
+    font-weight: 700;
+}
+
+.lesson-sidebar .sidebar-desc {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 24px;
+    line-height: 1.4;
+}
+
+.lesson-sidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.lesson-sidebar li {
+    margin-bottom: 4px;
+}
+
+.lesson-sidebar a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #555;
+    text-decoration: none;
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.lesson-sidebar a:hover {
+    background: #f5f0ff;
+    color: var(--primary-color, #7c3aed);
+}
+
+.lesson-sidebar a.active {
+    background: var(--primary-color, #7c3aed);
+    color: #fff;
+    font-weight: 600;
+}
+
+.lesson-sidebar .section-status {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid #ddd;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+}
+
+.lesson-sidebar .section-status.completed {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #fff;
+}
+
+/* ─── LESSON CONTENT ───────────────────────────── */
+
+.lesson-content {
+    flex: 1;
+    padding: 40px 60px;
+    max-width: 800px;
+}
+
+.lesson-section {
+    margin-bottom: 60px;
+    padding-bottom: 40px;
+    border-bottom: 1px solid #eee;
+}
+
+.lesson-section:last-child {
+    border-bottom: none;
+}
+
+.lesson-section h1,
+.lesson-section h3 {
+    color: var(--text-color, #111);
+}
+
+.lesson-section h1 {
+    font-size: 32px;
+    margin: 0 0 20px;
+}
+
+.lesson-section h3 {
+    font-size: 22px;
+    margin: 0 0 12px;
+}
+
+.lesson-section p {
+    color: #444;
+    line-height: 1.8;
+    font-size: 16px;
+}
+
+.lesson-section ul,
+.lesson-section ol {
+    color: #444;
+    line-height: 1.8;
+    font-size: 16px;
+    padding-left: 24px;
+}
+
+.lesson-section strong {
+    color: var(--text-color, #111);
+}
+
+/* ─── MARK COMPLETE BUTTON ─────────────────────── */
+
+.section-complete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 20px;
+    padding: 10px 24px;
+    border: 2px solid var(--primary-color, #7c3aed);
+    background: transparent;
+    color: var(--primary-color, #7c3aed);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+}
+
+.section-complete-btn:hover {
+    background: var(--primary-color, #7c3aed);
+    color: #fff;
+}
+
+.section-complete-btn.completed {
+    background: #22c55e;
+    border-color: #22c55e;
+    color: #fff;
+    cursor: default;
+    pointer-events: none;
+}
+
+.section-complete-btn .checkmark {
+    font-size: 16px;
+}
+
+/* ─── XP TOAST NOTIFICATION ────────────────────── */
+
+.xp-toast {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    background: var(--primary-color, #7c3aed);
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 15px;
+    box-shadow: 0 8px 24px rgba(124, 58, 237, 0.35);
+    z-index: 99999;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.xp-toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.xp-toast.level-up {
+    background: linear-gradient(135deg, #7c3aed, #a855f7);
+    font-size: 17px;
+}
+
+/* ─── LESSON NAVIGATION ───────────────────────── */
+
+.lesson-nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 40px;
+    padding-top: 30px;
+    border-top: 1px solid #eee;
+}
+
+.lesson-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--primary-color, #7c3aed);
+    border: 1.5px solid var(--primary-color, #7c3aed);
+    transition: all 0.2s ease;
+}
+
+.lesson-nav a:hover {
+    background: var(--primary-color, #7c3aed);
+    color: #fff;
+}
+
+.lesson-nav .disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+
+/* ─── PIANO FRAME ──────────────────────────────── */
+
+.tutorial-piano-frame {
+    margin-top: 24px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 14px;
+    padding: 20px;
+    overflow: hidden;
+}
+
+.tutorial-piano-header {
+    margin-bottom: 16px;
+}
+
+.tutorial-piano-header h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+}
+
+.tutorial-piano-header p {
+    margin: 0;
+    color: #888;
+    font-size: 14px;
+}
+
+.tutorial-piano {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 10px;
+}
+
+.tutorial-piano-ui {
+    display: flex;
+    align-items: flex-start;
+    position: relative;
+    min-width: fit-content;
+    user-select: none;
+}
+
+/* ─── PIANO KEYS ───────────────────────────────── */
+
+.key {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    cursor: pointer;
+    transition: 0.15s;
+    box-sizing: border-box;
+}
+
+.key span {
+    font-size: 11px;
+    margin-bottom: 10px;
+    pointer-events: none;
+    font-weight: 600;
+}
+
+.white-key {
+    width: 54px;
+    height: 200px;
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    color: #888;
+    z-index: 1;
+    border-radius: 0 0 6px 6px;
+}
+
+.white-key:hover {
+    background: #f5f0ff;
+}
+
+.white-key:active {
+    background: #ede5ff;
+}
+
+.black-key {
+    width: 36px;
+    height: 130px;
+    background: #1a1a1a;
+    border: 1px solid #333;
+    margin-left: -18px;
+    margin-right: -18px;
+    z-index: 2;
+    color: #888;
+    border-radius: 0 0 5px 5px;
+}
+
+.black-key:hover {
+    background: #2a2a2a;
+}
+
+.black-key:active {
+    background: #3a3a3a;
+}
+
+/* ─── HIGHLIGHT KEYS ───────────────────────────── */
+
+.highlight-key {
+    opacity: 1 !important;
+    box-shadow: 0 0 12px rgba(124, 58, 237, 0.5),
+                0 0 24px rgba(124, 58, 237, 0.25);
+}
+
+.highlight-key.white-key {
+    background: #ede5ff;
+}
+
+.highlight-key.black-key {
+    background: #7c3aed;
+}
+
+.dim-key {
+    opacity: 0.18;
+    filter: grayscale(0.5);
+}
+
+.correct-key {
+    background: #22c55e !important;
+    color: white !important;
+}
+
+.wrong-key {
+    background: #ef4444 !important;
+    color: white !important;
+}
+
+/* ─── PRACTICE BOX ─────────────────────────────── */
+
+.practice-box {
+    margin-top: 24px;
+    background: #f9f7ff;
+    border: 1px solid #e8e0ff;
+    border-radius: 14px;
+    padding: 24px;
+}
+
+.practice-box p {
+    margin: 0;
+}
+
+.practice-box button {
+    margin-top: 14px;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 8px;
+    background: var(--primary-color, #7c3aed);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.practice-box button:hover {
+    background: #6d28d9;
+}
+
+#practice-feedback {
+    margin-top: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    color: #22c55e;
+}
+
+.staff-demo {
+    margin: 20px 0;
+}
+
+.staff-demo img {
+    width: 100%;
+    max-width: 600px;
+    border-radius: 10px;
+    background: white;
+    padding: 12px;
+    border: 1px solid #eee;
+}
+
+
+/* ─── RESPONSIVE ───────────────────────────────── */
+
+@media (max-width: 1000px) {
+    .lesson-container {
+        flex-direction: column;
+    }
+
+    .lesson-sidebar {
+        width: 100%;
+        min-width: 100%;
+        height: auto;
+        position: relative;
+        border-right: none;
+        border-bottom: 1px solid #e8e8e8;
+        top: 0;
+    }
+
+    .lesson-sidebar ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .lesson-sidebar li {
+        margin: 0;
+    }
+
+    .lesson-content {
+        padding: 30px 24px;
+    }
+
+    .lesson-section h1 {
+        font-size: 26px;
+    }
+}
+
+@media (max-width: 600px) {
+    .tutorial-page {
+        padding: 30px 16px;
+    }
+
+    .tutorial-hero h1 {
+        font-size: 30px;
+    }
+
+    .tutorial-list {
+        grid-template-columns: 1fr;
+    }
+
+    .lesson-content {
+        padding: 20px 16px;
+    }
+
+    .white-key {
+        width: 44px;
+        height: 170px;
+    }
+
+    .black-key {
+        width: 28px;
+        height: 100px;
+        margin-left: -14px;
+        margin-right: -14px;
+    }
+
+    .key span {
+        font-size: 9px;
+    }
+}

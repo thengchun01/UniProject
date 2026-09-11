@@ -1,0 +1,582 @@
+/* ============================================ */
+/* TEACHER CLASSROOM LAYOUT - Specific styles  */
+/* ============================================ */
+
+.classroom-wrapper {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.classroom-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.header-title h1 {
+    margin: 0 0 6px 0;
+    font-size: 26px;
+    font-weight: 600;
+}
+
+.classroom-id {
+    font-size: 12px;
+    color: #888;
+    font-family: monospace;
+    background: #f5f5f5;
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px solid #ddd;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    color: #555;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    box-sizing: border-box;
+}
+
+.btn-outline:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #555;
+}
+
+.btn-outline-danger {
+    background: transparent;
+    border: 1px solid #dc3545;
+    padding: 8px 18px;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #dc3545;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    box-sizing: border-box;
+}
+
+.btn-outline-danger:hover {
+    background: #fff5f5;
+    border-color: #dc3545;
+    color: #dc3545;
+}
+
+#createStudentBtn{background-color: black; color: aliceblue;}
+#createStudentBtn:hover{
+    background: hsl(0, 0%, 15%);
+    color: hsl(0, 0%, 100%);
+}
+/* Main Layout - Two Column */
+.main-layout {
+    display: flex;
+    gap: 20px;
+    position: relative;
+}
+
+.main-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Students Section */
+.students-section {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 20px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.section-header h2 {
+    margin: 0 0 4px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.student-count {
+    font-size: 12px;
+    color: #888;
+}
+
+/* Teacher Table (uses .student-table) */
+.student-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.student-table th,
+.student-table td {
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.student-table th {
+    background: #fff;
+    font-weight: 600;
+    font-size: 12px;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.student-table td {
+    font-size: 13px;
+}
+
+/* Collapsible Sidebar */
+.pending-sidebar {
+    width: 280px;
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: width 0.3s ease;
+    flex-shrink: 0;
+}
+
+.pending-sidebar.collapsed {
+    width: 50px;
+}
+
+.pending-sidebar.collapsed .sidebar-header .sidebar-title span:not(.icon),
+.pending-sidebar.collapsed .sidebar-header .badge,
+.pending-sidebar.collapsed .sidebar-content {
+    display: none;
+}
+
+.pending-sidebar.collapsed .sidebar-header {
+    justify-content: center;
+}
+
+.pending-sidebar.collapsed .sidebar-header .sidebar-title {
+    justify-content: center;
+}
+
+.pending-sidebar.collapsed .toggle-btn {
+    transform: rotate(180deg);
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    padding: 14px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #e8e8e8;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.sidebar-header:hover {
+    background: #f5f5f5;
+}
+
+.sidebar-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 13px;
+    color: #333;
+}
+
+.sidebar-title .icon {
+    font-size: 16px;
+}
+
+.badge {
+    background: #dc3545;
+    color: #fff;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.toggle-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: #999;
+    transition: all 0.2s;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.toggle-btn:hover {
+    background: #f0f0f0;
+    color: #666;
+}
+
+/* Sidebar Content */
+.sidebar-content {
+    padding: 12px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.empty-requests {
+    text-align: center;
+    padding: 30px 12px;
+    color: #999;
+    font-size: 12px;
+}
+
+/* Request Cards */
+.requests-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.request-card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 10px;
+    padding: 12px;
+    transition: all 0.2s;
+}
+
+.request-card:hover {
+    border-color: #ddd;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.request-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.request-email {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 6px;
+    word-break: break-all;
+}
+
+.request-date {
+    font-size: 10px;
+    color: #aaa;
+    margin-bottom: 10px;
+}
+
+.request-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-approve {
+    background: #28a745;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.btn-approve:hover {
+    background: #218838;
+}
+
+.btn-reject {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 11px;
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.btn-reject:hover {
+    background: #c82333;
+}
+
+/* Teacher Modal Styles (for teacher-specific modals) */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal-box {
+    background: #fff;
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-box .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-box .modal-header h3 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #aaa;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: #f0f0f0;
+    color: #666;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.warning-icon {
+    font-size: 48px;
+    text-align: center;
+    margin-bottom: 16px;
+}
+
+.warning-text {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 8px;
+}
+
+.error-msg {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 13px;
+}
+
+/* Teacher Form Fields */
+.form-field {
+    margin-bottom: 16px;
+}
+
+.form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 13px;
+}
+
+.form-field input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.form-field input:focus {
+    outline: none;
+    border-color: #000;
+}
+
+.form-field input:disabled {
+    background: #f5f5f5;
+    color: #999;
+}
+
+.btn-submit {
+    width: 100%;
+    background: #000;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.btn-submit:hover {
+    background: #333;
+}
+
+.btn-cancel {
+    background: #fff;
+    color: #555;
+    border: 1px solid #ddd;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+    color: #555;
+}
+
+.btn-confirm-delete {
+    background: #dc3545;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.btn-confirm-delete:hover {
+    background: #c82333;
+}
+
+/* Action Buttons for Teacher Table (reuse from admin.css) */
+.action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+    .main-layout {
+        flex-direction: column;
+    }
+    
+    .pending-sidebar {
+        width: 100%;
+    }
+    
+    .pending-sidebar.collapsed {
+        width: 100%;
+    }
+    
+    .pending-sidebar.collapsed .sidebar-content {
+        display: block;
+    }
+    
+    .pending-sidebar.collapsed .sidebar-title span:not(.icon) {
+        display: inline;
+    }
+    
+    .pending-sidebar.collapsed .badge {
+        display: inline-block;
+    }
+    
+    .pending-sidebar.collapsed .toggle-btn {
+        transform: none;
+    }
+    
+    .classroom-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .header-actions {
+        width: 100%;
+    }
+    
+    .btn-outline,
+    .btn-outline-danger {
+        flex: 1;
+        text-align: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+    
+    .action-buttons {
+        flex-wrap: wrap;
+    }
+}

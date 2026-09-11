@@ -1,0 +1,170 @@
+/* ============================================ */
+/* HOMEPAGE STYLES                             */
+/* ============================================ */
+
+/* Hero Section with Image Background */
+.hero-section {
+    position: relative;
+    padding: 140px 20px;
+    text-align: center;
+    overflow: hidden;
+    color: #fff;
+    margin-top: -1px; /* Remove gap if any */
+}
+
+.hero-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+}
+
+.hero-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(17,17,17,0.85) 0%, rgba(55,55,55,0.7) 100%);
+    z-index: 2;
+}
+
+.hero-content {
+    position: relative;
+    z-index: 3;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.hero-content h1 {
+    font-size: 56px;
+    color: #fff;
+    margin-bottom: 24px;
+    background: none;
+    -webkit-text-fill-color: #fff;
+}
+
+.hero-content p {
+    font-size: 20px;
+    color: #eaeaea;
+    margin-bottom: 40px;
+}
+
+.hero-actions .primary-btn {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.hero-actions .primary-btn:hover {
+    background: var(--primary-hover);
+}
+
+.hero-actions .secondary-btn {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.hero-actions .secondary-btn:hover {
+    background: #fff;
+    color: var(--text-color);
+}
+
+/* Learning Journey Steps */
+.step-card {
+    position: relative;
+    padding-top: 50px;
+}
+
+.step-number {
+    position: absolute;
+    top: -20px;
+    left: 32px;
+    width: 48px;
+    height: 48px;
+    background: var(--primary-color);
+    color: #fff;
+    font-size: 24px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.step-card h3 {
+    margin-top: 10px;
+}
+
+/* Feature Cards */
+.feature-card {
+    padding: 0;
+    overflow: hidden;
+}
+
+.feature-card .placeholder {
+    margin-bottom: 0;
+    border-radius: 0;
+    height: 200px;
+}
+
+.feature-card h3 {
+    padding: 24px 24px 8px;
+    margin: 0;
+}
+
+.feature-card p {
+    padding: 0 24px;
+    margin-bottom: 24px;
+}
+
+.feature-card .text-button {
+    margin: 0 24px 24px;
+    align-self: flex-start;
+}
+
+/* Call to Action Section */
+.cta-section {
+    padding: 80px 20px;
+    background: #fdfdfd;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+    border-radius: var(--radius-lg);
+    margin: 60px 0;
+}
+
+.cta-content {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.cta-content h2 {
+    font-size: 36px;
+    margin-bottom: 16px;
+}
+
+.cta-content p {
+    color: var(--text-muted);
+    font-size: 18px;
+    margin-bottom: 32px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .hero-content h1 {
+        font-size: 40px;
+    }
+    
+    .hero-section {
+        padding: 100px 20px;
+    }
+    
+    .step-number {
+        left: 20px;
+    }
+}

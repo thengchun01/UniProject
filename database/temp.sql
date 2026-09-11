@@ -1,0 +1,2 @@
+ALTER TABLE users
+ADD COLUMN classroom_status ENUM('NONE', 'PENDING', 'APPROVED', 'REJECTED') DEFAULT 'NONE' AFTER classroom;
