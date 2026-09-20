@@ -160,26 +160,6 @@
     margin-bottom: 32px;
 }
 
-/* Homepage sections are revealed after they enter the viewport. */
-[data-reveal] {
-    opacity: 0;
-    transition: opacity 650ms ease, transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
-    transition-delay: var(--reveal-delay, 0ms);
-}
-
-[data-reveal="rise"] {
-    transform: translateY(42px);
-}
-
-[data-reveal="jump"] {
-    transform: translateY(30px) scale(0.94);
-}
-
-[data-reveal].is-visible {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-}
-
 @keyframes hero-enter {
     from {
         opacity: 0;
@@ -208,11 +188,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .hero-entrance,
-    [data-reveal] {
+    .hero-entrance {
         animation: none;
-        opacity: 1;
-        transform: none;
-        transition: none;
     }
 }

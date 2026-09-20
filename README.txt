@@ -7,6 +7,7 @@ performance-session saving through the PSM MySQL database.
 Interface updates in 0.4.1:
 - Full-width homepage banner with account registration and login actions
 - Homepage section reveal animations that respect reduced-motion preferences
+- Shared responsive footer and motion for top-level content across pages
 - Updated account login, registration, and signed-in dashboard presentation
 - Piano is the consistent visible label for the browser-based piano feature
 

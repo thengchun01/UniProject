@@ -1,5 +1,13 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.site-content > *, .site-footer').forEach((element) => {
+        if (element.matches('script, style, .modal-overlay-full') || element.dataset.reveal || element.classList.contains('hero-entrance')) {
+            return;
+        }
+
+        element.dataset.reveal = 'rise';
+    });
+
     const revealElements = document.querySelectorAll('[data-reveal]');
 
     if (!revealElements.length) {
@@ -24,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
             entry.target.classList.add('is-visible');
             observer.unobserve(entry.target);
         });
-    }, { threshold: 0.15 });
+    }, { threshold: 0.01 });
 
     revealElements.forEach((element) => observer.observe(element));
 });

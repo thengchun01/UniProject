@@ -190,7 +190,7 @@ endif; // !$_ufw_hide
     });
 </script>
 
-<div class="container">
+<div class="container site-content">
 <?php if (!is_database_connected()): ?>
     <div class="alert error">
         Database connection to PSM is not ready. Import <strong>database/psm_schema.sql</strong> and check the database settings in <strong>includes/config.php</strong>.

@@ -90,7 +90,9 @@ Do not move a root page into another directory merely for aesthetic reasons. Exi
 
 ### Homepage and account presentation
 
-The homepage hero is intentionally full viewport width while its surrounding content remains within the shared layout container. Its primary calls to action lead to account registration and login. Homepage sections use lightweight `IntersectionObserver`-based reveal animations defined in `assets/js/main.js`; preserve the `prefers-reduced-motion` fallback when extending them.
+The homepage hero is intentionally full viewport width while its surrounding content remains within the shared layout container. Its primary calls to action lead to account registration and login. Top-level page content uses lightweight `IntersectionObserver`-based reveal animations defined in `assets/js/main.js`; preserve the `prefers-reduced-motion` fallback when extending them.
+
+The shared footer is defined in `includes/footer.php` and has navigation links styled by `assets/css/style.css`. Reuse it rather than adding page-specific footer markup.
 
 The account page keeps its existing server-side authentication and dashboard logic. Its presentation is split between `assets/css/account.css` for guests and `assets/css/account_log.css` for signed-in users.
 
