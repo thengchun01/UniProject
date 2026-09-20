@@ -106,7 +106,7 @@ CREATE TABLE `users` (
   `username` varchar(100) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `email` varchar(150) DEFAULT NULL,
-  `role` varchar(50) DEFAULT 'student',
+  `role` enum('student', 'teacher', 'admin') DEFAULT 'student',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `last_login` timestamp NULL DEFAULT NULL,
   `active_day` int(11) DEFAULT 0,
