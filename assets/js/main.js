@@ -1,4 +1,5 @@
 let revealObserver = null;
+const activeRevealAnimations = new WeakMap();
 
 function getRevealElements() {
     const selector = [
@@ -23,7 +24,8 @@ function getRevealElements() {
     const elements = new Set(document.querySelectorAll('[data-reveal]'));
 
     document.querySelectorAll(selector).forEach((element) => {
-        if (element.hidden || element.closest('.modal-overlay, .modal-overlay-full, .modal, .piano-keys-area')) {
+        // Exclude UI controls inside complex apps to prevent layout jumping
+        if (element.hidden || element.closest('.modal-overlay, .modal-overlay-full, .modal, .piano-workspace, .game-menu, .piano-actions')) {
             return;
         }
 
@@ -41,6 +43,12 @@ function initializeRevealAnimations() {
     const revealElements = getRevealElements();
 
     revealElements.forEach((element, index) => {
+        const previousAnimation = activeRevealAnimations.get(element);
+        if (previousAnimation) {
+            previousAnimation.cancel();
+            activeRevealAnimations.delete(element);
+        }
+
         if (!element.dataset.reveal) {
             element.dataset.reveal = element.matches('.card, .stat-card, .btn, .text-button, button, .site-footer') ? 'jump' : 'rise';
             element.dataset.revealDelay = String((index % 5) * 60);
@@ -51,10 +59,47 @@ function initializeRevealAnimations() {
         element.classList.remove('is-visible');
     });
 
+    const showElement = (element) => {
+        if (element.classList.contains('is-visible') || activeRevealAnimations.has(element)) {
+            return;
+        }
+
+        if (window.matchMedia('(prefers-reduced-motion: reduce)').matches || !element.animate) {
+            element.classList.add('is-visible');
+            return;
+        }
+
+        const isJump = element.dataset.reveal === 'jump';
+        const animation = element.animate([
+            {
+                opacity: 0,
+                transform: isJump ? 'translateY(30px) scale(0.94)' : 'translateY(32px)'
+            },
+            {
+                opacity: 1,
+                transform: 'translateY(0) scale(1)'
+            }
+        ], {
+            duration: 650,
+            delay: Number(element.dataset.revealDelay || 0),
+            easing: 'cubic-bezier(0.16, 1, 0.3, 1)',
+            fill: 'both'
+        });
+
+        activeRevealAnimations.set(element, animation);
+        animation.onfinish = () => {
+            element.classList.add('is-visible');
+            activeRevealAnimations.delete(element);
+        };
+    };
+
     if (!revealElements.length || !('IntersectionObserver' in window) || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        revealElements.forEach((element) => element.classList.add('is-visible'));
+        revealElements.forEach(showElement);
         return;
     }
+
+    // Force reflow to ensure 'reveal-pending' is applied before observer adds 'is-visible'
+    void document.body.offsetHeight;
 
     revealObserver = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
@@ -62,7 +107,7 @@ function initializeRevealAnimations() {
                 return;
             }
 
-            entry.target.classList.add('is-visible');
+            showElement(entry.target);
             revealObserver.unobserve(entry.target);
         });
     }, {
@@ -72,15 +117,30 @@ function initializeRevealAnimations() {
 
     revealElements.forEach((element) => revealObserver.observe(element));
 
-    // Never leave content hidden if an observer callback is delayed by a busy page.
+    // Guarantee that elements currently in viewport animate immediately without waiting for IntersectionObserver
+    // This fixes the issue on heavy pages where observer callbacks are delayed or dropped
+    window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+            revealElements.forEach((element) => {
+                const rect = element.getBoundingClientRect();
+                if (rect.top < window.innerHeight && rect.bottom > 0) {
+                    showElement(element);
+                    revealObserver.unobserve(element);
+                }
+            });
+        });
+    });
+
+    // Fallback for off-screen elements if observer completely fails
     window.setTimeout(() => {
         revealElements.forEach((element) => {
-            const isNearViewport = element.getBoundingClientRect().top < window.innerHeight * 1.2;
+            const isNearViewport = element.getBoundingClientRect().top < window.innerHeight * 1.5;
             if (isNearViewport) {
-                element.classList.add('is-visible');
+                showElement(element);
+                revealObserver.unobserve(element);
             }
         });
-    }, 1800);
+    }, 800);
 }
 
 if (document.readyState === 'loading') {
