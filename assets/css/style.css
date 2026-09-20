@@ -178,6 +178,7 @@ button:hover, .text-button:hover, .btn:hover {
     transform: translateY(32px);
     transition: opacity 650ms ease, transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
     transition-delay: var(--reveal-delay, 0ms);
+    will-change: opacity, transform;
 }
 
 [data-reveal="jump"] {
@@ -187,6 +188,7 @@ button:hover, .text-button:hover, .btn:hover {
 [data-reveal].is-visible {
     opacity: 1;
     transform: translateY(0) scale(1);
+    will-change: auto;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -489,5 +491,6 @@ h1, h2, h3, h4, h5, h6 {
         opacity: 1;
         transform: none;
         transition: none;
+        will-change: auto;
     }
 }
