@@ -47,6 +47,7 @@ function initializeRevealAnimations() {
         }
 
         element.style.setProperty('--reveal-delay', `${element.dataset.revealDelay || 0}ms`);
+        element.classList.add('reveal-pending');
         element.classList.remove('is-visible');
     });
 
@@ -70,6 +71,16 @@ function initializeRevealAnimations() {
     });
 
     revealElements.forEach((element) => revealObserver.observe(element));
+
+    // Never leave content hidden if an observer callback is delayed by a busy page.
+    window.setTimeout(() => {
+        revealElements.forEach((element) => {
+            const isNearViewport = element.getBoundingClientRect().top < window.innerHeight * 1.2;
+            if (isNearViewport) {
+                element.classList.add('is-visible');
+            }
+        });
+    }, 1800);
 }
 
 if (document.readyState === 'loading') {

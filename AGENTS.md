@@ -92,6 +92,8 @@ Do not move a root page into another directory merely for aesthetic reasons. Exi
 
 The homepage hero is intentionally full viewport width while its surrounding content remains within the shared layout container. Its primary calls to action lead to account registration and login. Individual headings, text, actions, cards, and data rows use lightweight `IntersectionObserver`-based reveal animations defined in `assets/js/main.js`; preserve the `prefers-reduced-motion` fallback when extending them.
 
+Reveal animation styles use a JavaScript-added `reveal-pending` state so content remains visible if initialization is delayed or unavailable. Keep the safety fallback when extending the animation system.
+
 The shared footer is defined in `includes/footer.php` and has navigation links styled by `assets/css/style.css`. Reuse it rather than adding page-specific footer markup.
 
 The account page keeps its existing server-side authentication and dashboard logic. Its presentation is split between `assets/css/account.css` for guests and `assets/css/account_log.css` for signed-in users.
