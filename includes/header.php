@@ -36,7 +36,7 @@ window.PSM_CONFIG = {
         <a href="<?php echo BASE_URL . 'index.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'class="active"' : ''; ?>>Home</a>
         <a href="<?php echo BASE_URL . 'tutorial.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'tutorial.php' ? 'class="active"' : ''; ?>>Tutorial</a>
         <a href="<?php echo BASE_URL . 'songs.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'songs.php' ? 'class="active"' : ''; ?>>Songs</a>
-        <a href="<?php echo BASE_URL . 'piano.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'piano.php' ? 'class="active"' : ''; ?>>Virtual Piano</a>
+        <a href="<?php echo BASE_URL . 'piano.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'piano.php' ? 'class="active"' : ''; ?>>Piano</a>
         <a href="<?php echo BASE_URL . 'game.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'game.php' ? 'class="active"' : ''; ?>>Game</a>
         <a href="<?php echo BASE_URL . 'account.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'account.php' ? 'class="active"' : ''; ?>>Account</a>
         <?php if ($currentUser): ?>

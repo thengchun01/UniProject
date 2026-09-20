@@ -309,7 +309,7 @@ include __DIR__ . '/includes/header.php';
     <section class="data-section">
         <h2>Recent Performance</h2>
         <?php if (!$recentSessions): ?>
-            <p class="empty-state">No database-backed play sessions yet. Complete a Play session in the Virtual Piano page while logged in.</p>
+            <p class="empty-state">No database-backed play sessions yet. Complete a Play session in the Piano page while logged in.</p>
         <?php else: ?>
             <table class="data-table">
                 <thead>

@@ -12,7 +12,7 @@ This file is the project-level guide for human developers and coding agents. It 
 
 UniProject is a browser-based piano-learning platform. The current 0.3.6 project combines:
 
-- An interactive virtual piano.
+- An interactive piano.
 - Browser-based piano sound generation.
 - Visual piano-key highlighting.
 - MIDI import and playback-related functionality.
@@ -87,6 +87,12 @@ UniProject/
 The root PHP pages currently include the public landing page, authentication, piano, tutorials, games, songs, rankings, activity/progress, and development/setup utilities.
 
 Do not move a root page into another directory merely for aesthetic reasons. Existing URLs and relative include paths may depend on the current structure.
+
+### Homepage and account presentation
+
+The homepage hero is intentionally full viewport width while its surrounding content remains within the shared layout container. Its primary calls to action lead to account registration and login. Homepage sections use lightweight `IntersectionObserver`-based reveal animations defined in `assets/js/main.js`; preserve the `prefers-reduced-motion` fallback when extending them.
+
+The account page keeps its existing server-side authentication and dashboard logic. Its presentation is split between `assets/css/account.css` for guests and `assets/css/account_log.css` for signed-in users.
 
 ---
 
@@ -1000,4 +1006,3 @@ This file is intended to become the stable contract between the project and codi
 When the application architecture changes, update this file at the same time as the code. Do not allow the agent guide to describe features or conventions that no longer exist.
 
 For major changes, include a concise migration note so a future coding agent can understand what changed without reconstructing the entire history.
-

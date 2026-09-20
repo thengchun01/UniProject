@@ -3,17 +3,11 @@
    account_log.css
 ================================= */
 
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f5f6f8;
-}
-
 /* MAIN WRAPPER */
 .account-page-content {
     max-width: 1200px;
     margin: auto;
-    padding: 20px;
+    padding: 36px 20px 60px;
 }
 
 /* ===============================
@@ -30,22 +24,23 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
-    background: #ffffff;
-    border-radius: 10px;
-    border: 1px solid #e5e5e5;
-    margin-bottom: 15px;
+    padding: 28px 32px;
+    background: linear-gradient(120deg, #fff 0%, #faf8ff 100%);
+    border-radius: 18px;
+    border: 1px solid var(--border-color);
+    margin-bottom: 24px;
+    box-shadow: var(--shadow-sm);
 }
 
 .account-header h2 {
     margin: 0;
-    font-size: 22px;
+    font-size: 30px;
 }
 
 .role-pill {
-    padding: 6px 12px;
+    padding: 8px 14px;
     border-radius: 20px;
-    background: #222;
+    background: var(--primary-color);
     color: #fff;
     font-size: 13px;
 }
@@ -57,33 +52,42 @@ body {
 .card-grid.account-summary {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 12px;
-    margin-bottom: 20px;
+    gap: 16px;
+    margin-bottom: 28px;
 }
 
-.card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 15px;
-    border: 1px solid #eaeaea;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    transition: 0.2s;
+.account-summary .card {
+    position: relative;
+    padding: 20px;
+    overflow: hidden;
 }
 
-.card:hover {
-    transform: translateY(-2px);
+.account-summary .card::before {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    height: 4px;
+    content: '';
+    background: var(--primary-color);
 }
 
-.card h3 {
+.account-summary .card h3 {
     margin: 0;
     font-size: 14px;
-    color: #666;
+    color: var(--text-muted);
 }
 
-.card strong {
-    font-size: 20px;
+.account-summary .card strong {
+    font-size: 28px;
     display: block;
     margin-top: 8px;
+}
+
+.account-summary .card p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
 /* ===============================
@@ -179,6 +183,21 @@ th {
 td {
     padding: 8px;
     border-bottom: 1px solid #eee;
+}
+
+.account-page-content .data-section {
+    padding: 28px;
+    margin-bottom: 20px;
+    overflow-x: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 18px;
+    background: var(--surface-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.account-page-content .data-section h2 {
+    margin-bottom: 20px;
+    font-size: 20px;
 }
 
 /* ===============================
@@ -289,5 +308,21 @@ td {
         flex-direction: column;
         align-items: flex-start;
         gap: 10px;
+    }
+}
+
+@media (max-width: 560px) {
+    .account-page-content {
+        padding: 24px 0 40px;
+    }
+
+    .account-header,
+    .account-page-content .data-section {
+        padding: 22px;
+        border-radius: 14px;
+    }
+
+    .card-grid.account-summary {
+        grid-template-columns: 1fr;
     }
 }

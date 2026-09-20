@@ -4,6 +4,12 @@ PIANO COURSE WEBSITE
 Version 0.3.6 adds database-backed user accounts, tutorial progress, and
 performance-session saving through the PSM MySQL database.
 
+Interface updates in 0.4.1:
+- Full-width homepage banner with account registration and login actions
+- Homepage section reveal animations that respect reduced-motion preferences
+- Updated account login, registration, and signed-in dashboard presentation
+- Piano is the consistent visible label for the browser-based piano feature
+
 Features:
 - PHP client/server structure
 - Top navigation layout

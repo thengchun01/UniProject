@@ -265,57 +265,74 @@ include __DIR__ . '/includes/header.php';
         <div class="alert error"><?php echo e($authError); ?></div>
     <?php endif; ?>
 
-    <div class="account-auth-tabs" aria-label="Account options">
-        <a class="<?php echo $authMode === 'login' ? 'active' : ''; ?>" href="<?php echo e(url_path('account.php?mode=login')); ?>">Login</a>
-        <a class="<?php echo $authMode === 'register' ? 'active' : ''; ?>" href="<?php echo e(url_path('account.php?mode=register')); ?>">Register</a>
-    </div>
-
-    <div class="account-auth-card">
-        <?php if ($authMode === 'login'): ?>
-        <section class="auth-panel" id="login-panel">
-            <h2>Login</h2>
-            <form class="form-panel compact" method="post" action="<?php echo e(url_path('account.php?mode=login')); ?>">
-                <input type="hidden" name="auth_action" value="login">
-
-                <label>
-                    Username or Email
-                    <input type="text" name="login_username" value="<?php echo e($loginUsername); ?>" required>
-                </label>
-
-                <label>
-                    Password
-                    <input type="password" name="login_password" required>
-                </label>
-
-                <button type="submit">Login</button>
-            </form>
+    <div class="account-auth-layout">
+        <section class="account-auth-intro">
+            <p class="eyebrow">Piano learning, your way</p>
+            <h1>Make every practice session count.</h1>
+            <p>Keep your tutorials, songs, MIDI files, and performance progress together in one place.</p>
+            <div class="auth-benefits" aria-label="Account benefits">
+                <span>Track tutorial progress</span>
+                <span>Review play sessions</span>
+                <span>Build your MIDI library</span>
+            </div>
         </section>
-        <?php else: ?>
 
-        <section class="auth-panel" id="register-panel">
-            <h2>Register</h2>
-            <form class="form-panel compact" method="post" action="<?php echo e(url_path('account.php?mode=register')); ?>">
-                <input type="hidden" name="auth_action" value="register">
+        <div class="account-auth-form">
+            <div class="account-auth-tabs" aria-label="Account options">
+                <a class="<?php echo $authMode === 'login' ? 'active' : ''; ?>" href="<?php echo e(url_path('account.php?mode=login')); ?>">Login</a>
+                <a class="<?php echo $authMode === 'register' ? 'active' : ''; ?>" href="<?php echo e(url_path('account.php?mode=register')); ?>">Register</a>
+            </div>
 
-                <label>
-                    Username
-                    <input type="text" name="register_username" value="<?php echo e($registerUsername); ?>" maxlength="100" required>
-                </label>
+            <div class="account-auth-card">
+                <?php if ($authMode === 'login'): ?>
+                <section class="auth-panel" id="login-panel">
+                    <h2>Welcome back</h2>
+                    <p class="auth-panel-copy">Log in to continue your piano learning journey.</p>
+                    <form class="form-panel compact" method="post" action="<?php echo e(url_path('account.php?mode=login')); ?>">
+                        <input type="hidden" name="auth_action" value="login">
 
-                <label>
-                    Email
-                    <input type="email" name="register_email" value="<?php echo e($registerEmail); ?>" maxlength="100" required>
-                </label>
+                        <label>
+                            Username or Email
+                            <input type="text" name="login_username" value="<?php echo e($loginUsername); ?>" autocomplete="username" required>
+                        </label>
 
-                <label>
-                    Password
-                    <input type="password" name="register_password" minlength="6" required>
-                </label>
+                        <label>
+                            Password
+                            <input type="password" name="login_password" autocomplete="current-password" required>
+                        </label>
 
-                <button type="submit">Register</button>
-            </form>
-        </section>
-        <?php endif; ?>
+                        <button type="submit">Log In</button>
+                    </form>
+                </section>
+                <?php else: ?>
+
+                <section class="auth-panel" id="register-panel">
+                    <h2>Start learning</h2>
+                    <p class="auth-panel-copy">Create an account to save your progress across sessions.</p>
+                    <form class="form-panel compact" method="post" action="<?php echo e(url_path('account.php?mode=register')); ?>">
+                        <input type="hidden" name="auth_action" value="register">
+
+                        <label>
+                            Username
+                            <input type="text" name="register_username" value="<?php echo e($registerUsername); ?>" maxlength="100" autocomplete="username" required>
+                        </label>
+
+                        <label>
+                            Email
+                            <input type="email" name="register_email" value="<?php echo e($registerEmail); ?>" maxlength="100" autocomplete="email" required>
+                        </label>
+
+                        <label>
+                            Password
+                            <input type="password" name="register_password" minlength="6" autocomplete="new-password" required>
+                        </label>
+
+                        <button type="submit">Create Account</button>
+                    </form>
+                </section>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 <?php else: ?>
     <?php if ($accountError): ?>
@@ -415,7 +432,7 @@ include __DIR__ . '/includes/header.php';
     <section class="data-section">
         <h2>Recent Performance</h2>
         <?php if (!$recentSessions): ?>
-            <p class="empty-state">No database-backed play sessions yet. Complete a Play session in the Virtual Piano page while logged in.</p>
+            <p class="empty-state">No database-backed play sessions yet. Complete a Play session in the Piano page while logged in.</p>
         <?php else: ?>
             <table class="data-table">
                 <thead>

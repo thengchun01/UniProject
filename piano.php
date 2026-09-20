@@ -10,7 +10,7 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
 
     <header class="piano-hero">
         <div class="piano-title-block">
-            <p class="eyebrow">Virtual Piano</p>
+            <p class="eyebrow">Piano</p>
             <h1 class="section-title">Piano Practice Studio</h1>
         </div>
 
