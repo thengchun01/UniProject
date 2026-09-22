@@ -230,6 +230,8 @@ Tutorial functionality includes:
 
 The application stores tutorial progress using a section-oriented model. Do not reintroduce a free-text `title` field as the primary progress identifier when the existing schema expects `sectionID`.
 
+Practice exercises in `tutorials/lesson.php` hint only the current expected key (`updateKeyHints()` follows `currentStep`); the full `highlight_keys` set is shown only for informational lessons without a sequence. Preserve this one-by-one hint behavior when changing lesson highlighting.
+
 ### 4.6 Performance sessions
 
 Performance/session data is saved for later review.

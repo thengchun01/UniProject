@@ -239,6 +239,29 @@ document.addEventListener('DOMContentLoaded', function() {
     let activeHoldMidi = null;
     const DURATION_BEATS = { "w": 4, "h": 2, "q": 1, "8": 0.5, "16": 0.25 };
 
+    // Hint ONLY the current step's key so the highlight advances one by one
+    // as the user plays. Informational lessons without a sequence keep the
+    // static highlight set. Clears all hints once the section is completed.
+    // (pianoContainer is assigned during init; every call happens after that.)
+    function updateKeyHints() {
+        if (!pianoContainer) return;
+        pianoContainer.querySelectorAll('.key.train-hint').forEach(keyEl => keyEl.classList.remove('train-hint'));
+        if (isCompleted) return;
+        if (expectedSequence.length > 0) {
+            const current = expectedSequence[currentStep];
+            if (current) {
+                const midi = nameToMidi(current.name);
+                pianoContainer.querySelector('.key[data-midi="' + midi + '"]')?.classList.add('train-hint');
+            }
+        } else if (highlightKeys.length > 0) {
+            highlightKeys.forEach(noteName => {
+                const midi = nameToMidi(noteName);
+                const keyEl = pianoContainer.querySelector('.key[data-midi="' + midi + '"]');
+                if (keyEl) keyEl.classList.add('train-hint');
+            });
+        }
+    }
+
     // Show login overlay when there are interactive keys but user is a guest
     const loginOverlay = document.getElementById('piano-login-overlay');
     if (!isLoggedIn && expectedSequence.length > 0 && loginOverlay) {
@@ -271,6 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
             feedbackEl.innerText = 'Correct! Section completed.';
             document.getElementById('btn-retry-lesson').style.display = 'block';
         }
+        updateKeyHints();
         
         try {
             const response = await fetch('../api/complete_section.php', {
@@ -346,6 +370,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 feedbackEl.innerText = currentStep + ' / ' + expectedSequence.length + ' ✓';
                             }
                             if (typeof updateStaff === 'function') updateStaff();
+                            updateKeyHints();
                             if (currentStep >= expectedSequence.length) markAsComplete();
                             holdTimer = null;
                             activeHoldMidi = null;
@@ -358,6 +383,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             feedbackEl.innerText = currentStep + ' / ' + expectedSequence.length + ' ✓';
                         }
                         if (typeof updateStaff === 'function') updateStaff();
+                        updateKeyHints();
                         if (currentStep >= expectedSequence.length) {
                             markAsComplete();
                         }
@@ -374,6 +400,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         setTimeout(() => { if (!isCompleted) feedbackEl.innerText = 'Play: ' + expectedSequence.map(n=>n.name).join(' → '); }, 2500);
                     }
                     if (typeof updateStaff === 'function') updateStaff();
+                    updateKeyHints();
                 }
             },
             onUp: function(midi, source) {
@@ -394,18 +421,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         setTimeout(() => { if (!isCompleted) feedbackEl.innerText = 'Play: ' + expectedSequence.map(n=>n.name).join(' → '); }, 2500);
                     }
                     if (typeof updateStaff === 'function') updateStaff();
+                    updateKeyHints();
                 }
             }
         });
 
-        // 2. Highlight hint keys after piano renders
-        if (highlightKeys.length > 0) {
-            highlightKeys.forEach(noteName => {
-                const midi = nameToMidi(noteName);
-                const keyEl = pianoContainer.querySelector('.key[data-midi="' + midi + '"]');
-                if (keyEl) keyEl.classList.add('train-hint');
-            });
-        }
+        // 2. Hint the current step's key after piano renders
+        updateKeyHints();
 
         // 3. Render sheet music function
         window.updateStaff = function() {
@@ -460,6 +482,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 feedbackEl.innerText = 'Play: ' + expectedSequence.map(n=>n.name).join(' → ');
             }
             updateStaff();
+            updateKeyHints();
         });
 
     } else {
