@@ -195,6 +195,28 @@
                 }
             });
         }
+
+        if (!container.dataset.coreMidiBound) {
+            container.dataset.coreMidiBound = "1";
+            window.addEventListener('globalMidiMessage', async event => {
+                if (!document.body.contains(container)) return;
+                const { type, note } = event.detail;
+                if (note >= start && note <= end) {
+                    if (type === 'noteon') {
+                        if (!activeMouseNotes.has(note)) {
+                            activeMouseNotes.add(note);
+                            await initAudio();
+                            onDown(note, "midi");
+                        }
+                    } else if (type === 'noteoff') {
+                        if (activeMouseNotes.has(note)) {
+                            activeMouseNotes.delete(note);
+                            onUp(note, "midi");
+                        }
+                    }
+                }
+            });
+        }
     }
 
     const KEYBOARD_MAP = {

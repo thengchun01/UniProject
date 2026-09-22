@@ -47,14 +47,12 @@ UniProject/
 ├── teacher/
 ├── tutorials/
 ├── account.php
-├── account2.php
 ├── activity.php
 ├── car_race.php
 ├── create_account_dev.php
 ├── dir.txt
 ├── game.php
 ├── index.php
-├── index copy.php
 ├── login.php
 ├── logout.php
 ├── piano.php
@@ -196,6 +194,8 @@ Keep piano interaction logic separate from unrelated authentication/database log
 ### 4.3 MIDI functionality
 
 The application supports MIDI-related learning workflows, including MIDI import/parsing and music-note handling.
+
+Device connection is centralized in `assets/js/midi-manager.js`, loaded on every page via `includes/footer.php`. It requests Web MIDI access once, watches `onstatechange`, shows a non-blocking toast when a device appears, remembers the accepted/declined choice in `sessionStorage` across navigation, and forwards notes via the `globalMidiMessage` window event consumed by `piano-core.js` and `piano.js`.
 
 When changing MIDI code:
 

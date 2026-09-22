@@ -583,3 +583,111 @@ h1, h2, h3, h4, h5, h6 {
         will-change: auto;
     }
 }
+
+/* ============================================ */
+/* GLOBAL MIDI CONNECT TOAST                   */
+/* ============================================ */
+.midi-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+    padding: 14px 16px;
+    max-width: 340px;
+    width: calc(100% - 48px);
+    opacity: 0;
+    transform: translateY(16px);
+    pointer-events: none;
+    transition: opacity 0.28s ease, transform 0.28s ease;
+}
+
+.midi-toast.midi-toast-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.midi-toast-icon {
+    font-size: 28px;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.midi-toast-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.midi-toast-title {
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-color);
+    margin: 0 0 2px;
+}
+
+.midi-toast-name {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.midi-toast-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.midi-toast-btn {
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 6px 14px;
+    transition: background 0.15s;
+    white-space: nowrap;
+}
+
+.midi-toast-accept {
+    background: var(--primary-color);
+    color: #fff;
+}
+
+.midi-toast-accept:hover {
+    background: var(--primary-hover);
+}
+
+.midi-toast-dismiss {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border-color);
+}
+
+.midi-toast-dismiss:hover {
+    background: var(--border-color);
+}
+
+@media (max-width: 480px) {
+    .midi-toast {
+        bottom: 12px;
+        right: 12px;
+        width: calc(100% - 24px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .midi-toast {
+        transition: none;
+    }
+}

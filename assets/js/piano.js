@@ -2062,9 +2062,27 @@
 
         async function connectMidi() {
             if (!navigator.requestMIDIAccess) {
-                setElementText(ui.midiStatus, "MIDI Not Available");
+                setElementText(ui.midiStatus, "MIDI Not Supported");
                 return;
             }
+
+            // Delegate to the global MidiManager which handles permission & device
+            // prompting across all pages.
+            if (window.MidiManager) {
+                await window.MidiManager.connect();
+                // Update status display based on manager state
+                if (window.MidiManager.isConnected()) {
+                    const input = window.MidiManager.getConnectedInput();
+                    setElementText(ui.midiStatus, "Connected: " + (input?.name || "Device"));
+                    if (ui.midiStatusDot) ui.midiStatusDot.className = "status-dot connected";
+                } else {
+                    setElementText(ui.midiStatus, "No MIDI Devices");
+                    if (ui.midiStatusDot) ui.midiStatusDot.className = "status-dot";
+                }
+                return;
+            }
+
+            // Fallback: legacy direct access (MidiManager not loaded)
             try {
                 const access = await navigator.requestMIDIAccess({ sysex: false });
                 if (access.inputs.size === 0) {
@@ -2088,6 +2106,17 @@
                 if (ui.midiStatusDot) ui.midiStatusDot.className = "status-dot";
             }
         }
+
+        // Listen to globalMidiMessage so piano.php receives notes from MidiManager
+        // (handles reconnect across pages without needing to re-click "Connect MIDI")
+        window.addEventListener("globalMidiMessage", event => {
+            const { type, note, velocity } = event.detail;
+            if (type === "noteon") {
+                initAudio().then(() => triggerNoteOn(note, "midi", velocity));
+            } else if (type === "noteoff") {
+                triggerNoteOff(note, "midi");
+            }
+        });
 
         function openKeybindsModal() {
             const modal = $("modal-keybinds");
@@ -2168,6 +2197,14 @@
 
         document.querySelectorAll("#piano-app .tab").forEach(tab => tab.addEventListener("click", () => switchTab(tab.dataset.mode)));
         ui.btnMidi?.addEventListener("click", connectMidi);
+
+        // Reflect any MIDI device already connected from a previous page visit
+        if (window.MidiManager && window.MidiManager.isConnected()) {
+            const input = window.MidiManager.getConnectedInput();
+            setElementText(ui.midiStatus, "Connected: " + (input?.name || "Device"));
+            if (ui.midiStatusDot) ui.midiStatusDot.className = "status-dot connected";
+        }
+
         ui.globalMidiUpload?.addEventListener("change", event => loadMidiFile(event.target.files[0]));
         ui.btnPlayPause?.addEventListener("click", () => {
             if (isPlayMode() && !state.playSessionActive) {

@@ -49,7 +49,7 @@ window.PSM_CONFIG = {
 // ── Floating User Widget ──────────────────────────────────────────────────────
 // Suppress on the account page (user already sees full profile there)
 $_ufw_page = basename($_SERVER['PHP_SELF']);
-$_ufw_hide = in_array($_ufw_page, ['account.php', 'account2.php', 'login.php', 'register.php'], true);
+$_ufw_hide = in_array($_ufw_page, ['account.php', 'login.php', 'register.php'], true);
 
 if (!$_ufw_hide):
     // XP leveling formula: Level = 1 + floor(sqrt(XP/100))

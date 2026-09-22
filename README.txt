@@ -14,6 +14,20 @@ Interface updates in 0.4.1:
 - Updated account login, registration, and signed-in dashboard presentation
 - Piano is the consistent visible label for the browser-based piano feature
 
+Feature updates in 0.4.1 (continued):
+- Animation system fixed so reveal animations no longer block app-like pages (piano,
+  songs, game). Complex UI controls inside .piano-workspace, .game-menu, and
+  .piano-actions are excluded from automatic reveal targeting. In-viewport elements
+  now animate immediately via double-rAF instead of waiting for the IntersectionObserver.
+  The safety fallback timer was reduced from 1800ms to 800ms.
+- Global MIDI device manager (assets/js/midi-manager.js) loaded on every page via
+  includes/footer.php. Detects MIDI devices being plugged in at any time and shows a
+  non-blocking toast prompting the user to connect. The accepted device is remembered in
+  sessionStorage so navigating between pages (tutorial, piano, game) does not require
+  reconnection. All piano widgets receive notes via the globalMidiMessage window event.
+  The piano.php "Connect MIDI" button delegates to MidiManager instead of managing its
+  own requestMIDIAccess call.
+
 Features:
 - PHP client/server structure
 - Top navigation layout
@@ -28,6 +42,7 @@ Features:
 - User registration and login
 - Tutorial progress table
 - Performance session table
+- Global MIDI device detection on all pages (midi-manager.js)
 
 Requirements:
 - PHP 8+
