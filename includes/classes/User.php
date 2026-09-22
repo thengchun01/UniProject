@@ -9,7 +9,13 @@ class User {
     public function getUser($userId) {
         $stmt = $this->db->prepare("SELECT * FROM users WHERE user_id = :user_id");
         $stmt->execute(['user_id' => $userId]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($user && isset($user['role']) && function_exists('normalize_role')) {
+            $user['role'] = normalize_role($user['role']);
+        } elseif ($user && isset($user['role'])) {
+            $user['role'] = strtoupper(trim((string) $user['role']));
+        }
+        return $user;
     }
 
     public function addExperience($userId, $xpAmount) {

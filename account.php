@@ -52,7 +52,7 @@ if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['user_id'] = (int) $loginUser['user_id'];
                     $_SESSION['username'] = $loginUser['username'];
                     $_SESSION['email'] = $loginUser['email'];
-                    $_SESSION['role'] = $loginUser['role'];
+                    $_SESSION['role'] = normalize_role($loginUser['role']);
                     $_SESSION['classroom'] = $loginUser['classroom'];
                     $_SESSION['classroom_status'] = $loginUser['classroom_status'];
 
@@ -122,7 +122,10 @@ if ($user && is_database_connected()) {
         );
         $stmt->execute(['user_id' => $user['user_id']]);
         $userInfo = $stmt->fetch(PDO::FETCH_ASSOC);
-        
+        if ($userInfo && isset($userInfo['role'])) {
+            $userInfo['role'] = normalize_role($userInfo['role']);
+        }
+
         // Update session with latest classroom data
         $_SESSION['classroom'] = $userInfo['classroom'];
         $_SESSION['classroom_status'] = $userInfo['classroom_status'];

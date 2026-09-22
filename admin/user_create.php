@@ -27,7 +27,7 @@ try {
     $username = trim($_POST['username'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'STUDENT';
+    $role = normalize_role($_POST['role'] ?? 'STUDENT');
 
     if (empty($username) || empty($email) || empty($password)) {
         echo json_encode([

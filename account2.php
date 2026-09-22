@@ -58,7 +58,7 @@ if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['user_id'] = (int)$loginUser['user_id'];
                     $_SESSION['username'] = $loginUser['username'];
                     $_SESSION['email'] = $loginUser['email'];
-                    $_SESSION['role'] = $loginUser['role'];
+                    $_SESSION['role'] = normalize_role($loginUser['role']);
 
                     db()->prepare(
                         'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE user_id = :user_id'
@@ -124,6 +124,9 @@ if ($user && is_database_connected()) {
         );
         $stmt->execute(['user_id' => $user['user_id']]);
         $userInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($userInfo && isset($userInfo['role'])) {
+            $userInfo['role'] = normalize_role($userInfo['role']);
+        }
 
         // tutorial stats
         $summary['total_sections'] = (int)$db->query(

@@ -63,6 +63,11 @@ function is_logged_in(): bool
     return !empty($_SESSION['user_id']);
 }
 
+function normalize_role($role): string
+{
+    return strtoupper(trim((string) $role));
+}
+
 function current_user(): ?array
 {
     if (!is_logged_in() || !is_database_connected()) {
@@ -72,7 +77,11 @@ function current_user(): ?array
     try {
         $stmt = db()->prepare("SELECT * FROM users WHERE user_id = :id");
         $stmt->execute(['id' => $_SESSION['user_id']]);
-        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        $user = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        if ($user && isset($user['role'])) {
+            $user['role'] = normalize_role($user['role']);
+        }
+        return $user;
     } catch (Exception $e) {
         return null;
     }

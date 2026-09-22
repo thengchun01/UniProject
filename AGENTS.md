@@ -178,6 +178,8 @@ $_SESSION['email']
 $_SESSION['role']
 ```
 
+Roles from the server are normalized with `normalize_role()` in `includes/config.php` to uppercase `ADMIN`, `TEACHER`, `STUDENT`, `GUEST`. Authorization checks use strict uppercase comparison.
+
 ### 4.2 Interactive piano
 
 The piano subsystem provides:

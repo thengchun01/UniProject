@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
-    $role = $_POST['role'] ?? 'STUDENT';
+    $role = normalize_role($_POST['role'] ?? 'STUDENT');
     $classroom_status = ($role === 'STUDENT') ? 'NONE' : NULL;
 
     if (empty($username) || empty($email) || empty($password)) {
