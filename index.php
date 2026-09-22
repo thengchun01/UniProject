@@ -1,5 +1,5 @@
 <?php include 'includes/header.php'; ?>
-<link rel="stylesheet" href="<?php echo e(url_path('assets/css/homepage.css')); ?>">
+<link rel="stylesheet" href="<?php echo e(url_path('assets/css/homepage.css') . '?v=' . filemtime(__DIR__ . '/assets/css/homepage.css')); ?>">
 
 <section class="hero-section">
     <div class="hero-background" style="background-image: url('https://images.unsplash.com/photo-1552422535-c45813c61732?auto=format&fit=crop&q=80&w=1600');"></div>

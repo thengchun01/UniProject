@@ -33,7 +33,7 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
     </header>
 
     <!-- Song loading banner (shown when piece_id is provided) -->
-    <div id="song-load-banner" style="display:none; background:linear-gradient(90deg,#6c63ff22,#7c73ff11); border-left:4px solid #6c63ff; padding:10px 18px; font-size:0.9rem; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+    <div id="song-load-banner" style="display:none; background:linear-gradient(90deg,#6c63ff22,#7c73ff11); border-left:4px solid #6c63ff; padding:10px 18px; font-size:0.9rem; align-items:center; gap:10px; flex-wrap:wrap;">
         <span id="song-load-banner-text">⏳ Loading song piece…</span>
         <a href="<?= BASE_URL ?>songs.php" style="margin-left:auto; font-size:0.82rem; color:#6c63ff; text-decoration:underline;">← Back to Songs</a>
     </div>
@@ -192,7 +192,7 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
 
             <div class="piano-controls" id="piano-controls">
                 <button class="btn secondary" id="btn-keybinds" type="button">Key Binds</button>
-                <label class="check-row"><input type="checkbox" id="show-labels"> Show labels</label>
+                <label class="check-row"><input type="checkbox" id="show-labels" checked> Show labels</label>
                 <label class="check-row"><input type="checkbox" id="toggle-key-highlight" checked> Key lights</label>
                 <label class="check-row"><input type="checkbox" id="toggle-staff-labels" checked> Sheet labels</label>
 

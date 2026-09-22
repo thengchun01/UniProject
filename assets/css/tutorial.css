@@ -637,3 +637,12 @@
         font-size: 9px;
     }
 }
+
+/* Lesson controls modal close button: visible hit-area feedback */
+#keyboardModal .kb-modal-close:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+#keyboardModal .kb-modal-close:active {
+    background: rgba(0, 0, 0, 0.12);
+}

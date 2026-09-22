@@ -145,7 +145,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Keyboard Controls Modal -->
             <div id="keyboardModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
                 <div style="background:var(--studio-panel); padding:24px; border-radius:12px; max-width:500px; width:90%; position:relative; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-                    <button onclick="document.getElementById('keyboardModal').style.display='none'" aria-label="Close controls" title="Close" style="position:absolute; top:8px; right:8px; min-width:40px; min-height:40px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; font-size:24px; line-height:1; cursor:pointer; color:var(--studio-muted);">&times;</button>
+                    <button type="button" class="kb-modal-close" onclick="document.getElementById('keyboardModal').style.display='none'" aria-label="Close controls" title="Close" style="position:absolute; top:8px; right:8px; z-index:1; min-width:44px; min-height:44px; padding:0; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; font-size:24px; line-height:1; cursor:pointer; color:var(--studio-muted);"><span aria-hidden="true" style="pointer-events:none;">&times;</span></button>
                     <h2 style="margin-top:0; font-size:20px; display:flex; align-items:center; gap:8px;">⌨️ Keyboard Controls</h2>
                     <p style="color:var(--studio-muted); font-size:14px; margin-bottom:20px;">Use your computer keyboard to play the piano.</p>
                     

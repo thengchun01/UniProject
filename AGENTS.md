@@ -92,6 +92,8 @@ The homepage hero is intentionally full viewport width while its surrounding con
 
 Reveal animation styles use a JavaScript-added `reveal-pending` state so content remains visible if initialization is delayed or unavailable. Keep the safety fallback when extending the animation system.
 
+Explore Features cards are a single link each via a stretched `::after` overlay on the card action (`assets/css/homepage.css`); keep one link per card and preserve the overlay when restyling.
+
 The shared footer is defined in `includes/footer.php` and has navigation links styled by `assets/css/style.css`. Reuse it rather than adding page-specific footer markup.
 
 Logout confirmation is a shared styled dialog in `includes/header.php`, activated by `assets/js/main.js`. Keep direct logout links as the no-JavaScript fallback.

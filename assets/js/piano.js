@@ -547,7 +547,7 @@
             mode: "practice",
             octaveFold: false,
             keyLightsOn: ui.toggleKeyHighlight ? ui.toggleKeyHighlight.checked : true,
-            showLabels: false,
+            showLabels: $("show-labels") ? $("show-labels").checked : true,
             staffNoteLabels: ui.toggleStaffLabels ? ui.toggleStaffLabels.checked : true,
             baseOctave: 4,
             displayNotes: [],
@@ -832,7 +832,7 @@
             showZoomControls.timer = setTimeout(() => controls.classList.remove("visible"), 1000);
         }
 
-        function buildMainPiano() {
+        function buildMainPiano(centerMidi) {
             createPianoKeys(ui.keyboard, {
                 start: state.octaveFold ? 60 : START_NOTE,
                 end: state.octaveFold ? 71 : END_NOTE,
@@ -842,9 +842,10 @@
                 onUp: triggerNoteOff
             });
             if (!state.octaveFold) {
+                const target = centerMidi || 60;
                 setTimeout(() => {
-                    const middleC = ui.keyboard?.querySelector('.key[data-midi="60"]');
-                    if (middleC) ui.keyboard.scrollLeft = Math.max(0, middleC.offsetLeft - ui.keyboard.clientWidth / 2);
+                    const key = ui.keyboard?.querySelector('.key[data-midi="' + target + '"]');
+                    if (key) ui.keyboard.scrollLeft = Math.max(0, key.offsetLeft - ui.keyboard.clientWidth / 2);
                 }, 80);
             }
             updateScrollZoneLimits();
@@ -2308,12 +2309,16 @@
         $("btn-octave-down")?.addEventListener("click", () => {
             state.baseOctave = Math.max(1, state.baseOctave - 1);
             setElementText($("disp-octave"), String(state.baseOctave));
-            buildMainPiano();
+            // Center C of the selected octave; clamping pins the lowest /
+            // highest octaves to the leftmost / rightmost edge.
+            buildMainPiano((state.baseOctave + 1) * 12);
         });
         $("btn-octave-up")?.addEventListener("click", () => {
             state.baseOctave = Math.min(7, state.baseOctave + 1);
             setElementText($("disp-octave"), String(state.baseOctave));
-            buildMainPiano();
+            // Center C of the selected octave; clamping pins the lowest /
+            // highest octaves to the leftmost / rightmost edge.
+            buildMainPiano((state.baseOctave + 1) * 12);
         });
         $("btn-keybinds")?.addEventListener("click", openKeybindsModal);
         $("btn-keybinds-save")?.addEventListener("click", () => {
