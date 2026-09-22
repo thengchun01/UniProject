@@ -269,16 +269,74 @@
     }
 
     function loadKeyMap() {
+        // Shared preset engine (single source of truth); the piano page
+        // defaults to the single-hand preset until the user picks one.
+        try {
+            if (window.PianoCore && typeof PianoCore.getKeybindMap === "function") {
+                return PianoCore.getKeybindMap("single");
+            }
+        } catch (e) {}
         try {
             const stored = localStorage.getItem("pianoKeyBinds");
-            return stored ? JSON.parse(stored) : { ...DEFAULT_KEY_MAP };
-        } catch (e) {
-            return { ...DEFAULT_KEY_MAP };
-        }
+            if (stored) return JSON.parse(stored);
+        } catch (e) {}
+        return { ...DEFAULT_KEY_MAP };
     }
 
     function saveKeyMap() {
         try { localStorage.setItem("pianoKeyBinds", JSON.stringify(currentKeyMap)); } catch (e) {}
+        // Mark the write unconfirmed until a push succeeds, so a quick
+        // navigation afterwards cannot lose it to the older server copy.
+        try { window.PianoCore?.markKeybindsPending?.(); } catch (e) {}
+    }
+
+    function activeKeybindPreset() {
+        try {
+            if (window.PianoCore && typeof PianoCore.getKeybindPresetId === "function") {
+                return PianoCore.getKeybindPresetId() || "single";
+            }
+        } catch (e) {}
+        return "single";
+    }
+
+    function syncPresetRadio() {
+        const active = activeKeybindPreset();
+        document.querySelectorAll('input[name="kb-preset"]').forEach(radio => {
+            radio.checked = radio.value === active;
+        });
+    }
+
+    function pushSettingsToServer() {
+        if (!window.PSM_CONFIG?.isLoggedIn || !window.PSM_CONFIG?.apiBase) return Promise.resolve(false);
+        let preset = null;
+        try {
+            preset = window.PianoCore?.getKeybindPresetId?.() || null;
+        } catch (e) {}
+        const payload = { keybinds: { ...currentKeyMap }, keybindPreset: preset };
+        return fetch(window.PSM_CONFIG.apiBase + "/save_settings.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ settings: payload }),
+            // Survive navigation so a save followed by a quick page change
+            // still reaches the server.
+            keepalive: true
+        }).then((response) => {
+            // HTTP errors (404/500 HTML pages) must NOT count as success.
+            if (!response || !response.ok) throw new Error("settings save failed");
+            return response.json();
+        }).then((data) => !!(data && data.success)).catch(() => false)
+        .then((ok) => {
+            // Refresh the in-page snapshot so later server-first reads (e.g.
+            // reopening the modal) see what was just saved instead of the
+            // copy rendered at page load. Playing already uses currentKeyMap.
+            try {
+                if (window.PSM_CONFIG) {
+                    window.PSM_CONFIG.userSettings = { keybinds: { ...payload.keybinds }, keybindPreset: payload.keybindPreset };
+                }
+                if (ok) window.PianoCore?.clearKeybindsPending?.();
+            } catch (e) {}
+            return ok;
+        });
     }
 
     function syncKeySizing() {
@@ -511,6 +569,7 @@
             midiTime: $("midi-time"),
             playhead: $("playhead"),
             sheetScrollArea: $("sheet-scroll-area"),
+            sheetFollowBtn: $("sheet-follow-btn"),
             staffContainer: $("staff-container"),
             scrollZoneLeft: $("scroll-zone-left"),
             scrollZoneRight: $("scroll-zone-right"),
@@ -550,6 +609,8 @@
             showLabels: $("show-labels") ? $("show-labels").checked : true,
             staffNoteLabels: ui.toggleStaffLabels ? ui.toggleStaffLabels.checked : true,
             baseOctave: 4,
+            sheetFollow: true,
+            lastSheetAutoScroll: 0,
             displayNotes: [],
             sheetMap: [],
             customTrackLoaded: false,
@@ -891,6 +952,7 @@
                     state.displayNotes.push(midiName(actualMidi));
                     if (state.displayNotes.length > 40) state.displayNotes.shift();
                     renderStaff();
+                    if (state.sheetFollow) scrollSheetToEnd(true);
                 }
                 if (isPracticeMode()) handlePracticeAttempt(actualMidi);
                 if (isPlayMode()) handlePlayAttempt(actualMidi);
@@ -2123,34 +2185,92 @@
             }
         });
 
+        // Mark bound vs unregistered fields, and flag duplicate binds in red.
+        function refreshBindStates() {
+            const grid = $("keybinds-grid");
+            if (!grid) return;
+            const counts = {};
+            const inputs = [...grid.querySelectorAll("input")];
+            inputs.forEach(input => {
+                const value = (input.value || "").toLowerCase();
+                if (value) counts[value] = (counts[value] || 0) + 1;
+            });
+            inputs.forEach(input => {
+                const value = (input.value || "").toLowerCase();
+                const cell = input.closest(".kb-key");
+                if (cell) {
+                    cell.classList.toggle("is-bound", value !== "");
+                    cell.classList.toggle("is-empty", value === "");
+                    cell.classList.toggle("is-dup", value !== "" && counts[value] > 1);
+                }
+                if (value !== "" && counts[value] > 1) input.title = "Duplicate bind: also used by another key";
+                else input.removeAttribute("title");
+            });
+        }
+
+        function serializeBindGrid() {
+            const grid = $("keybinds-grid");
+            const entries = [];
+            grid?.querySelectorAll("input").forEach(input => {
+                if (input.value) entries.push(input.value.toLowerCase() + ":" + input.dataset.midi);
+            });
+            return JSON.stringify(entries.sort());
+        }
+
         function openKeybindsModal() {
             const modal = $("modal-keybinds");
             const grid = $("keybinds-grid");
             if (!modal || !grid) return;
             grid.innerHTML = "";
+            // The grid shows the ACTIVE preset. Built-ins are fixed, so their
+            // fields render blurred read-only — only the Custom map is editable.
+            const viewingCustom = activeKeybindPreset() === "custom";
+            let displayMap = null;
+            try {
+                if (viewingCustom) {
+                    displayMap = window.PianoCore?.getCustomKeybinds?.() || null;
+                } else {
+                    const presets = window.PianoCore?.KEYBIND_PRESETS || null;
+                    if (presets && presets[activeKeybindPreset()]) displayMap = { ...presets[activeKeybindPreset()] };
+                }
+            } catch (e) {}
+            if (!displayMap || !Object.keys(displayMap).length) displayMap = { ...currentKeyMap };
             const mappedByMidi = {};
-            Object.entries(currentKeyMap).forEach(([key, midi]) => { mappedByMidi[midi] = key; });
-            const makeBindInput = (midi) => {
+            Object.entries(displayMap).forEach(([key, midi]) => { mappedByMidi[midi] = key; });
+            const makeBindInput = (midi, editable) => {
                 const input = document.createElement("input");
                 input.type = "text";
                 input.maxLength = 1;
                 input.dataset.midi = String(midi);
                 input.value = mappedByMidi[midi] || "";
                 input.setAttribute("aria-label", "Computer key for " + midiName(midi).toUpperCase());
+                input.disabled = !editable;
                 input.addEventListener("keydown", event => {
                     if (event.key === "Tab") return;
                     event.preventDefault();
-                    input.value = event.key === "Backspace" || event.key === "Delete" ? "" : (event.key.length === 1 ? event.key.toLowerCase() : input.value);
+                    if (event.key === "Backspace" || event.key === "Delete") {
+                        input.value = "";
+                    } else if (event.key.length === 1) {
+                        input.value = event.key.toLowerCase();
+                    } else {
+                        // Shift, Esc, F-keys, arrows etc. cannot be bound — flash it.
+                        input.classList.remove("kb-invalid");
+                        void input.offsetWidth;
+                        input.classList.add("kb-invalid");
+                        setTimeout(() => input.classList.remove("kb-invalid"), 600);
+                        return;
+                    }
+                    refreshBindStates();
                 });
                 return input;
             };
-            const makeKeyCell = (midi) => {
+            const makeKeyCell = (midi, editable) => {
                 const cell = document.createElement("label");
                 cell.className = "kb-key " + (isBlackKey(midi) ? "kb-black" : "kb-white");
                 const note = document.createElement("span");
                 note.className = "kb-note";
                 note.textContent = midiName(midi).toUpperCase();
-                cell.append(note, makeBindInput(midi));
+                cell.append(note, makeBindInput(midi, editable));
                 return cell;
             };
             // One horizontal strip per octave, ordered low to high (partial edge octaves included)
@@ -2180,9 +2300,9 @@
                 const strip = document.createElement("div");
                 strip.className = "kb-strip";
                 const whites = group.midis.filter(midi => !isBlackKey(midi));
-                whites.forEach(midi => strip.appendChild(makeKeyCell(midi)));
+                whites.forEach(midi => strip.appendChild(makeKeyCell(midi, viewingCustom)));
                 group.midis.filter(midi => isBlackKey(midi)).forEach(midi => {
-                    const cell = makeKeyCell(midi);
+                    const cell = makeKeyCell(midi, viewingCustom);
                     const precedingWhites = whites.filter(w => w < midi).length;
                     cell.style.left = (precedingWhites / whites.length * 100) + "%";
                     strip.appendChild(cell);
@@ -2190,6 +2310,19 @@
                 section.append(head, strip);
                 grid.appendChild(section);
             });
+            grid.classList.toggle("viewing-builtin", !viewingCustom);
+            const saveBtn = $("btn-keybinds-save");
+            if (saveBtn) {
+                saveBtn.disabled = !viewingCustom;
+                saveBtn.title = viewingCustom ? "" : "Switch to the Custom preset to edit keybinds";
+            }
+            if (!grid.dataset.bindWatch) {
+                grid.dataset.bindWatch = "1";
+                grid.addEventListener("input", refreshBindStates);
+            }
+            refreshBindStates();
+            syncPresetRadio();
+            grid.dataset.snapshot = serializeBindGrid();
             modal.classList.add("open");
         }
 
@@ -2228,6 +2361,8 @@
             show(ui.songInfoPanel, false);
             show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
             show(ui.livePanel, false);
+            state.sheetFollow = true;
+            if (ui.sheetFollowBtn) ui.sheetFollowBtn.hidden = true;
             show($("analysis-grid"), false);
             show($("analysis-empty"), true);
             if (ui.globalMidiUpload) ui.globalMidiUpload.value = "";
@@ -2235,6 +2370,36 @@
             renderStaff();
             updateTrainSeekLock();
             updateLivePlayStats();
+        }
+
+        // Sheet auto-follow: track the latest drawn note until the user
+        // scrolls away manually; the jump arrow restores following.
+        let sheetScrollTimer = null;
+
+        function scrollSheetToEnd(smooth) {
+            if (!ui.sheetScrollArea) return;
+            state.lastSheetAutoScroll = Date.now();
+            const left = Math.max(0, ui.sheetScrollArea.scrollWidth - ui.sheetScrollArea.clientWidth);
+            if (smooth && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                ui.sheetScrollArea.scrollTo({ left, behavior: "smooth" });
+            } else {
+                ui.sheetScrollArea.scrollLeft = left;
+            }
+            state.sheetFollow = true;
+            if (ui.sheetFollowBtn) ui.sheetFollowBtn.hidden = true;
+        }
+
+        function onSheetScroll() {
+            if (sheetScrollTimer) clearTimeout(sheetScrollTimer);
+            sheetScrollTimer = setTimeout(() => {
+                if (!ui.sheetScrollArea) return;
+                // Ignore scroll events fired by our own smooth animation.
+                if (Date.now() - state.lastSheetAutoScroll < 500) return;
+                const area = ui.sheetScrollArea;
+                const atEnd = area.scrollWidth - area.scrollLeft - area.clientWidth <= 24;
+                state.sheetFollow = atEnd;
+                if (ui.sheetFollowBtn) ui.sheetFollowBtn.hidden = atEnd;
+            }, 150);
         }
 
         function updateScrollZoneLimits() {
@@ -2322,6 +2487,8 @@
         });
         ui.sheetScrollArea?.addEventListener("mouseenter", showZoomControls);
         ui.sheetScrollArea?.addEventListener("wheel", showZoomControls, { passive: true });
+        ui.sheetScrollArea?.addEventListener("scroll", onSheetScroll, { passive: true });
+        $("sheet-follow-btn")?.addEventListener("click", () => scrollSheetToEnd(true));
         ui.scrollZoneLeft?.addEventListener("click", () => ui.keyboard?.scrollBy({ left: -7 * keyWidthWhite, behavior: "smooth" }));
         ui.scrollZoneRight?.addEventListener("click", () => ui.keyboard?.scrollBy({ left: 7 * keyWidthWhite, behavior: "smooth" }));
         ui.keyboard?.addEventListener("scroll", updateScrollZoneLimits, { passive: true });
@@ -2368,12 +2535,39 @@
             buildMainPiano((state.baseOctave + 1) * 12, true);
         });
         $("btn-keybinds")?.addEventListener("click", openKeybindsModal);
+        document.querySelectorAll('input[name="kb-preset"]').forEach(radio => {
+            radio.addEventListener("change", () => {
+                // Leaving Custom with unsaved edits discards them — confirm first.
+                if (activeKeybindPreset() === "custom") {
+                    const grid = $("keybinds-grid");
+                    if (grid && grid.dataset.snapshot !== undefined && serializeBindGrid() !== grid.dataset.snapshot) {
+                        if (!window.confirm("Switch preset without saving your Custom changes?")) {
+                            syncPresetRadio();
+                            return;
+                        }
+                    }
+                }
+                try { window.PianoCore?.setKeybindPresetId?.(radio.value); } catch (e) {}
+                currentKeyMap = loadKeyMap();
+                syncPresetRadio();
+                pushSettingsToServer();
+                openKeybindsModal();
+            });
+        });
         $("btn-keybinds-save")?.addEventListener("click", () => {
+            // Built-in presets are fixed; the grid is read-only there.
+            if (activeKeybindPreset() !== "custom") return;
             currentKeyMap = {};
             $("keybinds-grid")?.querySelectorAll("input").forEach(input => {
                 if (input.value) currentKeyMap[input.value.toLowerCase()] = Number(input.dataset.midi);
             });
             saveKeyMap();
+            // Saving means playing it: switch the active preset to Custom.
+            // NOTE: no server re-read here — currentKeyMap already holds the
+            // fresh grid values, and re-reading would restore the stale copy.
+            try { window.PianoCore?.setKeybindPresetId?.("custom"); } catch (e) {}
+            syncPresetRadio();
+            pushSettingsToServer();
             $("modal-keybinds")?.classList.remove("open");
         });
         $("btn-keybinds-cancel")?.addEventListener("click", () => {
@@ -2382,11 +2576,34 @@
         document.querySelector("#modal-keybinds .kb-modal-close")?.addEventListener("click", () => {
             $("modal-keybinds")?.classList.remove("open");
         });
-        $("btn-keybinds-reset")?.addEventListener("click", () => {
-            if (!window.confirm("Reset all keyboard binds to the default? Your custom binds will be lost.")) return;
-            currentKeyMap = { ...DEFAULT_KEY_MAP };
+        const resetCustomToPreset = async (presetId) => {
+            const factory = window.PianoCore?.KEYBIND_PRESETS?.[presetId] || null;
+            if (!factory) return;
+            currentKeyMap = { ...factory };
             saveKeyMap();
+            try { window.PianoCore?.setKeybindPresetId?.("custom"); } catch (e) {}
+            // Await the push so the server copy matches before the grid
+            // rebuilds from it; otherwise the stale copy would reappear.
+            await pushSettingsToServer();
             openKeybindsModal();
+        };
+        $("btn-keybinds-reset")?.addEventListener("click", () => {
+            const dialog = $("keybindsResetDialog");
+            if (dialog && typeof dialog.showModal === "function") {
+                if (!dialog.open) dialog.showModal();
+            }
+        });
+        document.querySelectorAll("#keybindsResetDialog [data-reset-preset]").forEach(btn => {
+            btn.addEventListener("click", () => {
+                $("keybindsResetDialog")?.close();
+                resetCustomToPreset(btn.dataset.resetPreset);
+            });
+        });
+        document.querySelector("#keybindsResetDialog [data-reset-cancel]")?.addEventListener("click", () => {
+            $("keybindsResetDialog")?.close();
+        });
+        $("keybindsResetDialog")?.addEventListener("click", (event) => {
+            if (event.target.id === "keybindsResetDialog") event.target.close();
         });
         $("btn-analysis-csv")?.addEventListener("click", () => {
             const rows = [["Expected", "Pressed", "Correct", "TimingDeltaMs", "TimeScore"]].concat(

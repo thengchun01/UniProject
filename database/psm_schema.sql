@@ -145,6 +145,18 @@ CREATE TABLE `user_progress` (
   `last_accessed` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+-- --------------------------------------------------------
+
+--
+-- 表的结构 `user_settings`
+--
+
+CREATE TABLE `user_settings` (
+  `user_id` int(11) NOT NULL,
+  `settings_json` longtext NOT NULL,
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 --
 -- 转储表的索引
 --
@@ -204,6 +216,12 @@ ALTER TABLE `user_progress`
   ADD PRIMARY KEY (`progress_id`),
   ADD UNIQUE KEY `user_id` (`user_id`,`section_id`),
   ADD KEY `section_id` (`section_id`);
+
+--
+-- 表的索引 `user_settings`
+--
+ALTER TABLE `user_settings`
+  ADD PRIMARY KEY (`user_id`);
 
 --
 -- 在导出的表使用AUTO_INCREMENT
@@ -292,6 +310,12 @@ ALTER TABLE `user_activity_log`
 ALTER TABLE `user_progress`
   ADD CONSTRAINT `user_progress_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE,
   ADD CONSTRAINT `user_progress_ibfk_2` FOREIGN KEY (`section_id`) REFERENCES `tutorial_section` (`section_id`) ON DELETE CASCADE;
+
+--
+-- 限制表 `user_settings`
+--
+ALTER TABLE `user_settings`
+  ADD CONSTRAINT `user_settings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

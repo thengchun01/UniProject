@@ -110,6 +110,7 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
                         <div id="playhead" class="playhead" hidden></div>
                         <div id="staff-container"></div>
                     </div>
+                    <button id="sheet-follow-btn" class="sheet-follow-btn" type="button" aria-label="Jump to latest note" title="Jump to latest note" hidden>→</button>
                 </div>
             </section>
 
@@ -229,15 +230,33 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
     <div class="modal modal-wide">
         <button type="button" class="kb-modal-close" aria-label="Close keyboard binds" title="Close" style="position:absolute; top:8px; right:8px; z-index:1; min-width:44px; min-height:44px; padding:0; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; font-size:24px; line-height:1; cursor:pointer; color:var(--studio-muted);"><span aria-hidden="true" style="pointer-events:none;">&times;</span></button>
         <h2>Configure Keyboard Binds</h2>
-        <p class="kb-hint">One row per octave. Click a field, then press a computer key to bind it — Backspace clears it.</p>
+        <div class="kb-preset-row" role="radiogroup" aria-label="Keybind preset">
+            <label class="kb-preset"><input type="radio" name="kb-preset" value="single"> Preset 1 · Single-hand</label>
+            <label class="kb-preset"><input type="radio" name="kb-preset" value="double"> Preset 2 · Two-hand</label>
+            <label class="kb-preset"><input type="radio" name="kb-preset" value="custom"> Preset 3 · Custom</label>
+        </div>
+        <p class="kb-hint">Preset 1 covers C4–B4 on the home row; Preset 2 spans C3–B4 across two hands. Built-in presets are fixed — switch to Custom to make your own. Click a field, press a key (Backspace clears; Tab, Shift, Esc and F-keys can't be bound), then press Save to keep changes.</p>
         <div id="keybinds-grid" class="keybinds-grid"></div>
         <div class="modal-actions">
-            <button class="btn secondary modal-reset-left" id="btn-keybinds-reset" type="button">Reset Default</button>
+            <button class="btn secondary modal-reset modal-reset-left" id="btn-keybinds-reset" type="button" title="Load factory binds from a preset into Custom">Load Preset</button>
             <button class="btn secondary" id="btn-keybinds-cancel" type="button">Cancel</button>
             <button class="btn primary" id="btn-keybinds-save" type="button">Save</button>
         </div>
     </div>
 </div>
+
+<dialog class="logout-confirm-dialog" id="keybindsResetDialog" aria-labelledby="keybindsResetTitle">
+    <div class="logout-confirm-content">
+        <p class="logout-confirm-eyebrow">KEYBINDS</p>
+        <h2 id="keybindsResetTitle">Load preset into Custom?</h2>
+        <p>Load factory binds from which preset? Your custom binds will be replaced.</p>
+        <div class="logout-confirm-actions">
+            <button class="logout-confirm-submit" type="button" data-reset-preset="single">Preset 1 · Single-hand</button>
+            <button class="logout-confirm-submit" type="button" data-reset-preset="double">Preset 2 · Two-hand</button>
+            <button class="logout-confirm-cancel" type="button" data-reset-cancel>Cancel</button>
+        </div>
+    </div>
+</dialog>
 
 <div class="modal-overlay" id="modal-multitrack">
     <div class="modal">

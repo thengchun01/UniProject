@@ -19,11 +19,11 @@
 
 <button id="scroll-top-btn" type="button" aria-label="Back to top" title="Back to top">↑</button>
 
-<script src="<?php echo e(url_path('assets/js/main.js')); ?>"></script>
-<script src="<?php echo e(url_path('assets/js/midi-manager.js')); ?>"></script>
-<script src="<?php echo e(url_path('assets/js/piano-core.js')); ?>"></script>
-<script src="<?php echo e(url_path('assets/js/piano.js')); ?>"></script>
-<script src="<?php echo e(url_path('assets/js/user-widget.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/main.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/main.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/midi-manager.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/midi-manager.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/piano-core.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/piano-core.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/piano.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/piano.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/user-widget.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/user-widget.js')); ?>"></script>
 
 </body>
 </html>

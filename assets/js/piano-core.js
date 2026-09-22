@@ -167,12 +167,15 @@
 
         if (!container.dataset.coreKeyBound) {
             container.dataset.coreKeyBound = "1";
+            // Shared preset map (tutorial default "double") so the chosen
+            // preset plays the same on every page.
+            const keybindMap = getKeybindMap("double");
             document.addEventListener("keydown", async event => {
                 if (!document.body.contains(container)) return;
                 if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
-                
+
                 const key = event.key.toLowerCase();
-                const midi = KEYBOARD_MAP[key];
+                const midi = keybindMap[key];
                 if (midi !== undefined && midi >= start && midi <= end) {
                     event.preventDefault();
                     if (!activeMouseNotes.has(midi)) {
@@ -185,7 +188,7 @@
             document.addEventListener("keyup", event => {
                 if (!document.body.contains(container)) return;
                 const key = event.key.toLowerCase();
-                const midi = KEYBOARD_MAP[key];
+                const midi = keybindMap[key];
                 if (midi !== undefined && midi >= start && midi <= end) {
                     event.preventDefault();
                     if (activeMouseNotes.has(midi)) {
@@ -223,6 +226,110 @@
         'tab': 48, '1': 49, 'q': 50, '2': 51, 'w': 52, 'e': 53, '4': 54, 'r': 55, '5': 56, 't': 57, '6': 58, 'y': 59,
         'u': 60, '8': 61, 'i': 62, '9': 63, 'o': 64, 'p': 65, '-': 66, '[': 67, '=': 68, ']': 69, 'backspace': 70, '\\': 71
     };
+
+    /* ── Shared keybind presets (one map for every page) ────────────── */
+    // single: one-hand home-row map (C4–B4), the piano page default.
+    // double: two-hand chromatic map (C3–B4), the tutorial default.
+    // custom: the user's own map from synced user settings.
+    const KEYBIND_PRESETS = {
+        single: {
+            c: 60, f: 61, v: 62, g: 63, b: 64, n: 65,
+            j: 66, m: 67, k: 68, ",": 69, l: 70, ".": 71
+        },
+        double: { ...KEYBOARD_MAP }
+    };
+    const KEYBIND_PRESET_KEY = "pianoKeybindPreset";
+    const KEYBIND_PENDING_KEY = "pianoKeybindsPending";
+
+    function cleanKeybindMap(source) {
+        const cleaned = {};
+        if (!source || typeof source !== "object") return cleaned;
+        Object.entries(source).forEach(([key, midi]) => {
+            const note = Number(midi);
+            if (typeof key === "string" && key.length >= 1 && Number.isInteger(note) && note >= 21 && note <= 108) {
+                cleaned[key] = note;
+            }
+        });
+        return cleaned;
+    }
+
+    // Explicit user choice on this browser, else the synced server choice.
+    function getKeybindPresetId() {
+        try {
+            const id = localStorage.getItem(KEYBIND_PRESET_KEY);
+            if (id === "single" || id === "double" || id === "custom") return id;
+        } catch (e) {}
+        try {
+            const serverId = window.PSM_CONFIG?.userSettings?.keybindPreset;
+            if (window.PSM_CONFIG?.isLoggedIn && (serverId === "single" || serverId === "double" || serverId === "custom")) {
+                return serverId;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    function setKeybindPresetId(id) {
+        try {
+            if (id === "single" || id === "double" || id === "custom") localStorage.setItem(KEYBIND_PRESET_KEY, id);
+            else localStorage.removeItem(KEYBIND_PRESET_KEY);
+        } catch (e) {}
+        return getKeybindPresetId();
+    }
+
+    function markKeybindsPending() {
+        try { localStorage.setItem(KEYBIND_PENDING_KEY, "1"); } catch (e) {}
+    }
+
+    function clearKeybindsPending() {
+        try { localStorage.removeItem(KEYBIND_PENDING_KEY); } catch (e) {}
+    }
+
+    function getCustomKeybinds() {
+        // A locally saved map whose push never confirmed (e.g. saved then
+        // navigated away before the request finished) is fresher than
+        // anything the server has — prefer it until a push succeeds.
+        try {
+            if (localStorage.getItem(KEYBIND_PENDING_KEY) === "1") {
+                const stored = localStorage.getItem("pianoKeyBinds");
+                if (stored) {
+                    const parsed = JSON.parse(stored);
+                    if (parsed && typeof parsed === "object" && Object.keys(parsed).length) return parsed;
+                }
+            }
+        } catch (e) {}
+        // Logged-in users take the server copy when one exists (server wins).
+        try {
+            if (window.PSM_CONFIG?.isLoggedIn) {
+                const cleaned = cleanKeybindMap(window.PSM_CONFIG?.userSettings?.keybinds);
+                if (Object.keys(cleaned).length) {
+                    try { localStorage.setItem("pianoKeyBinds", JSON.stringify(cleaned)); } catch (e) {}
+                    return cleaned;
+                }
+            }
+        } catch (e) {}
+        try {
+            const stored = localStorage.getItem("pianoKeyBinds");
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (parsed && typeof parsed === "object") return parsed;
+            }
+        } catch (e) {}
+        return null;
+    }
+
+    // Resolve the computer-keyboard map every page plays with. pageDefault
+    // ("single" on the piano page, "double" in tutorials) applies until the
+    // user explicitly picks a preset, which then wins on every page.
+    function getKeybindMap(pageDefault) {
+        const fallback = pageDefault === "double" ? "double" : "single";
+        const id = getKeybindPresetId() || fallback;
+        if (id === "custom") {
+            const custom = getCustomKeybinds();
+            if (custom && Object.keys(custom).length) return custom;
+            return { ...KEYBIND_PRESETS.single };
+        }
+        return { ...(KEYBIND_PRESETS[id] || KEYBIND_PRESETS[fallback]) };
+    }
 
     function renderStaff(container, notes, options) {
         if (!container) return [];
@@ -494,6 +601,7 @@
         END_NOTE,
         NOTE_NAMES,
         DEFAULT_KEY_MAP,
+        KEYBIND_PRESETS,
         create,
         createPianoKeys,
         renderStaff,
@@ -504,6 +612,13 @@
         loadKeyMap,
         saveKeyMap,
         syncKeySizing,
+        cleanKeybindMap,
+        markKeybindsPending,
+        clearKeybindsPending,
+        getKeybindPresetId,
+        setKeybindPresetId,
+        getCustomKeybinds,
+        getKeybindMap,
         getSynth: () => synth
     };
 })();

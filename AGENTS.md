@@ -299,6 +299,10 @@ Password: blank (common XAMPP default)
 
 The actual values must always come from the local `includes/config.php` configuration. Never assume production credentials.
 
+Per-user client preferences (e.g. piano keybinds) live in `user_settings.settings_json` as a version-tolerant JSON document (`{keybinds: {...}, keybindPreset: "single"|"double"|"custom"}`), written via `api/save_settings.php` and exposed read-only through `PSM_CONFIG.userSettings`. Browser `localStorage` remains the fast working copy; for logged-in users the server copy wins on load (so stale offline maps never survive logout/login), while guests and empty server docs fall back to local/defaults. Saves mark a pending flag cleared only by a confirmed push (sent with `keepalive` so quick navigation can't abort it), so an unconfirmed local write always beats the older server copy. Extend the same JSON document for new preferences instead of adding columns.
+
+Computer-keyboard maps are centralized in `assets/js/piano-core.js` (`KEYBIND_PRESETS` + `getKeybindMap()`), so tutorial, piano, and game pages resolve the same map: page defaults (single-hand on piano, two-hand in tutorials) apply until the user picks a preset, which then wins everywhere. The piano-page keybind modal edits the Custom map and switches to it on save.
+
 ### Database rules for agents
 
 - Read the active schema before writing SQL.
@@ -347,6 +351,8 @@ Do not copy a large header/footer implementation into every page.
 ### URL generation
 
 The project uses a shared URL/base-path approach in its existing architecture. Prefer the existing `BASE_URL` / URL helper conventions where available instead of hard-coding deployment-specific paths.
+
+Shared CSS/JS includes carry a `?v=filemtime(...)` cache-buster so browsers and CDNs fetch fresh assets after each change; preserve the version parameter when editing asset tags.
 
 ### Sessions
 

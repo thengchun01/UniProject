@@ -93,3 +93,50 @@ Status: SOLVED (22/09/2026)
 - Layout rework (22/09/2026): converted the full-width strips into octave cards, 4 per row (2 on tablet, 1 on phone), each card stacking its keys as roomy full-width rows with piano-style note badges (dark for black keys). Same input[data-midi] contract, so Save/Reset/Cancel logic untouched. Status: SOLVED.
 - Horizontal restore (22/09/2026): vertical stacks were harder to read, so each octave is a horizontal piano strip again (full width, keys left-to-right like a real piano), keeping the roomy 1020px dialog, 112px strips, and larger labels/fields. Same input[data-midi] contract; dead card-list code fully removed. Verified: node --check passed, CSS braces balanced, no orphaned classes, git diff --check clean. Status: SOLVED.
 - Slim-down (22/09/2026): keys looked too fat because 7 whites stretched across the full dialog width, so strips now sit two per row with white keys capped at 70px and centered (88px tall, closer to real piano proportions); black-key boundary math rechecked exact for full and partial octaves. Single column under 640px. CSS-only change. Verified: CSS braces balanced, git diff --check clean. Status: SOLVED.
+
+
+12. Piano page, when the user click on piano keys, and draw the notes, can you make the display follow the latest note, unless user scroll and add a right arrow
+
+Status: SOLVED (22/09/2026)
+- Fix: the sheet auto-follows the latest drawn note (smooth, reduced-motion aware); a debounced scroll listener pauses following on manual scroll and reveals a → jump button (#sheet-follow-btn in piano.php) that restores it. Programmatic scrolls are timestamp-guarded so the button never flickers. Follow resets on piano reset.
+- Verified: piano.js passes node --check; git diff --check clean.
+
+13. When the logged in user enter the keybind, and logout, the user's key bind remain, and log in back into his account, I want to keep the key-bind setting from the server instead of the offline.
+    1. Can you make that there is a different between unregistered key and registered key, so it is more intuitive, and maybe a red color indicator when there is two overlapping keybind
+
+Status: SOLVED (22/09/2026)
+- Fix: loadKeyMap() now prefers the server copy whenever the user is logged in and a valid non-empty server doc exists (validated + persisted locally); guests and empty server docs keep local/defaults. This also fixes cross-device and account-switch staleness.
+- 13.1: refreshBindStates() marks bound fields with an accent border, empty fields stay neutral, and duplicate binds get a red border/glow, red note label, and tooltip — refreshed live on every keystroke via the shared keydown handler and a grid-level input listener.
+- Verified: 9 assertions against the real functions passed (server-wins, local fallback, guest, dup flag/tooltip/clearing); piano.js passes node --check; git diff --check clean.
+
+14. store user's personal configuration such as piano keybind preset — cache or database?
+
+Status: SOLVED (22/09/2026)
+- Decision: hybrid. localStorage stays the fast working copy (guests/offline included); new user_settings table (user_id PK, settings_json, updated_at, FK cascade) persists {keybinds:{...}} per account for cross-device sync.
+- Implemented: user_settings added to database/psm_schema.sql and live psm_2; api/save_settings.php (auth + shape/range validation + prepared upsert); header.php exposes the doc via PSM_CONFIG.userSettings (null-safe when logged out or migration missing); piano.js seeds empty browsers from server and pushes on keybind Save/Reset.
+- Verified: upsert round-trip executed live against psm_2 (rolled back, 0 rows left); 6 pull-logic assertions against the real loadKeyMap() passed; piano.js passes node --check; git diff --check clean.
+
+13. keybind, can you make the keybind synchronize across everypage including the tutorial, piano and so on, and also make three preset between preset 1 (single hand) for the "cfv..." as for the current piano page, preset 2 for the "tab, 1, q, ..." and preset 3 custom following the user settings
+    1. When I enter the key for the keybind, but it doesn't registered the key into it
+    2. preset 1, 2 doesn't effect the keybind settings and they are both the same as the "cfv...". And the preset 1, 2 should always be the same. And can you blur out the other option for the default preset.
+    3. When in the custom keybind, can you add the reset back to dafault option for whether for reset to preset 1 or 2 
+
+Status: SOLVED (22/09/2026)
+- Fix: presets centralized in piano-core.js (KEYBIND_PRESETS single/double + getKeybindMap()); tutorial/game/car-race keyboards resolve through it, and the piano page delegates to it. Page defaults preserved (single on piano, double in tutorials) until the user picks a preset, which then wins on every page via localStorage. Piano keybind modal gained a preset radio (grid always edits Custom; Save/Reset switch to and use Custom); preset id syncs through user_settings.keybindPreset with server enum validation.
+- Verified: 11 assertions against the real engine passed (defaults, cross-page override, server adoption, custom fallback, invalid rejection); piano-core.js and piano.js pass node --check; git diff --check clean.
+- Follow-ups (22/09/2026):
+  - Unassigned fields are now darkened (dark inset field + dimmed note) in every preset view via a new is-empty state in refreshBindStates(); bound keeps the accent border, duplicates keep red.
+  - Reset collapsed back to one Reset to Default button opening a styled popup (native dialog reusing the logout-confirm styles, with backdrop-click and Cancel) offering Preset 1 · Single-hand / Preset 2 · Two-hand with full names; choice restores Custom and switches to it.
+  - Shadow-veil rework (22/09/2026): replaced the dark input fields with a pointer-events:none shadow veil over each entire unassigned key (matching key corner radii), so fields stay clickable beneath and the veil lifts on focus-within; bound and duplicate treatments unchanged and never co-occur with it.
+  - Load Preset no-op fix (22/09/2026): root cause was ordering — Save/Reset wrote locally then re-read from the server, so the stale server copy instantly clobbered the fresh change for logged-in users (Save was affected too). Removed the post-write re-reads; Reset now awaits the push before rebuilding the grid. Also added ?v=filemtime cache-busters to all shared CSS/JS includes (same stale-asset hazard as before) and documented the convention in AGENTS.md.
+  - Stale modal after save fix (22/09/2026): playing worked but the reopened modal showed old binds until hard refresh, because PSM_CONFIG.userSettings is a page-load snapshot. pushSettingsToServer() now refreshes that in-page snapshot with the saved payload, so later server-first reads see the fresh copy. NOTE: the deployed host also needs the user_settings table (only local psm_2 has it) or pushes fail silently there.
+  - Lost binds after navigation fix (22/09/2026): saving then quickly navigating aborted the push, and the next page load let the older server copy clobber the fresh local map. Saves now mark a pending flag (cleared only by a confirmed push) that makes the unconfirmed local map win, and pushes use keepalive so navigation can't abort them. Login-time server-wins behavior is unchanged.
+  - Push success detection fix (22/09/2026): the push treated any HTTP response (even 404/500 pages) as success, hiding real failures and wrongly clearing the pending flag. It now requires response.ok plus data.success; the pending flag survives genuine failures so binds persist across pages regardless.
+- Verified: 4 pending-flag assertions against the real engine passed plus the earlier 11 preset assertions re-passed; both JS files pass node --check; git diff --check clean.
+  - Rephrase (22/09/2026): Reset to Default is now Load Preset, since the popup loads factory binds from Preset 1/2 into Custom rather than restoring a single default.
+- Verified: piano.js passes node --check; CSS braces balanced; no stale reset-button references; git diff --check clean.
+- Follow-ups (22/09/2026):
+  - Key entry: unbindable keys (Shift, Esc, F-keys, arrows) now flash the field red instead of silently doing nothing; hint text documents Save requirement and unbindable keys. (Global piano handlers already ignore INPUT focus, so typing never sounds notes.)
+  - Grid reflects the active preset: built-in presets render blurred read-only (immutable, always identical) with Save disabled; only Custom is editable. Switching presets rebuilds the grid, with a confirm guard if Custom has unsaved edits.
+  - Reset choice: split into Reset to P1 / Reset to P2 (danger zone left), each with its own confirm; both restore Custom and switch to it.
+- Verified: piano.js passes node --check; no stale reset-button references; git diff --check clean.

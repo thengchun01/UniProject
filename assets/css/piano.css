@@ -474,6 +474,29 @@
     padding:30px 8px 8px;
 }
 
+.sheet-follow-btn{
+    position:absolute;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    z-index:6;
+    width:38px;
+    height:38px;
+    border-radius:50%;
+    padding:0;
+    font-size:18px;
+    line-height:1;
+    background:var(--studio-panel);
+    border:1px solid var(--studio-border);
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+    cursor:pointer;
+}
+
+.sheet-follow-btn:hover{
+    transform:translateY(-50%);
+    background:var(--studio-panel-2);
+}
+
 #staff-container{
     display:inline-block;
     color:#111;
@@ -865,21 +888,24 @@
     width:min(760px,96vw);
 }
 
-/* Keybinds modal: quarantine destructive Reset on the left, keep
+/* Keybinds modal: quarantine destructive Resets on the left, keep
    Cancel + Save grouped on the right as the dialog resolution pair */
-#modal-keybinds .modal-reset-left{
-    margin-right:auto;
+#modal-keybinds .modal-reset{
     background:transparent;
     border-color:var(--studio-border);
     color:var(--studio-danger);
 }
 
-#modal-keybinds .modal-reset-left:hover{
+#modal-keybinds .modal-reset:hover{
     background:rgba(220,38,38,.08);
     border-color:var(--studio-danger);
     color:var(--studio-danger);
     box-shadow:none;
     transform:none;
+}
+
+#modal-keybinds .modal-reset-left{
+    margin-right:auto;
 }
 
 /* Keybinds modal: roomier dialog for the octave strips */
@@ -957,6 +983,37 @@
 }
 
 /* Keybinds modal: one horizontal piano strip per octave */
+.kb-preset-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-bottom:10px;
+}
+
+.kb-preset{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:7px 12px;
+    border:1px solid var(--studio-border);
+    border-radius:20px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--studio-muted);
+    cursor:pointer;
+}
+
+.kb-preset:has(input:checked){
+    border-color:var(--studio-accent);
+    color:var(--studio-text);
+    background:rgba(124,58,237,.08);
+}
+
+.kb-preset input{
+    accent-color:var(--studio-accent);
+    margin:0;
+}
+
 .kb-hint{
     margin:0 0 12px;
     color:var(--studio-muted);
@@ -1069,6 +1126,65 @@
     outline:none;
     border-color:var(--studio-accent);
     box-shadow:0 0 0 3px rgba(124,58,237,.18);
+}
+
+.kb-key input.kb-invalid{
+    border-color:var(--studio-danger);
+    box-shadow:0 0 0 3px rgba(220,38,38,.25);
+}
+
+#keybinds-grid.viewing-builtin .kb-strip{
+    opacity:.8;
+}
+
+#modal-keybinds .btn:disabled{
+    opacity:.45;
+    cursor:not-allowed;
+}
+
+.kb-key.is-bound input{
+    border-color:var(--studio-accent);
+}
+
+/* Unassigned keys: shadow veil over the whole key. The veil ignores
+   pointer events so the bind field beneath stays fully clickable, and it
+   lifts while a field has focus so assignment is never obscured. */
+.kb-white.is-empty{
+    position:relative;
+}
+
+.kb-key.is-empty::after{
+    content:'';
+    position:absolute;
+    inset:0;
+    background:rgba(17,17,17,.45);
+    pointer-events:none;
+    transition:opacity .2s ease;
+}
+
+.kb-white.is-empty::after{
+    border-radius:0 0 5px 5px;
+}
+
+.kb-black.is-empty::after{
+    border-radius:0 0 4px 4px;
+}
+
+.kb-key.is-empty:focus-within::after{
+    opacity:0;
+}
+
+.kb-key.is-dup input{
+    border-color:var(--studio-danger);
+    box-shadow:0 0 0 3px rgba(220,38,38,.18);
+}
+
+.kb-key.is-dup .kb-note{
+    color:var(--studio-danger);
+}
+
+.kb-black.is-dup .kb-note{
+    color:#ff8a8a;
 }
 
 /* Game page */

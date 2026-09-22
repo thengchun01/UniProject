@@ -1,6 +1,22 @@
 <?php
     require_once __DIR__ . '/config.php';
     $currentUser = current_user();
+    // Server-synced personal settings (one cheap PK lookup; null when logged
+    // out, on DB error, or when the user_settings migration is not applied).
+    $serverSettingsJson = 'null';
+    if ($currentUser && is_database_connected()) {
+        try {
+            $settingsStmt = db()->prepare('SELECT settings_json FROM user_settings WHERE user_id = :id');
+            $settingsStmt->execute(['id' => (int) $currentUser['user_id']]);
+            $settingsRow = $settingsStmt->fetch(PDO::FETCH_ASSOC);
+            $settingsData = json_decode($settingsRow['settings_json'] ?? '', true);
+            if (is_array($settingsData)) {
+                $serverSettingsJson = json_encode($settingsData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
+            }
+        } catch (Throwable $e) {
+            $serverSettingsJson = 'null';
+        }
+    }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -9,9 +25,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?php echo e(SITE_NAME); ?></title>
 
-<link rel="stylesheet" href="<?php echo BASE_URL . 'assets/css/style.css'; ?>">
-<link rel="stylesheet" href="<?php echo BASE_URL . 'assets/css/user-widget.css'; ?>">
-<link rel="stylesheet" href="<?php echo BASE_URL . 'assets/css/piano.css'; ?>">
+<link rel="stylesheet" href="<?php echo e(BASE_URL . 'assets/css/style.css?v=' . filemtime(__DIR__ . '/../assets/css/style.css')); ?>">
+<link rel="stylesheet" href="<?php echo e(BASE_URL . 'assets/css/user-widget.css?v=' . filemtime(__DIR__ . '/../assets/css/user-widget.css')); ?>">
+<link rel="stylesheet" href="<?php echo e(BASE_URL . 'assets/css/piano.css?v=' . filemtime(__DIR__ . '/../assets/css/piano.css')); ?>">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@tonejs/midi@2.0.28"></script>
@@ -19,7 +35,8 @@
 <script>
 window.PSM_CONFIG = {
     isLoggedIn: <?php echo is_logged_in() ? 'true' : 'false'; ?>,
-    apiBase: "<?php echo e(url_path('api')); ?>"
+    apiBase: "<?php echo e(url_path('api')); ?>",
+    userSettings: <?php echo $serverSettingsJson; ?>
 };
 </script>
 </head>
