@@ -9,6 +9,8 @@ Interface updates in 0.4.1:
 - Reliable element-level reveal animations for headings, text, actions, cards, and table rows
 - Animation fallback keeps content visible if a page is still loading other scripts
 - Shared responsive footer and motion across pages that respect reduced-motion preferences
+- Homepage separates non-link information cards from linked practice features
+- Logout links open a styled confirmation dialog before ending the session
 - Updated account login, registration, and signed-in dashboard presentation
 - Piano is the consistent visible label for the browser-based piano feature
 

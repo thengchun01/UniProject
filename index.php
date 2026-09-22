@@ -18,35 +18,65 @@
 </section>
 
 <div class="container">
-    <section class="data-section" data-reveal="rise">
-        <h2 class="section-title">Learning Journey</h2>
-        <div class="card-grid">
-            <div class="card step-card" data-reveal="jump" data-reveal-delay="0">
-                <div class="step-number">1</div>
-                <h3>Learn Piano Basics</h3>
-                <p>Understand piano keys, note names, octaves, and keyboard layout.</p>
+    <div class="homepage-information">
+        <section class="data-section info-section journey-section" data-reveal="rise">
+            <p class="section-kicker">YOUR PATH</p>
+            <h2 class="section-title">Learning Journey</h2>
+            <p class="section-intro">A simple progression from first notes to confident practice.</p>
+            <div class="card-grid journey-grid">
+                <div class="card info-card step-card" data-reveal="jump" data-reveal-delay="0">
+                    <div class="step-number">1</div>
+                    <h3>Learn Piano Basics</h3>
+                    <p>Understand piano keys, note names, octaves, and keyboard layout.</p>
+                </div>
+                <div class="card info-card step-card" data-reveal="jump" data-reveal-delay="100">
+                    <div class="step-number">2</div>
+                    <h3>Read Music Notes</h3>
+                    <p>Learn how notes are displayed on musical staffs and improve recognition.</p>
+                </div>
+                <div class="card info-card step-card" data-reveal="jump" data-reveal-delay="200">
+                    <div class="step-number">3</div>
+                    <h3>Practice Songs</h3>
+                    <p>Apply your knowledge through beginner-friendly songs.</p>
+                </div>
+                <div class="card info-card step-card" data-reveal="jump" data-reveal-delay="300">
+                    <div class="step-number">4</div>
+                    <h3>Challenge Yourself</h3>
+                    <p>Improve speed and accuracy through interactive piano games.</p>
+                </div>
             </div>
-            <div class="card step-card" data-reveal="jump" data-reveal-delay="100">
-                <div class="step-number">2</div>
-                <h3>Read Music Notes</h3>
-                <p>Learn how notes are displayed on musical staffs and improve recognition.</p>
-            </div>
-            <div class="card step-card" data-reveal="jump" data-reveal-delay="200">
-                <div class="step-number">3</div>
-                <h3>Practice Songs</h3>
-                <p>Apply your knowledge through beginner-friendly songs.</p>
-            </div>
-            <div class="card step-card" data-reveal="jump" data-reveal-delay="300">
-                <div class="step-number">4</div>
-                <h3>Challenge Yourself</h3>
-                <p>Improve speed and accuracy through interactive piano games.</p>
-            </div>
-        </div>
-    </section>
+        </section>
 
-    <section class="data-section" data-reveal="rise">
+        <section class="data-section info-section benefits-section" data-reveal="rise">
+            <p class="section-kicker">BUILT FOR CONSISTENT PRACTICE</p>
+            <h2 class="section-title">Why Use This Platform?</h2>
+            <p class="section-intro">Helpful context about the experience, not another destination to click.</p>
+            <div class="card-grid benefits-grid">
+                <div class="card info-card" data-reveal="jump" data-reveal-delay="0">
+                    <h3>Interactive Learning</h3>
+                    <p>Learn through hands-on practice rather than only reading theory.</p>
+                </div>
+                <div class="card info-card" data-reveal="jump" data-reveal-delay="100">
+                    <h3>Browser Based</h3>
+                    <p>Practice anywhere without installing additional software.</p>
+                </div>
+                <div class="card info-card" data-reveal="jump" data-reveal-delay="200">
+                    <h3>MIDI Support</h3>
+                    <p>Import MIDI files and interact with songs directly in the system.</p>
+                </div>
+                <div class="card info-card" data-reveal="jump" data-reveal-delay="300">
+                    <h3>Progress Tracking</h3>
+                    <p>Save learning activities and monitor your improvement over time.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <section class="data-section feature-section" data-reveal="rise">
+        <p class="section-kicker">PRACTICE TOOLS</p>
         <h2 class="section-title">Explore Features</h2>
-        <div class="card-grid">
+        <p class="section-intro">Choose a destination and keep building your skills.</p>
+        <div class="card-grid feature-grid">
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="0">
                 <div class="placeholder">
                     <img src="https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&q=80&w=500" alt="Tutorials">
@@ -55,7 +85,6 @@
                 <p>Follow structured lessons that teach piano fundamentals step by step.</p>
                 <a href="tutorial.php" class="text-button">Open Tutorials</a>
             </div>
-
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="100">
                 <div class="placeholder">
                     <img src="https://images.unsplash.com/photo-1507838153428-9d983cbc9f41?auto=format&fit=crop&q=80&w=500" alt="Song Library">
@@ -64,7 +93,6 @@
                 <p>Practice piano pieces and learn through guided song exercises.</p>
                 <a href="songs.php" class="text-button">Browse Songs</a>
             </div>
-
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="200">
                 <div class="placeholder">
                     <img src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=500" alt="Piano">
@@ -73,7 +101,6 @@
                 <p>Play directly in your browser using your keyboard, mouse, or MIDI device.</p>
                 <a href="piano.php" class="text-button">Start Playing</a>
             </div>
-
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="300">
                 <div class="placeholder">
                     <img src="https://images.unsplash.com/photo-1611339555312-e607c8352fd7?auto=format&fit=crop&q=80&w=500" alt="Learning Games">
@@ -81,28 +108,6 @@
                 <h3>Learning Games</h3>
                 <p>Test note recognition and strengthen your understanding through challenges.</p>
                 <a href="game.php" class="text-button">Play Games</a>
-            </div>
-        </div>
-    </section>
-
-    <section class="data-section bg-light" data-reveal="rise">
-        <h2 class="section-title">Why Use This Platform?</h2>
-        <div class="card-grid">
-            <div class="card" data-reveal="jump" data-reveal-delay="0">
-                <h3>Interactive Learning</h3>
-                <p>Learn through hands-on practice rather than only reading theory.</p>
-            </div>
-            <div class="card" data-reveal="jump" data-reveal-delay="100">
-                <h3>Browser Based</h3>
-                <p>Practice anywhere without installing additional software.</p>
-            </div>
-            <div class="card" data-reveal="jump" data-reveal-delay="200">
-                <h3>MIDI Support</h3>
-                <p>Import MIDI files and interact with songs directly in the system.</p>
-            </div>
-            <div class="card" data-reveal="jump" data-reveal-delay="300">
-                <h3>Progress Tracking</h3>
-                <p>Save learning activities and monitor your improvement over time.</p>
             </div>
         </div>
     </section>

@@ -40,7 +40,7 @@ window.PSM_CONFIG = {
         <a href="<?php echo BASE_URL . 'game.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'game.php' ? 'class="active"' : ''; ?>>Game</a>
         <a href="<?php echo BASE_URL . 'account.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'account.php' ? 'class="active"' : ''; ?>>Account</a>
         <?php if ($currentUser): ?>
-            <a href="<?php echo BASE_URL . 'logout.php'; ?>">Logout</a>
+            <a href="<?php echo BASE_URL . 'logout.php'; ?>" data-logout-confirm>Logout</a>
         <?php endif; ?>
     </div>
 </nav>
@@ -129,7 +129,7 @@ if (!$_ufw_hide):
                 <span class="ufw-icon">🎹</span> Tutorials
             </a>
             <div class="ufw-divider" style="margin:4px -18px 4px;"></div>
-            <a href="<?= BASE_URL ?>logout.php" class="ufw-action-btn danger">
+            <a href="<?= BASE_URL ?>logout.php" class="ufw-action-btn danger" data-logout-confirm>
                 <span class="ufw-icon">🚪</span> Log out
             </a>
         </div>
@@ -164,6 +164,20 @@ if (!$_ufw_hide):
     endif; // logged in vs guest
 endif; // !$_ufw_hide
 ?>
+
+<?php if ($currentUser): ?>
+<dialog class="logout-confirm-dialog" id="logoutConfirmDialog" aria-labelledby="logoutConfirmTitle">
+    <div class="logout-confirm-content">
+        <p class="logout-confirm-eyebrow">ACCOUNT</p>
+        <h2 id="logoutConfirmTitle">Log out?</h2>
+        <p>Are you sure you want to end this session?</p>
+        <div class="logout-confirm-actions">
+            <button class="logout-confirm-cancel" type="button" data-logout-cancel>Stay Logged In</button>
+            <a class="logout-confirm-submit" href="<?= e(url_path('logout.php')); ?>">Log Out</a>
+        </div>
+    </div>
+</dialog>
+<?php endif; ?>
 
 <!-- Mobile menu toggle JavaScript -->
 <script>

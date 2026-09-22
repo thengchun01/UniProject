@@ -430,6 +430,85 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateY(-2px);
 }
 
+/* Shared logout confirmation dialog */
+.logout-confirm-dialog {
+    width: min(420px, calc(100vw - 32px));
+    padding: 0;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: var(--surface-color);
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.22);
+}
+
+.logout-confirm-dialog::backdrop {
+    background: rgba(17, 17, 17, 0.5);
+    backdrop-filter: blur(3px);
+}
+
+.logout-confirm-content {
+    padding: 32px;
+}
+
+.logout-confirm-eyebrow {
+    margin-bottom: 8px;
+    color: var(--primary-color);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.logout-confirm-content h2 {
+    margin-bottom: 10px;
+    font-size: 28px;
+}
+
+.logout-confirm-content > p:not(.logout-confirm-eyebrow) {
+    color: var(--text-muted);
+}
+
+.logout-confirm-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 28px;
+}
+
+.logout-confirm-cancel,
+.logout-confirm-submit {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.logout-confirm-cancel {
+    border: 1px solid var(--border-color);
+    background: var(--surface-color);
+    color: var(--text-color);
+}
+
+.logout-confirm-cancel:hover {
+    border-color: var(--text-color);
+    background: var(--surface-color);
+    box-shadow: none;
+    transform: none;
+}
+
+.logout-confirm-submit {
+    background: var(--text-color);
+    color: #fff;
+}
+
+.logout-confirm-submit:hover {
+    background: var(--primary-color);
+    color: #fff;
+    transform: translateY(-1px);
+}
+
 /* ============================================ */
 /* RESPONSIVE                                  */
 /* ============================================ */
@@ -483,6 +562,15 @@ h1, h2, h3, h4, h5, h6 {
 
     .site-footer-links {
         gap: 14px;
+    }
+
+    .logout-confirm-actions {
+        flex-direction: column-reverse;
+    }
+
+    .logout-confirm-cancel,
+    .logout-confirm-submit {
+        width: 100%;
     }
 }
 

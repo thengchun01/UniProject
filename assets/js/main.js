@@ -154,3 +154,33 @@ window.addEventListener('pageshow', (event) => {
         initializeRevealAnimations();
     }
 });
+
+function initializeLogoutConfirmation() {
+    const dialog = document.getElementById('logoutConfirmDialog');
+
+    if (!dialog || typeof dialog.showModal !== 'function') {
+        return;
+    }
+
+    document.querySelectorAll('[data-logout-confirm]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (!dialog.open) {
+                dialog.showModal();
+            }
+        });
+    });
+
+    dialog.querySelector('[data-logout-cancel]')?.addEventListener('click', () => dialog.close());
+    dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) {
+            dialog.close();
+        }
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeLogoutConfirmation, { once: true });
+} else {
+    initializeLogoutConfirmation();
+}

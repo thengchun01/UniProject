@@ -69,15 +69,100 @@
     background: var(--primary-hover);
 }
 
-.hero-actions .secondary-btn {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.3);
+.hero-actions a.secondary-btn {
+    background: rgba(17, 17, 17, 0.72);
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.22);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
 }
 
-.hero-actions .secondary-btn:hover {
-    background: #fff;
+.hero-actions a.secondary-btn:hover {
+    background: #fff !important;
+    color: var(--text-color) !important;
+}
+
+/* Non-link information is intentionally quieter than linked feature cards. */
+.section-kicker {
+    margin-bottom: 10px;
+    color: var(--primary-color);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+    text-align: center;
+}
+
+.section-intro {
+    max-width: 620px;
+    margin: -24px auto 42px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.info-section {
+    position: relative;
+}
+
+.homepage-information {
+    margin: 40px 0 72px;
+    padding: 0 32px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    background: #fdfcff;
+}
+
+.homepage-information .data-section {
+    padding: 64px 0;
+}
+
+.homepage-information .journey-section {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.info-section::before {
+    position: absolute;
+    top: 42px;
+    left: 0;
+    width: 4px;
+    height: 56px;
+    content: '';
+    border-radius: 4px;
+    background: var(--primary-color);
+}
+
+.info-card {
+    cursor: default;
+    background: #fafafa;
+    box-shadow: none;
+}
+
+.info-card:hover {
+    border-color: var(--border-color);
+    box-shadow: none;
+    transform: none;
+}
+
+.info-card h3 {
     color: var(--text-color);
+}
+
+.feature-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 22px;
+}
+
+.feature-section .feature-card {
+    min-width: 0;
+}
+
+.benefits-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 18px;
+}
+
+.benefits-grid .info-card {
+    border-top: 3px solid var(--border-color);
+    padding: 24px;
 }
 
 /* Learning Journey Steps */
@@ -173,6 +258,13 @@
 }
 
 /* Responsive */
+@media (max-width: 1100px) {
+    .feature-grid,
+    .benefits-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 768px) {
     .hero-content h1 {
         font-size: 40px;
@@ -184,6 +276,27 @@
     
     .step-number {
         left: 20px;
+    }
+
+    .feature-grid,
+    .benefits-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .info-section::before {
+        display: none;
+    }
+
+    .homepage-information {
+        margin: 24px 0 48px;
+        padding: 0 20px;
+    }
+}
+
+@media (max-width: 520px) {
+    .feature-grid,
+    .benefits-grid {
+        grid-template-columns: 1fr;
     }
 }
 
