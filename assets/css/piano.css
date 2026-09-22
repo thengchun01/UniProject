@@ -865,6 +865,41 @@
     width:min(760px,96vw);
 }
 
+/* Keybinds modal: quarantine destructive Reset on the left, keep
+   Cancel + Save grouped on the right as the dialog resolution pair */
+#modal-keybinds .modal-reset-left{
+    margin-right:auto;
+    background:transparent;
+    border-color:var(--studio-border);
+    color:var(--studio-danger);
+}
+
+#modal-keybinds .modal-reset-left:hover{
+    background:rgba(220,38,38,.08);
+    border-color:var(--studio-danger);
+    color:var(--studio-danger);
+    box-shadow:none;
+    transform:none;
+}
+
+/* Keybinds modal: roomier dialog for the octave strips */
+#modal-keybinds .modal-wide{
+    width:min(1020px,96vw);
+}
+
+/* Keybinds modal close button: positioning context + hit-area feedback */
+#modal-keybinds .modal{
+    position:relative;
+}
+
+#modal-keybinds .kb-modal-close:hover{
+    background:rgba(0,0,0,.06);
+}
+
+#modal-keybinds .kb-modal-close:active{
+    background:rgba(0,0,0,.12);
+}
+
 .modal h2{
     margin-bottom:12px;
 }
@@ -884,10 +919,15 @@
 
 .keybinds-grid{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(130px,1fr));
-    gap:8px;
-    max-height:52vh;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px 20px;
+    max-height:62vh;
     overflow:auto;
+    padding-right:4px;
+}
+
+@media (max-width:640px){
+    .keybinds-grid{grid-template-columns:1fr;}
 }
 
 .keybind-row{
@@ -914,6 +954,121 @@
     color:var(--studio-text);
     padding:6px;
     text-align:center;
+}
+
+/* Keybinds modal: one horizontal piano strip per octave */
+.kb-hint{
+    margin:0 0 12px;
+    color:var(--studio-muted);
+    font-size:13px;
+}
+
+.kb-octave{
+    min-width:0;
+}
+
+.kb-octave-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:6px;
+}
+
+.kb-octave-num{
+    min-width:34px;
+    height:34px;
+    padding:0 10px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:9px;
+    background:var(--studio-accent);
+    color:#fff;
+    font-weight:700;
+    font-size:15px;
+}
+
+.kb-octave-range{
+    color:var(--studio-muted);
+    font-size:13px;
+    font-family:Consolas,Monaco,monospace;
+}
+
+.kb-strip{
+    position:relative;
+    display:flex;
+    justify-content:center;
+    height:88px;
+}
+
+.kb-key{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-end;
+    gap:6px;
+    padding:8px 4px;
+    cursor:text;
+}
+
+.kb-white{
+    flex:1 1 0;
+    min-width:0;
+    max-width:70px;
+    background:var(--key-white);
+    border:1px solid #b9c0c7;
+    border-radius:0 0 5px 5px;
+}
+
+.kb-black{
+    position:absolute;
+    top:0;
+    width:9%;
+    min-width:26px;
+    height:56%;
+    transform:translateX(-50%);
+    z-index:2;
+    background:var(--key-black);
+    border-radius:0 0 4px 4px;
+    box-shadow:2px 2px 5px rgba(0,0,0,.42);
+}
+
+.kb-note{
+    font-size:11px;
+    font-weight:700;
+    font-family:Consolas,Monaco,monospace;
+    color:#607080;
+    pointer-events:none;
+}
+
+.kb-black .kb-note{
+    color:rgba(255,255,255,.75);
+}
+
+.kb-key input{
+    width:32px;
+    max-width:92%;
+    background:transparent;
+    border:1px solid var(--studio-border);
+    border-radius:6px;
+    color:var(--studio-text);
+    padding:5px 4px;
+    font-size:14px;
+    font-weight:700;
+    text-align:center;
+    text-transform:uppercase;
+    font-family:Consolas,Monaco,monospace;
+}
+
+.kb-black input{
+    border-color:rgba(255,255,255,.25);
+    color:#fff;
+}
+
+.kb-key input:focus{
+    outline:none;
+    border-color:var(--studio-accent);
+    box-shadow:0 0 0 3px rgba(124,58,237,.18);
 }
 
 /* Game page */

@@ -227,10 +227,13 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
 
 <div class="modal-overlay" id="modal-keybinds">
     <div class="modal modal-wide">
+        <button type="button" class="kb-modal-close" aria-label="Close keyboard binds" title="Close" style="position:absolute; top:8px; right:8px; z-index:1; min-width:44px; min-height:44px; padding:0; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; font-size:24px; line-height:1; cursor:pointer; color:var(--studio-muted);"><span aria-hidden="true" style="pointer-events:none;">&times;</span></button>
         <h2>Configure Keyboard Binds</h2>
+        <p class="kb-hint">One row per octave. Click a field, then press a computer key to bind it — Backspace clears it.</p>
         <div id="keybinds-grid" class="keybinds-grid"></div>
         <div class="modal-actions">
-            <button class="btn secondary" id="btn-keybinds-reset" type="button">Reset Default</button>
+            <button class="btn secondary modal-reset-left" id="btn-keybinds-reset" type="button">Reset Default</button>
+            <button class="btn secondary" id="btn-keybinds-cancel" type="button">Cancel</button>
             <button class="btn primary" id="btn-keybinds-save" type="button">Save</button>
         </div>
     </div>

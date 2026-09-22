@@ -1,4 +1,30 @@
 <?php include 'includes/header.php'; ?>
+<?php
+// Continue Journey target: last-accessed lesson section, or tutorials home.
+$resumeUrl = 'tutorial.php';
+$resumeTitle = 'Continue your lessons';
+if (!empty($currentUser) && is_database_connected()) {
+    try {
+        $resumeStmt = db()->prepare(
+            'SELECT tt.tutorial_id, up.section_id, tt.title AS topic_title
+             FROM user_progress up
+             INNER JOIN tutorial_section ts ON ts.section_id = up.section_id
+             INNER JOIN tutorial_topic tt ON tt.tutorial_id = ts.tutorial_id
+             WHERE up.user_id = :user_id
+             ORDER BY up.last_accessed DESC
+             LIMIT 1'
+        );
+        $resumeStmt->execute(['user_id' => $currentUser['user_id']]);
+        $resume = $resumeStmt->fetch(PDO::FETCH_ASSOC);
+        if ($resume) {
+            $resumeUrl = 'tutorials/lesson.php?id=' . (int) $resume['tutorial_id'] . '&section=' . (int) $resume['section_id'];
+            $resumeTitle = 'Continue: ' . $resume['topic_title'];
+        }
+    } catch (Throwable $e) {
+        $resumeUrl = 'tutorial.php';
+    }
+}
+?>
 <link rel="stylesheet" href="<?php echo e(url_path('assets/css/homepage.css') . '?v=' . filemtime(__DIR__ . '/assets/css/homepage.css')); ?>">
 
 <section class="hero-section">
@@ -11,8 +37,13 @@
             guided songs, and educational games designed for beginners.
         </p>
         <div class="hero-actions">
+            <?php if (!empty($currentUser)): ?>
+            <a href="<?php echo e($resumeUrl); ?>" title="<?php echo e($resumeTitle); ?>" class="btn primary-btn">Continue Journey</a>
+            <a href="piano.php" class="btn secondary-btn">Open Piano</a>
+            <?php else: ?>
             <a href="account.php?mode=register" class="btn primary-btn">Create an Account</a>
             <a href="account.php?mode=login" class="btn secondary-btn">Log In</a>
+            <?php endif; ?>
         </div>
     </div>
 </section>
@@ -114,12 +145,21 @@
 
     <section class="cta-section" data-reveal="jump">
         <div class="cta-content">
+            <?php if (!empty($currentUser)): ?>
+            <h2>Keep Practicing</h2>
+            <p>Continue your tutorials, practice songs, and track your piano learning journey.</p>
+            <div class="hero-actions">
+                <a href="tutorial.php" class="btn primary-btn">Continue Tutorials</a>
+                <a href="piano.php" class="btn secondary-btn">Open Piano</a>
+            </div>
+            <?php else: ?>
             <h2>Create an Account</h2>
             <p>Register an account to track tutorial progress, save activities, and monitor your piano learning journey.</p>
             <div class="hero-actions">
                 <a href="account.php?mode=register" class="btn primary-btn">Register</a>
                 <a href="account.php?mode=login" class="btn secondary-btn">Login</a>
             </div>
+            <?php endif; ?>
         </div>
     </section>
 </div>

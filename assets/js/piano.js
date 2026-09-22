@@ -832,7 +832,7 @@
             showZoomControls.timer = setTimeout(() => controls.classList.remove("visible"), 1000);
         }
 
-        function buildMainPiano(centerMidi) {
+        function buildMainPiano(centerMidi, smoothCenter) {
             createPianoKeys(ui.keyboard, {
                 start: state.octaveFold ? 60 : START_NOTE,
                 end: state.octaveFold ? 71 : END_NOTE,
@@ -845,7 +845,10 @@
                 const target = centerMidi || 60;
                 setTimeout(() => {
                     const key = ui.keyboard?.querySelector('.key[data-midi="' + target + '"]');
-                    if (key) ui.keyboard.scrollLeft = Math.max(0, key.offsetLeft - ui.keyboard.clientWidth / 2);
+                    if (!key) return;
+                    const left = Math.max(0, key.offsetLeft - ui.keyboard.clientWidth / 2);
+                    if (smoothCenter) ui.keyboard.scrollTo({ left, behavior: "smooth" });
+                    else ui.keyboard.scrollLeft = left;
                 }, 80);
             }
             updateScrollZoneLimits();
@@ -1061,6 +1064,7 @@
                     playback.currentTime = 0;
                     playback.nextIndex = 0;
                     show(ui.midiPlayerControls, true);
+                    show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
                     rebuildTrackLists();
                     renderStaff();
                     updateSongInfo();
@@ -1750,7 +1754,7 @@
                 $("view-active")?.classList.add("active-view");
             }
             setElementText(ui.dispMode, modeTitle(mode));
-            show(ui.trainControls, isPracticeMode());
+            show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
             show(ui.livePanel, isPlayMode() && state.customTrackLoaded);
             if (ui.btnPlayPause) {
                 const canUseTransport = !!state.playbackNotes.length && !isPlayMode();
@@ -2126,24 +2130,66 @@
             grid.innerHTML = "";
             const mappedByMidi = {};
             Object.entries(currentKeyMap).forEach(([key, midi]) => { mappedByMidi[midi] = key; });
-            for (let midi = START_NOTE; midi <= END_NOTE; midi++) {
-                const row = document.createElement("label");
-                row.className = "keybind-row";
-                const note = document.createElement("span");
-                note.textContent = midiName(midi).toUpperCase();
+            const makeBindInput = (midi) => {
                 const input = document.createElement("input");
                 input.type = "text";
                 input.maxLength = 1;
                 input.dataset.midi = String(midi);
                 input.value = mappedByMidi[midi] || "";
+                input.setAttribute("aria-label", "Computer key for " + midiName(midi).toUpperCase());
                 input.addEventListener("keydown", event => {
                     if (event.key === "Tab") return;
                     event.preventDefault();
                     input.value = event.key === "Backspace" || event.key === "Delete" ? "" : (event.key.length === 1 ? event.key.toLowerCase() : input.value);
                 });
-                row.append(note, input);
-                grid.appendChild(row);
+                return input;
+            };
+            const makeKeyCell = (midi) => {
+                const cell = document.createElement("label");
+                cell.className = "kb-key " + (isBlackKey(midi) ? "kb-black" : "kb-white");
+                const note = document.createElement("span");
+                note.className = "kb-note";
+                note.textContent = midiName(midi).toUpperCase();
+                cell.append(note, makeBindInput(midi));
+                return cell;
+            };
+            // One horizontal strip per octave, ordered low to high (partial edge octaves included)
+            const octaveOf = (midi) => Math.floor(midi / 12) - 1;
+            const groups = [];
+            for (let midi = START_NOTE; midi <= END_NOTE; midi++) {
+                const octave = octaveOf(midi);
+                let group = groups.find(g => g.octave === octave);
+                if (!group) {
+                    group = { octave, midis: [] };
+                    groups.push(group);
+                }
+                group.midis.push(midi);
             }
+            groups.forEach(group => {
+                const section = document.createElement("section");
+                section.className = "kb-octave";
+                const head = document.createElement("div");
+                head.className = "kb-octave-head";
+                const num = document.createElement("span");
+                num.className = "kb-octave-num";
+                num.textContent = String(group.octave);
+                const range = document.createElement("span");
+                range.className = "kb-octave-range";
+                range.textContent = midiName(group.midis[0]).toUpperCase() + "–" + midiName(group.midis[group.midis.length - 1]).toUpperCase();
+                head.append(num, range);
+                const strip = document.createElement("div");
+                strip.className = "kb-strip";
+                const whites = group.midis.filter(midi => !isBlackKey(midi));
+                whites.forEach(midi => strip.appendChild(makeKeyCell(midi)));
+                group.midis.filter(midi => isBlackKey(midi)).forEach(midi => {
+                    const cell = makeKeyCell(midi);
+                    const precedingWhites = whites.filter(w => w < midi).length;
+                    cell.style.left = (precedingWhites / whites.length * 100) + "%";
+                    strip.appendChild(cell);
+                });
+                section.append(head, strip);
+                grid.appendChild(section);
+            });
             modal.classList.add("open");
         }
 
@@ -2180,6 +2226,7 @@
             if (ui.midiProgress) ui.midiProgress.value = 0;
             show(ui.midiPlayerControls, false);
             show(ui.songInfoPanel, false);
+            show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
             show(ui.livePanel, false);
             show($("analysis-grid"), false);
             show($("analysis-empty"), true);
@@ -2311,14 +2358,14 @@
             setElementText($("disp-octave"), String(state.baseOctave));
             // Center C of the selected octave; clamping pins the lowest /
             // highest octaves to the leftmost / rightmost edge.
-            buildMainPiano((state.baseOctave + 1) * 12);
+            buildMainPiano((state.baseOctave + 1) * 12, true);
         });
         $("btn-octave-up")?.addEventListener("click", () => {
             state.baseOctave = Math.min(7, state.baseOctave + 1);
             setElementText($("disp-octave"), String(state.baseOctave));
             // Center C of the selected octave; clamping pins the lowest /
             // highest octaves to the leftmost / rightmost edge.
-            buildMainPiano((state.baseOctave + 1) * 12);
+            buildMainPiano((state.baseOctave + 1) * 12, true);
         });
         $("btn-keybinds")?.addEventListener("click", openKeybindsModal);
         $("btn-keybinds-save")?.addEventListener("click", () => {
@@ -2329,7 +2376,14 @@
             saveKeyMap();
             $("modal-keybinds")?.classList.remove("open");
         });
+        $("btn-keybinds-cancel")?.addEventListener("click", () => {
+            $("modal-keybinds")?.classList.remove("open");
+        });
+        document.querySelector("#modal-keybinds .kb-modal-close")?.addEventListener("click", () => {
+            $("modal-keybinds")?.classList.remove("open");
+        });
         $("btn-keybinds-reset")?.addEventListener("click", () => {
+            if (!window.confirm("Reset all keyboard binds to the default? Your custom binds will be lost.")) return;
             currentKeyMap = { ...DEFAULT_KEY_MAP };
             saveKeyMap();
             openKeybindsModal();
@@ -2451,6 +2505,7 @@
                         playback.nextIndex   = 0;
 
                         show(ui.midiPlayerControls, true);
+                        show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
                         rebuildTrackLists();
                         renderStaff();
                         updateSongInfo();

@@ -17,6 +17,8 @@
     </div>
 </footer>
 
+<button id="scroll-top-btn" type="button" aria-label="Back to top" title="Back to top">↑</button>
+
 <script src="<?php echo e(url_path('assets/js/main.js')); ?>"></script>
 <script src="<?php echo e(url_path('assets/js/midi-manager.js')); ?>"></script>
 <script src="<?php echo e(url_path('assets/js/piano-core.js')); ?>"></script>

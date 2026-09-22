@@ -88,7 +88,7 @@ Do not move a root page into another directory merely for aesthetic reasons. Exi
 
 ### Homepage and account presentation
 
-The homepage hero is intentionally full viewport width while its surrounding content remains within the shared layout container. Its primary calls to action lead to account registration and login. Individual headings, text, actions, cards, and data rows use lightweight `IntersectionObserver`-based reveal animations defined in `assets/js/main.js`; preserve the `prefers-reduced-motion` fallback when extending them.
+The homepage hero is intentionally full viewport width while its surrounding content remains within the shared layout container. Its primary calls to action lead to account registration and login for guests; for signed-in users the hero offers a Continue Journey button resuming the last-accessed lesson section (falling back to the tutorial list). Individual headings, text, actions, cards, and data rows use lightweight `IntersectionObserver`-based reveal animations defined in `assets/js/main.js`; preserve the `prefers-reduced-motion` fallback when extending them.
 
 Reveal animation styles use a JavaScript-added `reveal-pending` state so content remains visible if initialization is delayed or unavailable. Keep the safety fallback when extending the animation system.
 
@@ -97,6 +97,8 @@ Explore Features cards are a single link each via a stretched `::after` overlay 
 The shared footer is defined in `includes/footer.php` and has navigation links styled by `assets/css/style.css`. Reuse it rather than adding page-specific footer markup.
 
 Logout confirmation is a shared styled dialog in `includes/header.php`, activated by `assets/js/main.js`. Keep direct logout links as the no-JavaScript fallback.
+
+A shared scroll-to-top button (`#scroll-top-btn` in `includes/footer.php`, styled in `assets/css/style.css`) sits bottom-right above the user widget and MIDI toast; it appears after 400px of scrolling and respects `prefers-reduced-motion`.
 
 The account page keeps its existing server-side authentication and dashboard logic. Its presentation is split between `assets/css/account.css` for guests and `assets/css/account_log.css` for signed-in users.
 

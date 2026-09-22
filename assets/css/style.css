@@ -430,6 +430,44 @@ h1, h2, h3, h4, h5, h6 {
     transform: translateY(-2px);
 }
 
+/* ============================================ */
+/* SCROLL TO TOP (right, above widget + toast) */
+/* ============================================ */
+#scroll-top-btn {
+    position: fixed;
+    right: 24px;
+    bottom: 110px;
+    z-index: 9000;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    padding: 0;
+    font-size: 22px;
+    line-height: 1;
+    border: 2px solid #fff;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.28);
+    opacity: 0;
+    transform: translateY(12px);
+    pointer-events: none;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+#scroll-top-btn.visible {
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+}
+
+#scroll-top-btn.visible:hover {
+    transform: translateY(-2px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #scroll-top-btn {
+        transition: none;
+    }
+}
+
 /* Shared logout confirmation dialog */
 .logout-confirm-dialog {
     width: min(420px, calc(100vw - 32px));

@@ -184,3 +184,21 @@ if (document.readyState === 'loading') {
 } else {
     initializeLogoutConfirmation();
 }
+
+function initializeScrollTop() {
+    const scrollTopBtn = document.getElementById('scroll-top-btn');
+    if (!scrollTopBtn) return;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const toggleScrollTop = () => scrollTopBtn.classList.toggle('visible', window.scrollY > 400);
+    window.addEventListener('scroll', toggleScrollTop, { passive: true });
+    toggleScrollTop();
+    scrollTopBtn.addEventListener('click', () => {
+        window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
+    });
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeScrollTop, { once: true });
+} else {
+    initializeScrollTop();
+}
