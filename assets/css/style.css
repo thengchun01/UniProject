@@ -433,6 +433,7 @@ h1, h2, h3, h4, h5, h6 {
 /* Shared logout confirmation dialog */
 .logout-confirm-dialog {
     width: min(420px, calc(100vw - 32px));
+    margin: auto;
     padding: 0;
     border: 1px solid var(--border-color);
     border-radius: var(--radius-lg);
