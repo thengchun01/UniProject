@@ -145,7 +145,7 @@ include __DIR__ . '/../includes/header.php';
             <!-- Keyboard Controls Modal -->
             <div id="keyboardModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; justify-content:center; align-items:center;">
                 <div style="background:var(--studio-panel); padding:24px; border-radius:12px; max-width:500px; width:90%; position:relative; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
-                    <button onclick="document.getElementById('keyboardModal').style.display='none'" style="position:absolute; top:12px; right:16px; background:none; border:none; font-size:24px; cursor:pointer; color:var(--studio-muted);">&times;</button>
+                    <button onclick="document.getElementById('keyboardModal').style.display='none'" aria-label="Close controls" title="Close" style="position:absolute; top:8px; right:8px; min-width:40px; min-height:40px; display:flex; align-items:center; justify-content:center; background:none; border:none; border-radius:8px; font-size:24px; line-height:1; cursor:pointer; color:var(--studio-muted);">&times;</button>
                     <h2 style="margin-top:0; font-size:20px; display:flex; align-items:center; gap:8px;">⌨️ Keyboard Controls</h2>
                     <p style="color:var(--studio-muted); font-size:14px; margin-bottom:20px;">Use your computer keyboard to play the piano.</p>
                     
@@ -325,6 +325,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (err) {
             console.error('Failed to auto-complete section:', err);
             isCompleted = false;
+            updateKeyHints();
         }
     }
 
@@ -334,8 +335,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (window.PianoCore && pianoContainer) {
         // Directly use createPianoKeys for the tutorial
-        const TUTORIAL_START = 48; // C3
-        const TUTORIAL_END   = 72; // C5 (3 octave boundaries: C3, C4, C5)
+        const TUTORIAL_START = 21; // A0 (full piano range, same as piano.php)
+        const TUTORIAL_END   = 108; // C8
         PianoCore.syncKeySizing();
         PianoCore.createPianoKeys(pianoContainer, {
             start: TUTORIAL_START,
@@ -454,9 +455,31 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         updateStaff();
 
-        // 4. Scroll so C3 is visible at the left (all keys start from C3)
-        // Use manual scrollLeft = 0 since we always start from C3 now
-        pianoContainer.scrollLeft = 0;
+        // 4. Wire the scroll-zone buttons (same pattern as piano.php) and
+        // center the first expected key, since the full range starts at A0
+        const scrollZoneLeft = document.getElementById('scroll-zone-left');
+        const scrollZoneRight = document.getElementById('scroll-zone-right');
+        const updateScrollLimits = () => {
+            const maxScroll = pianoContainer.scrollWidth - pianoContainer.clientWidth;
+            scrollZoneLeft?.classList.toggle('at-limit', pianoContainer.scrollLeft <= 2);
+            scrollZoneRight?.classList.toggle('at-limit', pianoContainer.scrollLeft >= maxScroll - 2);
+        };
+        const scrollStep = () => Math.max(160, Math.round(pianoContainer.clientWidth * 0.8));
+        scrollZoneLeft?.addEventListener('click', () => pianoContainer.scrollBy({ left: -scrollStep(), behavior: 'smooth' }));
+        scrollZoneRight?.addEventListener('click', () => pianoContainer.scrollBy({ left: scrollStep(), behavior: 'smooth' }));
+        pianoContainer.addEventListener('scroll', updateScrollLimits, { passive: true });
+
+        const focusMidi = expectedSequence.length > 0 ? nameToMidi(expectedSequence[0].name) : 60;
+        const centerFocusKey = () => {
+            const keyEl = pianoContainer.querySelector('.key[data-midi="' + focusMidi + '"]');
+            if (!keyEl) return;
+            const containerRect = pianoContainer.getBoundingClientRect();
+            const keyRect = keyEl.getBoundingClientRect();
+            pianoContainer.scrollLeft += (keyRect.left + keyRect.width / 2) - (containerRect.left + containerRect.width / 2);
+            updateScrollLimits();
+        };
+        requestAnimationFrame(centerFocusKey);
+        updateScrollLimits();
 
         // 5. Show instruction prompt if there's a sequence to play
         if (expectedSequence.length > 0) {

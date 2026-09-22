@@ -232,6 +232,8 @@ The application stores tutorial progress using a section-oriented model. Do not 
 
 Practice exercises in `tutorials/lesson.php` hint only the current expected key (`updateKeyHints()` follows `currentStep`); the full `highlight_keys` set is shown only for informational lessons without a sequence. Preserve this one-by-one hint behavior when changing lesson highlighting.
 
+The lesson piano uses the full 21–108 MIDI range with its scroll-zone buttons wired in-page and the first expected key centered on load; preserve scroll behavior when changing the range.
+
 ### 4.6 Performance sessions
 
 Performance/session data is saved for later review.
