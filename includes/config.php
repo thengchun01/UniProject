@@ -16,6 +16,7 @@ require_once __DIR__ . '/classes/User.php';
 require_once __DIR__ . '/classes/Game.php';
 require_once __DIR__ . '/classes/Tutorial.php';
 require_once __DIR__ . '/classes/Classroom.php';
+require_once __DIR__ . '/classes/Lessons.php';
 
 // Manually define your base URL (most reliable for production)
 define('BASE_URL', '/'); // Empty for root-relative
@@ -144,12 +145,18 @@ $userManager = null;
 $gameManager = null;
 $tutorialManager = null;
 $classroomManager = null;
+$lessonsManager = null;
 
 if (is_database_connected()) {
     $userManager = new User(db());
     $gameManager = new Game(db());
     $tutorialManager = new Tutorial(db());
     $classroomManager = new Classroom(db());
+    try {
+        $lessonsManager = new Lessons(db());
+    } catch (Throwable $e) {
+        $lessonsManager = null;
+    }
 }
 ?>
 

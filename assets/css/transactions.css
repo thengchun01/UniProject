@@ -1,0 +1,32 @@
+/* Transactions page — prefixed .txn-* only. */
+.txn-wrap { display: flex; flex-direction: column; gap: 20px; }
+.txn-filters {
+    background: var(--surface-color, #fff); border: 1px solid var(--border-color, #eaeaea);
+    border-radius: var(--radius-lg, 16px); box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
+    padding: 16px; display: flex; flex-wrap: wrap; gap: 12px; align-items: end;
+}
+.txn-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; }
+.txn-filters input, .txn-filters select { padding: 10px 12px; border: 1px solid var(--border-color, #eaeaea); border-radius: 10px; font-size: 14px; background: #fff; }
+.txn-totals { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.txn-total-card {
+    background: var(--surface-color, #fff); border: 1px solid var(--border-color, #eaeaea);
+    border-radius: var(--radius-md, 12px); padding: 14px; box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
+}
+.txn-total-card strong { font-size: 1.3rem; display: block; }
+.txn-total-card span { color: var(--text-muted, #666); font-size: 13px; }
+.txn-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #f4f4f5; border: 1px solid var(--border-color, #eaeaea); }
+.txn-badge.is-paid { background: #e8f5e9; border-color: #81c784; color: #2e7d32; }
+.txn-badge.is-pending { background: #fff3e0; border-color: #ffb74d; color: #e65100; }
+.txn-badge.is-cancelled { background: #ffebee; border-color: #ef9a9a; color: #c62828; }
+.txn-proof-link { font-size: 12px; }
+.txn-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.txn-commission { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.txn-panel {
+    background: var(--surface-color, #fff); border: 1px solid var(--border-color, #eaeaea);
+    border-radius: var(--radius-lg, 16px); padding: 18px;
+}
+.txn-panel h2 { margin: 0 0 12px; font-size: 1.1rem; }
+.txn-panel form { display: flex; gap: 8px; flex-wrap: wrap; align-items: end; }
+.txn-panel input, .txn-panel select { padding: 10px 12px; border: 1px solid var(--border-color, #eaeaea); border-radius: 10px; font-size: 14px; }
+@media (max-width: 900px) { .txn-totals { grid-template-columns: 1fr 1fr; } .txn-commission { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .txn-row-actions * { transition: none; } }

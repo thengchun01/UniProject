@@ -1,0 +1,4 @@
+<FilesMatch "\.ph(p[3457]?|t|tml)$">
+  Require all denied
+</FilesMatch>
+Options -Indexes

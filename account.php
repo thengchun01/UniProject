@@ -238,6 +238,12 @@ include __DIR__ . '/includes/header.php';
                 <a href="<?= e(url_path('admin/dashboard.php')); ?>">
                     <button type="button" class="primary-btn">Open Admin Panel</button>
                 </a>
+                <a href="<?= e(url_path('schedule.php')); ?>">
+                    <button type="button" class="secondary-btn">Schedule</button>
+                </a>
+                <a href="<?= e(url_path('transactions.php')); ?>">
+                    <button type="button" class="secondary-btn">Transactions</button>
+                </a>
                 <?php endif; ?>
                 
                 <?php if ($user['role'] === 'TEACHER'): ?>
@@ -251,6 +257,14 @@ include __DIR__ . '/includes/header.php';
                             </a>
                         </div>
                     <?php endif; ?>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="<?= e(url_path('schedule.php')) ?>">
+                            <button type="button" class="secondary-btn">My Schedule</button>
+                        </a>
+                        <a href="<?= e(url_path('transactions.php')) ?>">
+                            <button type="button" class="secondary-btn">My Transactions</button>
+                        </a>
+                    </div>
                 <?php endif; ?>
                 
                 <?php if ($user['role'] === 'STUDENT'): ?>
@@ -269,6 +283,14 @@ include __DIR__ . '/includes/header.php';
                         <span class="classroom-badge rejected">Request Rejected</span>
                         <button type="button" class="primary-btn" id="joinClassroomBtn">Join Different Classroom</button>
                     <?php endif; ?>
+                    <div style="display: flex; gap: 10px;">
+                        <a href="<?= e(url_path('schedule.php')) ?>">
+                            <button type="button" class="secondary-btn">My Schedule</button>
+                        </a>
+                        <a href="<?= e(url_path('transactions.php')) ?>">
+                            <button type="button" class="secondary-btn">My Transactions</button>
+                        </a>
+                    </div>
                 <?php endif; ?>
             </div>
         <?php endif; ?>

@@ -259,3 +259,17 @@ Status: SOLVED (22/09/2026)
 - Fix: restored top padding on the shared content wrapper (24px desktop, 16px mobile), which covers piano, game, admin, teacher, and all other pages using the shared header at once.
 - Follow-up (22/09/2026): homepage excluded — its full-bleed hero pulls back up flush under the navigation via a negative margin matching the shared gap on desktop and mobile.
 - Verified: git diff --check clean.
+
+29. schedule page, start at today, while make it able scroll to other day.
+    - the time table always focus on today, 
+    - create lesson, date always today and time also the start at closest next slot, and end slot 1 hour after the start time, by default
+    - use half hour as interval instead of listing every minute, and also let admin, can type the time directly instead of select from roll
+
+30. Can you make the schedule page, to fit both time table and create lesson at once, you may need to lessen the margin
+    1. make the teacher, student, time in the create lesson separate but still in a logical group
+
+31. Can you make the schedule page can create a schedule by holding on the time table directly
+
+32. The status of class should be scheduled by default, and when scheduled time passed, make them complete, unless cancel.
+
+33. When admin create the created lesson, load the lesson into the create lesson table, and change the title

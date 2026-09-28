@@ -28,6 +28,24 @@ if (!$user || $user['role'] !== 'ADMIN') {
         </a>
     </div>
 
+    <div class="card">
+        <h3>Schedule</h3>
+        <p>Timetable lessons, teachers and students.</p>
+
+        <a href="<?= BASE_URL.'schedule.php' ?>">
+            <button>Open Schedule</button>
+        </a>
+    </div>
+
+    <div class="card">
+        <h3>Transactions</h3>
+        <p>Fees, commissions, proofs and logs.</p>
+
+        <a href="<?= BASE_URL.'transactions.php' ?>">
+            <button>Open Transactions</button>
+        </a>
+    </div>
+
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

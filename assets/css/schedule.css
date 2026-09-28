@@ -1,0 +1,56 @@
+/* Schedule (lessons) page — prefixed .sched-* only. Reuses global tokens. */
+.sched-wrap { display: flex; flex-direction: column; gap: 20px; }
+.sched-filters {
+    background: var(--surface-color, #fff);
+    border: 1px solid var(--border-color, #eaeaea);
+    border-radius: var(--radius-lg, 16px);
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
+    padding: 16px;
+    display: flex; flex-wrap: wrap; gap: 12px; align-items: end;
+}
+.sched-filters label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; font-weight: 600; color: var(--text-color, #111); }
+.sched-filters input, .sched-filters select {
+    padding: 10px 12px; border: 1px solid var(--border-color, #eaeaea);
+    border-radius: 10px; font-size: 14px; background: #fff; color: var(--text-color, #111);
+}
+.sched-filters input:focus, .sched-filters select:focus { outline: none; border-color: var(--primary-color, #7c3aed); box-shadow: 0 0 0 3px rgba(124,58,237,0.12); }
+.sched-grid { overflow-x: auto; border: 1px solid var(--border-color, #eaeaea); border-radius: var(--radius-lg, 16px); background: #fff; }
+.sched-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; min-width: 760px; }
+.sched-table th {
+    position: sticky; top: 0; background: #111; color: #fff;
+    padding: 10px 8px; text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em;
+}
+.sched-table td { border-bottom: 1px solid var(--border-color, #eaeaea); padding: 6px; vertical-align: top; min-width: 120px; }
+.sched-slot { font-weight: 700; white-space: nowrap; color: var(--text-muted, #666); background: #fafafa; min-width: 70px !important; }
+.sched-cell { cursor: default; }
+.sched-chip {
+    display: block; width: 100%; text-align: left; margin: 2px 0; padding: 6px 8px;
+    border-radius: 10px; border: 1px solid var(--border-color, #eaeaea);
+    background: #f4f4f5; color: var(--text-color, #111); font-size: 12px; cursor: pointer;
+}
+.sched-chip:hover { border-color: var(--primary-color, #7c3aed); }
+.sched-chip.is-cancelled { opacity: 0.55; text-decoration: line-through; }
+.sched-chip.is-mine { border-left: 4px solid var(--primary-color, #7c3aed); }
+.sched-chip.is-clash { border-color: var(--studio-danger, #dc2626); }
+.sched-empty { color: var(--text-muted, #666); font-size: 12px; }
+.sched-panels { display: grid; grid-template-columns: 1fr 320px; gap: 20px; }
+.sched-panel {
+    background: var(--surface-color, #fff); border: 1px solid var(--border-color, #eaeaea);
+    border-radius: var(--radius-lg, 16px); padding: 18px; box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
+}
+.sched-panel h2 { margin: 0 0 12px; font-size: 1.1rem; }
+.sched-panel .form-field { margin-bottom: 12px; }
+.sched-panel .form-field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+.sched-panel .form-field input, .sched-panel .form-field select {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border-color, #eaeaea);
+    border-radius: 10px; font-size: 14px; box-sizing: border-box;
+}
+.sched-checks { display: flex; flex-wrap: wrap; gap: 8px; }
+.sched-checks label { display: inline-flex; gap: 6px; align-items: center; font-weight: 500; font-size: 13px; }
+.sched-student-fee { display: flex; gap: 8px; align-items: center; margin-bottom: 6px; }
+.sched-student-fee input[type="number"] { width: 110px; }
+.sched-teacher-note { font-size: 13px; padding: 10px; border-radius: 10px; background: #fafafa; border: 1px solid var(--border-color, #eaeaea); }
+.sched-teacher-note.is-clash { border-color: var(--studio-danger, #dc2626); background: #fef2f2; }
+.sched-detail-list { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+@media (max-width: 900px) { .sched-panels { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .sched-chip { transition: none; } }
