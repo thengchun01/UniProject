@@ -2,6 +2,11 @@
 /* HOMEPAGE STYLES                             */
 /* ============================================ */
 
+/* Homepage hero stays flush under the navigation (cancels shared gap). */
+.site-content > .hero-section {
+    margin-top: -24px;
+}
+
 /* Hero Section with Image Background */
 .hero-section {
     position: relative;
@@ -274,10 +279,14 @@
 }
 
 @media (max-width: 768px) {
+    .site-content > .hero-section {
+        margin-top: -16px;
+    }
+
     .hero-content h1 {
         font-size: 40px;
     }
-    
+
     .hero-section {
         padding: 100px 20px;
     }

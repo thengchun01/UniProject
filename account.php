@@ -181,14 +181,29 @@ if ($user && is_database_connected()) {
         $stmt->execute(['user_id' => $user['user_id']]);
         $recentProgress = $stmt->fetchAll();
 
+        $activityAllowedPerPage = [5, 10, 20];
+        $activityPerPage = (int) ($_GET['per_page'] ?? 10);
+        if (!in_array($activityPerPage, $activityAllowedPerPage, true)) {
+            $activityPerPage = 10;
+        }
+        $activityPage = max(1, (int) ($_GET['activity_page'] ?? 1));
+        $totalActivityPages = max(1, (int) ceil($summary['activity_count'] / $activityPerPage));
+        if ($activityPage > $totalActivityPages) {
+            $activityPage = $totalActivityPages;
+        }
+        $activityOffset = ($activityPage - 1) * $activityPerPage;
+
         $stmt = $db->prepare(
             'SELECT activity_id, activity_type, activity_title AS title, attribute, created_at
              FROM user_activity_log
              WHERE user_id = :user_id
              ORDER BY created_at DESC, activity_id DESC
-             LIMIT 8'
+             LIMIT :limit OFFSET :offset'
         );
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->bindValue('user_id', $user['user_id'], PDO::PARAM_INT);
+        $stmt->bindValue('limit', $activityPerPage, PDO::PARAM_INT);
+        $stmt->bindValue('offset', $activityOffset, PDO::PARAM_INT);
+        $stmt->execute();
         $recentActivities = $stmt->fetchAll();
 
         // Parse attribute JSON for display
@@ -393,7 +408,7 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <section class="data-section">
-        <h2>User Activity Log</h2>
+        <h2>Recent Activity</h2>
         <?php if (!$recentActivities): ?>
             <p class="empty-state">Game rounds and piano Play sessions will appear here after they are completed while logged in.</p>
         <?php else: ?>
@@ -429,6 +444,40 @@ include __DIR__ . '/includes/header.php';
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            <?php if ($totalActivityPages > 1): ?>
+                <?php
+                $pageStart = max(1, $activityPage - 2);
+                $pageEnd = min($totalActivityPages, $activityPage + 2);
+                ?>
+                <nav class="pagination" aria-label="Activity pages">
+                    <span class="pagination-count">Showing <?php echo e($activityOffset + 1); ?>–<?php echo e($activityOffset + count($recentActivities)); ?> of <?php echo e($summary['activity_count']); ?> items</span>
+                    <form class="per-page-form" method="get" action="<?php echo e(url_path('account.php')); ?>">
+                        <label for="per-page-select">Per page</label>
+                        <select id="per-page-select" name="per_page" onchange="this.form.submit()">
+                            <?php foreach ($activityAllowedPerPage as $perPageOption): ?>
+                                <option value="<?php echo $perPageOption; ?>" <?php echo $perPageOption === $activityPerPage ? 'selected' : ''; ?>><?php echo $perPageOption; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </form>
+                    <?php if ($activityPage > 1): ?>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . ($activityPage - 1) . '&per_page=' . $activityPerPage)); ?>">&larr; Prev</a>
+                    <?php endif; ?>
+                    <?php if ($pageStart > 1): ?>
+                        <a href="<?php echo e(url_path('account.php?activity_page=1&per_page=' . $activityPerPage)); ?>">1</a>
+                        <?php if ($pageStart > 2): ?><span class="pagination-gap">…</span><?php endif; ?>
+                    <?php endif; ?>
+                    <?php for ($p = $pageStart; $p <= $pageEnd; $p++): ?>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . $p . '&per_page=' . $activityPerPage)); ?>" class="<?php echo $p === $activityPage ? 'active' : ''; ?>" <?php echo $p === $activityPage ? 'aria-current="page"' : ''; ?>><?php echo $p; ?></a>
+                    <?php endfor; ?>
+                    <?php if ($pageEnd < $totalActivityPages): ?>
+                        <?php if ($pageEnd < $totalActivityPages - 1): ?><span class="pagination-gap">…</span><?php endif; ?>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . $totalActivityPages . '&per_page=' . $activityPerPage)); ?>"><?php echo $totalActivityPages; ?></a>
+                    <?php endif; ?>
+                    <?php if ($activityPage < $totalActivityPages): ?>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . ($activityPage + 1) . '&per_page=' . $activityPerPage)); ?>">Next &rarr;</a>
+                    <?php endif; ?>
+                </nav>
+            <?php endif; ?>
         <?php endif; ?>
     </section>
 

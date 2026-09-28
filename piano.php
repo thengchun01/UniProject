@@ -17,7 +17,6 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
         <nav class="tabs" id="main-tabs" aria-label="Piano mode">
             <button class="tab active" type="button" data-mode="practice">Practice</button>
             <button class="tab" type="button" data-mode="play">Play</button>
-            <button class="tab" type="button" data-mode="analysis">Analysis</button>
             <button class="tab" type="button" data-mode="history">History</button>
         </nav>
 
@@ -35,6 +34,7 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
     <!-- Song loading banner (shown when piece_id is provided) -->
     <div id="song-load-banner" style="display:none; background:linear-gradient(90deg,#6c63ff22,#7c73ff11); border-left:4px solid #6c63ff; padding:10px 18px; font-size:0.9rem; align-items:center; gap:10px; flex-wrap:wrap;">
         <span id="song-load-banner-text">⏳ Loading song piece…</span>
+        <span id="song-banner-stats" class="song-banner-stats"></span>
         <a href="<?= BASE_URL ?>songs.php" style="margin-left:auto; font-size:0.82rem; color:#6c63ff; text-decoration:underline;">← Back to Songs</a>
     </div>
 
@@ -43,7 +43,10 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
             <section id="view-active" class="view-panel active-view">
                 <div class="score-board">
                     <div class="stat-card song-info-card" id="song-info-panel" hidden>
-                        <div class="stat-label">Song</div>
+                        <div class="song-info-head">
+                            <div class="stat-label">Song</div>
+                            <button class="discard-song-btn" id="btn-discard-song" type="button" aria-label="Discard loaded song" title="Discard loaded song">×</button>
+                        </div>
                         <strong id="song-title">No MIDI loaded</strong>
                         <div class="song-info-grid">
                             <span>Tracks</span><b id="song-track-count">0</b>
@@ -77,16 +80,12 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
 
                         <div class="transport">
                             <button id="btn-play-pause" class="round-btn" type="button" aria-label="Play or pause">Play</button>
+                            <button id="btn-transport-reset" class="round-btn" type="button" aria-label="Restart from beginning" title="Restart from beginning">↺</button>
                             <div class="transport-range">
                                 <input type="range" id="midi-progress" min="0" max="100" value="0" step="0.1">
                                 <span id="midi-time">0:00 / 0:00</span>
                             </div>
                         </div>
-                    </div>
-
-                    <div class="stat-card settings-card" id="train-controls" hidden>
-                        <div class="stat-label">Practice</div>
-                        <button class="mini-btn" id="btn-train-retry" type="button">Retry Practice</button>
                     </div>
 
                     <div class="stat-card play-live-card" id="play-live-panel" hidden>
@@ -120,6 +119,7 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
                     <p id="analysis-meta">Complete a play session to see accuracy and timing here.</p>
                     <div class="analysis-actions">
                         <button class="btn secondary" id="btn-analysis-csv" type="button" hidden>Export CSV</button>
+                        <button class="btn secondary" id="btn-analysis-export-midi" type="button" hidden>Export MIDI</button>
                         <button class="btn secondary" id="btn-analysis-print" type="button" hidden>Print Report</button>
                     </div>
                 </div>
@@ -148,13 +148,6 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
                     </div>
                 </div>
 
-                <div id="analysis-empty" class="empty-state-block">
-                    <p>No analysis data yet.</p>
-                </div>
-            </section>
-
-            <section id="view-history" class="view-panel">
-                <h2>Session History</h2>
                 <div class="history-replay-panel" id="history-replay-panel" hidden>
                     <div class="history-replay-head">
                         <div>
@@ -178,6 +171,14 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
                         </div>
                     </div>
                 </div>
+
+                <div id="analysis-empty" class="empty-state-block">
+                    <p>No analysis data yet.</p>
+                </div>
+            </section>
+
+            <section id="view-history" class="view-panel">
+                <h2>Session History</h2>
                 <div class="history-list" id="history-list">
                     <p class="empty-state">No sessions saved yet.</p>
                 </div>
@@ -192,9 +193,13 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
             </div>
 
             <div class="piano-controls" id="piano-controls">
+                <div class="volume-controls">
+                    <button class="btn secondary volume-mute-btn" id="btn-mute" type="button" aria-label="Mute piano" aria-pressed="false" title="Mute/Unmute">🔊</button>
+                    <input type="range" id="volume-slider" min="0" max="100" value="100" step="1" aria-label="Piano volume">
+                    <span class="volume-label" id="volume-level">100%</span>
+                </div>
                 <button class="btn secondary" id="btn-keybinds" type="button">Key Binds</button>
                 <label class="check-row"><input type="checkbox" id="show-labels" checked> Show labels</label>
-                <label class="check-row"><input type="checkbox" id="toggle-key-highlight" checked> Key lights</label>
                 <label class="check-row"><input type="checkbox" id="toggle-staff-labels" checked> Sheet labels</label>
 
                 <div class="mode-toggle-group" id="piano-mode-toggle">

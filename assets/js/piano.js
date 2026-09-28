@@ -265,6 +265,7 @@
             envelope: { attack: 0.01, decay: 0.1, sustain: 0.55, release: 1.2 }
         }).toDestination();
         audioReady = true;
+        try { window.dispatchEvent(new Event("psm-audio-ready")); } catch (e) {}
         return true;
     }
 
@@ -470,6 +471,17 @@
         }
     }
 
+    function addSvgText(svg, x, y, text, className, anchor) {
+        if (!svg || !text) return;
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", String(Math.round(x)));
+        label.setAttribute("y", String(Math.round(y)));
+        label.setAttribute("class", className);
+        label.setAttribute("text-anchor", anchor || "middle");
+        label.textContent = text;
+        svg.appendChild(label);
+    }
+
     function renderSimpleStaff(container, notes, sheetMap, options = {}) {
         if (!container) return;
         const VF = getVexFlow();
@@ -523,10 +535,15 @@
                     voice.addTickables(tickables);
                     new VF.Formatter().joinVoices([voice]).format([voice], staveWidth - (index === 0 ? 95 : 34));
                     voice.draw(context, stave);
+                    let labelSvg = null;
                     tickables.forEach(tick => {
                         if (tick._sourceEvent && sheetMap) {
                             const x = tick.getAbsoluteX();
                             sheetMap.push({ x, time: tick._sourceEvent.time, notes: tick._sourceEvent.notes });
+                        }
+                        if (options.showLabels && tick._sourceEvent && tick._sourceEvent.label) {
+                            if (!labelSvg) labelSvg = container.querySelector("svg");
+                            addSvgText(labelSvg, tick.getAbsoluteX(), height - 12, tick._sourceEvent.label, "sheet-note-label");
                         }
                     });
                 } catch (e) {}
@@ -584,7 +601,6 @@
             btnTracksDisableAll: $("btn-tracks-disable-all"),
             focusTrackSection: $("focus-track-section"),
             focusTrackList: $("focus-track-list"),
-            toggleKeyHighlight: $("toggle-key-highlight"),
             toggleStaffLabels: $("toggle-staff-labels"),
             historyReplayPanel: $("history-replay-panel"),
             historyReplayTitle: $("history-replay-title"),
@@ -605,12 +621,13 @@
         const state = {
             mode: "practice",
             octaveFold: false,
-            keyLightsOn: ui.toggleKeyHighlight ? ui.toggleKeyHighlight.checked : true,
             showLabels: $("show-labels") ? $("show-labels").checked : true,
             staffNoteLabels: ui.toggleStaffLabels ? ui.toggleStaffLabels.checked : true,
             baseOctave: 4,
             sheetFollow: true,
             lastSheetAutoScroll: 0,
+            volume: 1,
+            muted: false,
             displayNotes: [],
             sheetMap: [],
             customTrackLoaded: false,
@@ -624,6 +641,7 @@
             selectedTracks: new Set(),
             trainIndex: 0,
             trainPressed: new Set(),
+            trainChordStartedAt: 0,
             analysisEvents: [],
             playExpectedNotes: [],
             playExpectedIndex: 0,
@@ -639,7 +657,8 @@
             playSessionComplete: false,
             playSessionPromptOpen: false,
             playSessionFinishing: false,
-            analysisContext: null
+            analysisContext: null,
+            reviewSession: null
         };
 
         const playback = {
@@ -722,7 +741,7 @@
                     name,
                     midi: nameToMidi(name),
                     time: index
-                })), state.sheetMap, { limit: 64, height: 150 });
+                })), state.sheetMap, { limit: 64, height: 150, showLabels: state.staffNoteLabels });
             }
             applySheetZoom();
         }
@@ -861,17 +880,6 @@
             return checked ? Number(checked.dataset.trackIndex) : null;
         }
 
-        function addSvgText(svg, x, y, text, className, anchor) {
-            if (!svg || !text) return;
-            const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-            label.setAttribute("x", String(Math.round(x)));
-            label.setAttribute("y", String(Math.round(y)));
-            label.setAttribute("class", className);
-            label.setAttribute("text-anchor", anchor || "middle");
-            label.textContent = text;
-            svg.appendChild(label);
-        }
-
         function nameToMidi(name) {
             const match = /^([A-G]#?)(-?\d+)$/.exec(name);
             if (!match) return 60;
@@ -942,10 +950,9 @@
                 try { synth.triggerAttack(midiName(actualMidi), Tone.now(), Math.min(velocityValue / 127, 1)); } catch (e) {}
             }
             setElementText(ui.dispNote, midiName(actualMidi));
-            if (state.keyLightsOn) {
-                const key = ui.keyboard?.querySelector('.key[data-midi="' + uiMidiFor(actualMidi, source) + '"]');
-                if (key) key.classList.add("active-key");
-            }
+            // Key lights are always on.
+            const litKey = ui.keyboard?.querySelector('.key[data-midi="' + uiMidiFor(actualMidi, source) + '"]');
+            if (litKey) litKey.classList.add("active-key");
 
             if (source !== "playback" && source !== "replay") {
                 if (!state.customTrackLoaded) {
@@ -953,6 +960,8 @@
                     if (state.displayNotes.length > 40) state.displayNotes.shift();
                     renderStaff();
                     if (state.sheetFollow) scrollSheetToEnd(true);
+                    markLastNote(actualMidi, source);
+                    snapKeyboardToKey(actualMidi);
                 }
                 if (isPracticeMode()) handlePracticeAttempt(actualMidi);
                 if (isPlayMode()) handlePlayAttempt(actualMidi);
@@ -1068,11 +1077,20 @@
 
         function updateSongInfo() {
             const visibleNotes = getVisibleExpectedNotes();
-            show(ui.songInfoPanel, state.customTrackLoaded);
+            // Song stats live in the top banner now; the old card stays hidden.
+            show(ui.songInfoPanel, false);
             setElementText(ui.songTitle, state.songName);
             setElementText(ui.songTrackCount, String(state.loadedTracks.length));
             setElementText(ui.songNoteCount, String(visibleNotes.length));
             setElementText(ui.songDuration, formatTime(playback.duration));
+            const bannerStats = $("song-banner-stats");
+            if (bannerStats) {
+                bannerStats.textContent = state.customTrackLoaded
+                    ? state.loadedTracks.length + " tracks · " + visibleNotes.length + " notes · " + formatTime(playback.duration)
+                    : "";
+            }
+            const banner = $("song-load-banner");
+            if (banner) banner.style.display = state.customTrackLoaded ? "flex" : "none";
         }
 
         function loadMidiFile(file) {
@@ -1127,6 +1145,10 @@
                     playback.nextIndex = 0;
                     show(ui.midiPlayerControls, true);
                     show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
+                    clearLastNote();
+                    // A newly selected song starts in practice mode so the
+                    // transport Play button is available immediately.
+                    switchTab("practice");
                     rebuildTrackLists();
                     renderStaff();
                     updateSongInfo();
@@ -1166,6 +1188,8 @@
         function startPlayback() {
             if (!state.playbackNotes.length) return;
             if (isPlayMode()) return;
+            // Clear any ringing tail from a previous natural end first.
+            releaseAllSoundingNotes();
             if (playback.currentTime >= playback.duration) {
                 playback.currentTime = 0;
                 playback.nextIndex = 0;
@@ -1176,11 +1200,15 @@
             requestAnimationFrame(playbackLoop);
         }
 
-        function stopPlayback() {
+        // Natural song end passes natural=true so already-sounding notes
+        // ring out through their own note-off timers instead of being cut.
+        function stopPlayback(natural) {
             playback.isPlaying = false;
-            playback.timers.forEach(timer => clearTimeout(timer));
-            playback.timers.clear();
-            releaseAllSoundingNotes();
+            if (!natural) {
+                playback.timers.forEach(timer => clearTimeout(timer));
+                playback.timers.clear();
+                releaseAllSoundingNotes();
+            }
             setElementText(ui.btnPlayPause, "Play");
         }
 
@@ -1228,13 +1256,14 @@
             }
             updateTransport();
             if (playback.currentTime >= playback.duration) {
-                stopPlayback();
+                stopPlayback(true);
                 if (isPracticeMode()) {
                     rewindPracticeToStart();
                 } else {
                     playback.currentTime = playback.duration;
                     playback.nextIndex = state.playbackNotes.length;
                 }
+                scrollSheetToStart();
                 updateTransport();
                 if (state.playSessionActive) finishPlaySession();
                 return;
@@ -1273,6 +1302,30 @@
             }
         }
 
+        function scrollSheetToStart() {
+            if (!ui.sheetScrollArea) return;
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) ui.sheetScrollArea.scrollLeft = 0;
+            else ui.sheetScrollArea.scrollTo({ left: 0, behavior: "smooth" });
+        }
+
+        function focusSheetOnTime(time) {
+            if (!ui.sheetScrollArea || !state.sheetMap.length) return;
+            let closest = state.sheetMap[0];
+            for (const item of state.sheetMap) {
+                if (item.time <= time) closest = item;
+                else break;
+            }
+            const containerLeft = ui.staffContainer ? ui.staffContainer.offsetLeft : 0;
+            const x = containerLeft + closest.x * state.sheetZoom;
+            const viewLeft = ui.sheetScrollArea.scrollLeft;
+            const viewWidth = ui.sheetScrollArea.clientWidth;
+            if (x < viewLeft + 40 || x > viewLeft + viewWidth - 80) {
+                const left = Math.max(0, x - viewWidth * 0.35);
+                if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) ui.sheetScrollArea.scrollLeft = left;
+                else ui.sheetScrollArea.scrollTo({ left, behavior: "smooth" });
+            }
+        }
+
         function syncPracticeIndexToTime() {
             if (!isPracticeMode()) return;
             const notes = getTrainNotes();
@@ -1305,9 +1358,18 @@
             resetTrainPosition();
             playback.currentTime = 0;
             playback.nextIndex = 0;
+            state.playExpectedIndex = 0;
+            state.playChordPressed.clear();
+            state.trainChordStartedAt = 0;
+            if (ui.midiProgress) ui.midiProgress.value = 0;
+            scrollSheetToStart();
             updateTransport();
+            updateLivePlayStats();
+            // snapToNote:false like every other reset path — snapping here
+            // would re-dirty currentTime to the first chord and repaint the
+            // bar/sheet off zero.
             if (!isPracticeMode()) switchTab("practice");
-            else highlightNextTrainNote({ snapToNote: true });
+            else highlightNextTrainNote({ snapToNote: false });
         }
 
         function getTrainNotes() {
@@ -1339,8 +1401,9 @@
             if (!notes.length) return;
             if (state.trainIndex >= notes.length) {
                 setElementText(ui.dispMode, "Practice Complete");
+                // Natural per-note release only — never cut the just-played
+                // final notes with releaseAll() here.
                 releaseAllManualNotes();
-                releaseAllSoundingNotes();
                 setTimeout(rewindPracticeToStart, 350);
                 return;
             }
@@ -1351,22 +1414,24 @@
                 if (playback.nextIndex < 0) playback.nextIndex = state.playbackNotes.length;
                 updateTransport();
             }
-            if (!state.keyLightsOn) return;
             chord.forEach(note => {
                 const uiMidi = state.octaveFold ? 60 + note.midi % 12 : note.midi;
                 const key = ui.keyboard?.querySelector('.key[data-midi="' + uiMidi + '"]');
                 if (key) key.classList.add("train-hint");
             });
+            if (chord.length) focusSheetOnTime(chord[0].time);
         }
 
         function highlightPlayExpectedNote() {
             document.querySelectorAll(".train-hint").forEach(key => key.classList.remove("train-hint"));
-            if (!isPlayMode() || !state.playSessionActive || !state.keyLightsOn) return;
-            getCurrentPlayChord().forEach(expected => {
+            if (!isPlayMode() || !state.playSessionActive) return;
+            const playChord = getCurrentPlayChord();
+            playChord.forEach(expected => {
                 const uiMidi = state.octaveFold ? 60 + expected.midi % 12 : expected.midi;
                 const key = ui.keyboard?.querySelector('.key[data-midi="' + uiMidi + '"]');
                 if (key) key.classList.add("train-hint");
             });
+            if (playChord.length) focusSheetOnTime(playChord[0].time);
         }
 
         function getCurrentPlayChord() {
@@ -1432,6 +1497,16 @@
             const expected = exact || pitchMatch || chord[0];
             const correct = !!(exact || (state.octaveFold && pitchMatch));
             if (correct) {
+                // Chords must be played as one gesture: notes arriving later
+                // than the simultaneity window restart the chord instead of
+                // letting sequential clicks bypass it.
+                const now = performance.now();
+                if (state.trainPressed.size === 0) {
+                    state.trainChordStartedAt = now;
+                } else if (now - state.trainChordStartedAt > 1000) {
+                    state.trainPressed.clear();
+                    state.trainChordStartedAt = now;
+                }
                 state.trainPressed.add(state.octaveFold ? expected.midi % 12 : expected.midi);
             }
             const needed = new Set(chord.map(note => state.octaveFold ? note.midi % 12 : note.midi));
@@ -1631,7 +1706,9 @@
         function finishPlaySession() {
             const session = state.currentSession;
             if (!session && !state.playSessionActive) return;
-            stopPlayback();
+            // Natural completion only (sole caller is the song-end path), so
+            // let sounding notes ring out instead of cutting them.
+            stopPlayback(true);
             releaseAllManualNotes();
             markOverduePlayNotes(true);
             flushRecordingNotes();
@@ -1662,6 +1739,8 @@
             }
             state.isRecording = false;
             state.currentSession = null;
+            state.reviewSession = session || null;
+            show($("btn-analysis-export-midi"), !!(session && session.events && session.events.length));
             state.playChordPressed.clear();
             state.playPromptStartedAt = 0;
             playback.currentTime = playback.duration;
@@ -1671,6 +1750,7 @@
             document.querySelectorAll(".train-hint").forEach(key => key.classList.remove("train-hint"));
             setElementText(ui.dispMode, "Play Complete");
             switchTab("analysis");
+            if (session) openHistoryReplay(session);
         }
 
         function buildAnalysis() {
@@ -2044,6 +2124,16 @@
             switchTab("analysis");
         }
 
+        // Single per-song entry point: analysis charts + replay player +
+        // MIDI export, all inside the analysis view.
+        function openHistoryReview(session) {
+            if (!session) return;
+            state.reviewSession = session;
+            show($("btn-analysis-export-midi"), true);
+            openHistoryAnalysis(session);
+            openHistoryReplay(session);
+        }
+
         function getSessions() {
             try { return JSON.parse(localStorage.getItem("pianoSessionsV033") || "[]"); } catch (e) { return []; }
         }
@@ -2091,16 +2181,14 @@
                 const duration = formatTime((summary.duration_ms || session.duration_ms || 0) / 1000);
                 const expected = summary.expected_notes ?? session.expected_notes ?? summary.total_notes ?? 0;
                 const createdAt = session.created_at ? new Date(session.created_at).toLocaleString() : "Saved session";
-                item.innerHTML = '<div><strong class="session-title">' + escapeHtml(songName) + '</strong><div class="session-metrics"><span>' + escapeHtml(createdAt) + '</span><span>Score <b>' + score + '</b></span><span>Accuracy <b>' + accuracy + '%</b></span><span>Time <b>' + duration + '</b></span><span>Notes <b>' + expected + '</b></span></div></div><div class="piano-actions"><button class="btn secondary" data-action="analysis" data-id="' + session.session_id + '">Analysis</button><button class="btn secondary" data-action="replay" data-id="' + session.session_id + '">Replay</button><button class="btn secondary" data-action="export" data-id="' + session.session_id + '">Export</button></div>';
+                item.innerHTML = '<div><strong class="session-title">' + escapeHtml(songName) + '</strong><div class="session-metrics"><span>' + escapeHtml(createdAt) + '</span><span>Score <b>' + score + '</b></span><span>Accuracy <b>' + accuracy + '%</b></span><span>Time <b>' + duration + '</b></span><span>Notes <b>' + expected + '</b></span></div></div><div class="piano-actions"><button class="btn secondary" data-action="review" data-id="' + session.session_id + '">Review</button></div>';
                 ui.historyList.appendChild(item);
             });
             ui.historyList.querySelectorAll("button").forEach(button => {
                 button.addEventListener("click", () => {
                     const session = sessions.find(item => item.session_id === button.dataset.id);
                     if (!session) return;
-                    if (button.dataset.action === "analysis") openHistoryAnalysis(session);
-                    if (button.dataset.action === "replay") openHistoryReplay(session);
-                    if (button.dataset.action === "export") exportSessionMidi(session);
+                    if (button.dataset.action === "review") openHistoryReview(session);
                 });
             });
         }
@@ -2360,13 +2448,19 @@
             show(ui.midiPlayerControls, false);
             show(ui.songInfoPanel, false);
             show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
+            const loadBanner = $("song-load-banner");
+            if (loadBanner) loadBanner.style.display = "none";
+            const bannerStats = $("song-banner-stats");
+            if (bannerStats) bannerStats.textContent = "";
             show(ui.livePanel, false);
             state.sheetFollow = true;
             if (ui.sheetFollowBtn) ui.sheetFollowBtn.hidden = true;
             show($("analysis-grid"), false);
             show($("analysis-empty"), true);
+            state.reviewSession = null;
+            show($("btn-analysis-export-midi"), false);
             if (ui.globalMidiUpload) ui.globalMidiUpload.value = "";
-            document.querySelectorAll(".active-key,.train-hint").forEach(key => key.classList.remove("active-key", "train-hint"));
+            document.querySelectorAll(".active-key,.train-hint,.last-note").forEach(key => key.classList.remove("active-key", "train-hint", "last-note"));
             renderStaff();
             updateTrainSeekLock();
             updateLivePlayStats();
@@ -2402,6 +2496,33 @@
             }, 150);
         }
 
+        // Free play (no song loaded): persistent latest-note highlight that
+        // moves with each new press, like the song-mode hint does.
+        function clearLastNote() {
+            document.querySelectorAll(".key.last-note").forEach(key => key.classList.remove("last-note"));
+        }
+
+        function markLastNote(actualMidi, source) {
+            clearLastNote();
+            const litKey = ui.keyboard?.querySelector('.key[data-midi="' + uiMidiFor(actualMidi, source) + '"]');
+            if (litKey) litKey.classList.add("last-note");
+        }
+
+        // Free play (no song loaded): keep the latest pressed key in view.
+        function snapKeyboardToKey(midi) {
+            if (state.octaveFold || !ui.keyboard) return;
+            const key = ui.keyboard.querySelector('.key[data-midi="' + midi + '"]');
+            if (!key) return;
+            const viewLeft = ui.keyboard.scrollLeft;
+            const viewWidth = ui.keyboard.clientWidth;
+            const keyWidth = key.offsetWidth || keyWidthWhite;
+            if (key.offsetLeft < viewLeft + 8 || key.offsetLeft + keyWidth > viewLeft + viewWidth - 8) {
+                const left = Math.max(0, key.offsetLeft + keyWidth / 2 - viewWidth / 2);
+                if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) ui.keyboard.scrollLeft = left;
+                else ui.keyboard.scrollBy({ left: left - viewLeft, behavior: "smooth" });
+            }
+        }
+
         function updateScrollZoneLimits() {
             if (!ui.keyboard || !ui.scrollZoneLeft || !ui.scrollZoneRight) return;
             ui.scrollZoneLeft.classList.toggle("at-limit", ui.keyboard.scrollLeft <= 2);
@@ -2426,6 +2547,10 @@
             }
             if (isPlayMode()) return;
             initAudio().then(() => playback.isPlaying ? stopPlayback() : startPlayback());
+        });
+        // Whole restart from the transport bar: back to the beginning.
+        $("btn-transport-reset")?.addEventListener("click", () => {
+            retryPracticeSession();
         });
         ui.midiProgress?.addEventListener("input", event => {
             if (isPlayMode()) {
@@ -2455,7 +2580,6 @@
             updateSongInfo();
             resetTrainPosition();
         });
-        $("btn-train-retry")?.addEventListener("click", retryPracticeSession);
         ui.btnPlaySessionStart?.addEventListener("click", beginPlaySession);
         ui.btnPlaySessionCancel?.addEventListener("click", hidePlaySessionPrompt);
         ui.btnHistoryReplayPlay?.addEventListener("click", () => {
@@ -2470,6 +2594,7 @@
             if (wasPlaying) startHistoryReplay();
         });
         $("btn-reset")?.addEventListener("click", resetPiano);
+        $("btn-discard-song")?.addEventListener("click", resetPiano);
         $("btn-modal-close")?.addEventListener("click", () => ui.modalSession?.classList.remove("open"));
         ui.btnExportMidi?.addEventListener("click", () => {
             const sessions = getSessions();
@@ -2496,10 +2621,37 @@
             state.showLabels = event.target.checked;
             buildMainPiano();
         });
-        ui.toggleKeyHighlight?.addEventListener("change", event => {
-            state.keyLightsOn = event.target.checked;
-            if (!state.keyLightsOn) document.querySelectorAll(".active-key,.train-hint").forEach(key => key.classList.remove("active-key", "train-hint"));
-            else if (isPracticeMode()) highlightNextTrainNote({ snapToNote: false });
+        const volumeSlider = $("volume-slider");
+        const volumeLevel = $("volume-level");
+        const muteBtn = $("btn-mute");
+        // Page-local volume state lives here (initPianoPage closure scope).
+        function applyVolume() {
+            if (!synth) return;
+            const level = state.muted ? 0 : state.volume;
+            try {
+                synth.volume.value = level <= 0 ? -Infinity : 20 * Math.log10(Math.max(0.001, level));
+            } catch (e) {}
+        }
+        window.addEventListener("psm-audio-ready", applyVolume);
+        const renderVolumeUi = () => {
+            if (volumeSlider) volumeSlider.value = String(state.muted ? 0 : Math.round(state.volume * 100));
+            if (volumeLevel) volumeLevel.textContent = state.muted ? "Muted" : Math.round(state.volume * 100) + "%";
+            if (muteBtn) {
+                muteBtn.textContent = state.muted ? "🔇" : "🔊";
+                muteBtn.setAttribute("aria-pressed", state.muted ? "true" : "false");
+                muteBtn.setAttribute("aria-label", state.muted ? "Unmute piano" : "Mute piano");
+            }
+        };
+        volumeSlider?.addEventListener("input", () => {
+            state.volume = Math.max(0, Math.min(100, Number(volumeSlider.value) || 0)) / 100;
+            if (state.volume > 0) state.muted = false;
+            applyVolume();
+            renderVolumeUi();
+        });
+        muteBtn?.addEventListener("click", () => {
+            state.muted = !state.muted;
+            applyVolume();
+            renderVolumeUi();
         });
         ui.toggleStaffLabels?.addEventListener("change", event => {
             state.staffNoteLabels = event.target.checked;
@@ -2624,6 +2776,9 @@
             URL.revokeObjectURL(url);
         });
         $("btn-analysis-print")?.addEventListener("click", () => window.print());
+        $("btn-analysis-export-midi")?.addEventListener("click", () => {
+            if (state.reviewSession) exportSessionMidi(state.reviewSession);
+        });
 
         window.addEventListener("keydown", async event => {
             if (event.repeat || document.activeElement?.tagName === "INPUT") return;
@@ -2723,6 +2878,10 @@
 
                         show(ui.midiPlayerControls, true);
                         show(ui.trainControls, isPracticeMode() && state.customTrackLoaded);
+                        clearLastNote();
+                        // A newly selected song starts in practice mode so the
+                        // transport Play button is available immediately.
+                        switchTab("practice");
                         rebuildTrackLists();
                         renderStaff();
                         updateSongInfo();

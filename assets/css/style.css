@@ -168,9 +168,9 @@ button:hover, .text-button:hover, .btn:hover {
     margin: 0 auto;
 }
 
-/* The shared wrapper begins immediately below the sticky navigation. */
+/* Breathing room between the sticky navigation and page content. */
 .site-content {
-    padding-top: 0;
+    padding-top: 24px;
 }
 
 .reveal-pending {
@@ -590,7 +590,7 @@ h1, h2, h3, h4, h5, h6 {
     }
 
     .site-content {
-        padding-top: 0;
+        padding-top: 16px;
     }
 
     .site-footer-inner {
