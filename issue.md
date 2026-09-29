@@ -264,12 +264,175 @@ Status: SOLVED (22/09/2026)
     - the time table always focus on today, 
     - create lesson, date always today and time also the start at closest next slot, and end slot 1 hour after the start time, by default
     - use half hour as interval instead of listing every minute, and also let admin, can type the time directly instead of select from roll
+    
+
+Status: SOLVED (28/09/2026)
+- schedule.php defaults month/week to today, adds a Today shortcut, highlights today's column and scrolls it into view; month/week selectors still scroll to other days.
+- Create form defaults to the next open day (skips Sunday/closing) with start at the next :00/:30 slot and end +1 hour.
+- Start/end are typable HH:MM text fields with a half-hour datalist; server-side :00/:30 validation unchanged.
 
 30. Can you make the schedule page, to fit both time table and create lesson at once, you may need to lessen the margin
     1. make the teacher, student, time in the create lesson separate but still in a logical group
 
+Status: SOLVED (28/09/2026)
+- schedule.php now places the timetable grid and the lesson form side by side (sticky form column, stacks under 1100px) with tighter gaps/padding.
+- Create/edit form grouped into Time, Teacher & commission, and Students fieldsets.
+
 31. Can you make the schedule page can create a schedule by holding on the time table directly
+
+Status: SOLVED (28/09/2026)
+- Mouse press-and-drag across empty cells of one day fills date/start/end with the selected consecutive slots (highlighted); tap/click fills a single slot. Lesson cells and Closed cells are skipped.
 
 32. The status of class should be scheduled by default, and when scheduled time passed, make them complete, unless cancel.
 
+Status: SOLVED (28/09/2026)
+- New Lessons::autoCompletePast() flips SCHEDULED lessons whose end time passed to COMPLETED (CANCELLED untouched); called on schedule.php and transactions.php loads. New lessons still default to SCHEDULED.
+
 33. When admin create the created lesson, load the lesson into the create lesson table, and change the title
+
+Status: SOLVED (28/09/2026)
+- Clicking a lesson as admin now loads it into the side form as "Edit lesson #ID" (time/status/teacher/commission prefilled, students managed in Lesson details below); "＋ New lesson" switches back to create mode. Edit saves via api/lessons_save.php update.
+
+34. I find the current schedule selection confusing, can you make it display as a calender, and selection by week clicking on the calender, make monday the start of the time table instead of tuesday. Also can you make it scrollable
+
+Status: SOLVED (28/09/2026)
+- schedule.php now shows a Monday-first month calendar above the grid; clicking (or Enter on) a week row loads that Mon–Sat week, with the selected week highlighted, today marked, lesson counts per day, and Sundays dimmed as closed. Old week=1-5 links still map to calendar weeks.
+- The timetable grid is scrollable both directions (72vh cap, sticky header) and always runs Monday to Saturday.
+
+35. Schedule page, I think the repeat same time is also confusing, can you make it as something like once per month, or a lesson per week,  two week and so on
+
+Status: SOLVED (28/09/2026)
+- Replaced the week-tick checkboxes with Repeat (Just once / Weekly / Every 2 weeks / Monthly same-date) plus an Extra times count (0–12). api/lessons_save.php generates the series server-side; dates outside working hours or missing month dates are skipped and reported, not fatal.
+
+36. schedule page, can you put student over the teacher pane, also can you put sorting into these student and teacher table as well.
+
+Status: SOLVED (28/09/2026)
+- Create form now orders Students above Teacher & commission. Both pickers are tables with click-to-sort headers (student name; teacher name/status with Available/Not available/Clash pills and clash row shading). The Lesson details enrolment table is sortable by student/fee/payment too.
+
+37. I need you to only mark the lesson as complete when the current over its time
+
+Status: SOLVED (28/09/2026)
+- Auto-complete was already end-time based; added the missing guard on the manual path: api/lessons_save.php update now rejects COMPLETED while the end time is still in the future (CANCELLED stays always allowed). Status prompt notes the rule.
+
+38. Schedule page, Can you add filter to find all lessons for certain student as well.
+
+Status: SOLVED (28/09/2026)
+- Added a student filter dropdown (admin: all students; teacher: own students; student role stays locked to self) backed by the existing enrollment-scoped lesson query and preserved across lesson links.
+
+39. Schedule page, the month selection on the top bar is unnecessary, we can just use the calender to adjust the date and month, so we might want to remove it.
+
+Status: SOLVED (28/09/2026)
+- Removed the month picker from the filter bar (kept as a hidden field); the calendar head now has Prev/Next month navigation and week rows for date selection.
+
+40. Schedule page, I want you to make the time table, parallel with the create lesson, maybe we need to put the calender else where?
+    1. I think it would be better to put the calender into the top bar together with the status, teacher and student filter, so that the time table will be parallel with the create lesson pane
+
+Status: SUPERSEDED by 40.1 (28/09/2026)
+- First pass put the calendar in the right sidebar; per 40.1 it now lives in the top bar (see below).
+
+    1. I think it would be better to put the calender into the top bar together with the status, teacher and student filter, so that the time table will be parallel with the create lesson pane
+
+    2. Instead of right of the top bar, just put it inside the left of the top bar, and the button beside the month is a bit fat.
+
+Status: SOLVED (28/09/2026)
+- Calendar moved into a top-bar grid beside the status/teacher/student filters (compact sizing, stacks under 1200px); the timetable grid below stays parallel with the create/edit form.
+- 40.1.2: calendar now renders on the left of the top bar (filters right), Prev/Next month buttons slimmed down, and both grid rows stretch so items in a row share the same height.
+
+    3. filter pane together with top of timetable under calendar; lesson details same row as calendar right side with greater portion; create lesson right of filter/timetable
+
+Status: SOLVED (28/09/2026)
+- schedule.php is now a 12-column grid: row 1 calendar (5/12) | lesson details (7/12); row 2 filters + timetable (8/12) | create/edit form (4/12, spanning rows 2-3); single column under 1200px.
+
+    4. remove the week label; filter bar in a single row; layout as calendar|details, filter bar full width, timetable|create lesson
+
+Status: SOLVED (28/09/2026)
+- Week-of label removed; filter bar spans the full row in one line (scrolls horizontally on narrow screens); grid is now row 1 calendar|details, row 2 filter bar, row 3 timetable|form.
+
+    5. timetable fits all days without right-scroll; timetable and form show all content without inner scroll at equal height; filter bar under calendar sharing its row with lesson details
+
+Status: SOLVED (28/09/2026)
+- Table uses fixed layout with no min-width floors so all days fit; removed inner-scroll caps (grid, sidebar, pick lists, series list) so the page scrolls as one; rows stretch for equal heights; grid is now row 1 calendar|details, row 2 filter bar (under calendar, details spanning rows 1-2), row 3 timetable|form.
+
+    6. filter bar fits all items in one row instead of scrolling
+
+Status: SOLVED (28/09/2026)
+- Filter controls share the row with flexible shrinking widths and compact padding; no horizontal scroll.
+
+41. in the timetable, can you try give priority as following, small time duration, big student names, middle teacher, small status ?
+
+Status: SOLVED (28/09/2026)
+- Chips restyled in that priority (small time + duration + title, big student names up to 3 + more-count, middle teacher, small status pill) with one extra enrolment-names query per week view.
+
+42. I found out that completed lesson can't edit how many time repeat, can you re-adjust it
+
+Status: SOLVED (28/09/2026)
+- Completed lessons now show a "Repeat from this lesson" section (mode + extra times) that clones the lesson with its students/fees/commission into new scheduled lessons via the create endpoint, then jumps to the first new lesson.
+
+43. In transaction, can you add button to delete the transaction
+
+Status: SOLVED (28/09/2026)
+- transactions.php rows gained an admin-only Delete button (confirm-guarded) that removes the enrolment, its fee and proof file via api/enrollments_save.php remove.
+
+44. in schedule page, can you give a bit space at the right of the scheduled slot, so othat I can overlay some more class.
+
+Status: SOLVED (28/09/2026)
+- Timetable cells widened (140px min, extra right padding, 40px min-height) and grid floor raised to 880px so slots have room to stack more class chips and stay easy drag targets.
+
+45. Can you add a delete button beside the edit lesson, and instead of using the id as title, it would be better to use the title name as title, and the id as sub-heading.
+
+Status: SOLVED (28/09/2026)
+- Edit panel now heads with the lesson title plus a "Lesson #ID · date · time" sub-heading, with Delete beside the New-lesson link sharing the guarded delete flow.
+
+46. When in edit lesson, the student info is not display
+
+Status: SOLVED (28/09/2026)
+- Edit form gained a Students section listing enrolled name/fee/payment/proof; fee edits and removals stay centralised in Lesson details below.
+
+47. there is a weird, unused gap between the time table with the lesson details
+
+Status: SOLVED (28/09/2026)
+- Root cause: the details panel carried its own 16px top margin on top of the wrap's 14px flex gap (30px total). Removed the inline margin so spacing matches the rest of the page.
+
+48. the filter bar can you group it together on top of the time table
+
+Status: SOLVED (28/09/2026)
+- Top bar is now one grouped panel (filters + calendar flat inside it) sitting on top of the timetable.
+
+49. after you have put the filter bar together with the time table, you can put the lesson details at that location.
+
+Status: SOLVED (28/09/2026)
+- Lesson details moved from below the grid into the right sidebar under the form, so the timetable keeps full width.
+
+50. I found the lesson details and schedule still confusing. I want to see the all the slots that is created with a lesson the repeats using repeat function, and also can be deleted by all related slot. You may include this in the lesson details. Like when is the first course, and the next course based on the repeat function.
+
+Status: SOLVED (28/09/2026)
+- Lesson details gained a Repeat series section (series tag, first + next upcoming dates, every slot linked, this-lesson marked) via Lessons::getGroupLessons(); admin gets a confirm-guarded Delete-entire-series button backed by api/lessons_save.php delete_group (proof files cleaned up).
+
+51. Currently the repeat function is confusing, the extra time meaning is unknown, how about change it to until which month? Then the repeat can have option something like just once, every week, or every two week. When it creates, it should creates lesson on same day different week, but the lesson details will list down all the lesson creates by this subscription (a temporary name) 
+
+Status: SOLVED (28/09/2026)
+- Repeat is now mode (Just once / Every week / Every two weeks) plus an until-month picker (empty means once; same weekday/time each occurrence, server errors clearly if month precedes the lesson). Unusable dates are skipped and reported; the series list in details acts as the subscription record with a short series tag.
+
+52. the lesson details is a bit too fat, try to use the space at the right top
+
+Status: SOLVED (28/09/2026)
+- Details now live in the narrower right sidebar (same column as the form) instead of a full-width panel, with the enrolment table scrolling horizontally inside it.
+
+53. When selecting date using the create lesson, can you make the related slot highlighted, instead of only highlight when selecting using mouse. Also, can you make the header always on top of the timetable when scroll down 
+
+Status: SOLVED (28/09/2026)
+- Typing or picking date/start/end in create/edit forms now paints the matching timetable cells (same highlight as drag-select; drag keeps priority mid-drag; defaults highlighted on load).
+- Header cells gained z-index over the sticky position so the day header stays pinned on top while scrolling down.
+- Rework: reverted pre-painted defaults — one shared selection synced both ways (drag fills the form, typing paints the grid) with highlight only after explicit selection; fixed drop-ordering so the highlight survives pointer-up.
+- Header now docks below the sticky blurred site nav (measured offset, refreshed on resize) instead of sliding underneath it.
+
+54. the date at form, can you include the day, and the day at the header cell can you include date, in the timetable the date should be larger than day
+
+Status: SOLVED (28/09/2026)
+- Create/edit date fields show a live weekday badge (e.g. Mon, 29 Sep 2026); timetable headers stack a small weekday over a big date (29 Sep).
+
+55. when the date is choose in the form, it should change the timetable to include the date
+    1. make sure the page position back to the time table instead of top of the page when refresh
+
+Status: SOLVED (28/09/2026)
+- Picking a form date outside the shown Mon–Sat week reloads the timetable on that date's week (Sunday resolves to its Monday week); the half-typed form is stashed to sessionStorage first and restored after reload so nothing is lost.

@@ -53,6 +53,8 @@ $proofLogs = [];
 if ($txAvailable && is_database_connected()) {
     try {
         $db = db();
+        // Issue 32: keep statuses current before listing.
+        $lessonsManager->autoCompletePast();
         $stmt = $db->query("SELECT user_id, username FROM users WHERE role = 'TEACHER' ORDER BY username ASC");
         $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $defaultCommission = $lessonsManager->getDefaultCommission();
@@ -322,6 +324,7 @@ include __DIR__ . '/includes/header.php';
                                     <?php if (!empty($r['commission_proof_path'])): ?>
                                         <button type="button" class="action-btn delete-btn" data-txn-delproof="COMMISSION" data-lesson="<?= (int) $r['lesson_id'] ?>" data-enroll="">Del comm. proof</button>
                                     <?php endif; ?>
+                                    <button type="button" class="action-btn delete-btn" data-txn-del="<?= (int) $r['enrollment_id'] ?>">Delete</button>
                                 </div>
                             </td>
                             <?php endif; ?>
@@ -460,6 +463,15 @@ include __DIR__ . '/includes/header.php';
             fd.append('lesson_id', b.getAttribute('data-lesson'));
             fd.append('enrollment_id', b.getAttribute('data-enroll') || '');
             postForm(apiProofDel, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+        });
+    });
+    document.querySelectorAll('[data-txn-del]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            if (!window.confirm('Delete this transaction? The student enrollment, fee and its proof file will be removed. This cannot be undone.')) return;
+            var fd = new FormData();
+            fd.append('action', 'remove');
+            fd.append('enrollment_id', b.getAttribute('data-txn-del'));
+            postForm(apiEnroll, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
         });
     });
     var defForm = document.getElementById('txnDefaultForm');

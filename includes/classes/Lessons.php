@@ -259,6 +259,38 @@ class Lessons
         $stmt->execute(['lesson_id' => $lessonId, 'student_id' => $studentId, 'fee' => $fee]);
     }
 
+    // Issue 32: SCHEDULED lessons whose end time has passed become COMPLETED.
+    // CANCELLED lessons are never touched. Idempotent; safe to call on page load.
+    public function autoCompletePast(): int
+    {
+        try {
+            $stmt = $this->db->prepare(
+                "UPDATE lessons SET status = 'COMPLETED'
+                 WHERE status = 'SCHEDULED' AND TIMESTAMP(lesson_date, end_time) < NOW()"
+            );
+            $stmt->execute();
+            return (int) $stmt->rowCount();
+        } catch (Throwable $e) {
+            return 0;
+        }
+    }
+
+    // Issue 50: all lessons sharing one repeat series, ordered first to last.
+    public function getGroupLessons(string $group): array
+    {
+        try {
+            $stmt = $this->db->prepare(
+                'SELECT lesson_id, lesson_date, start_time, end_time, status
+                 FROM lessons WHERE recurrence_group = :g
+                 ORDER BY lesson_date ASC, start_time ASC'
+            );
+            $stmt->execute(['g' => $group]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
     public function logProof(string $kind, ?int $lessonId, ?int $enrollmentId, string $filePath, string $action, ?int $performedBy): void
     {
         $stmt = $this->db->prepare(

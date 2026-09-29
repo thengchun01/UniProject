@@ -41,7 +41,8 @@ function fetch_user_role(PDO $db, int $id): ?string
 
 function validate_commission(?string $type, $value): array
 {
-    if (($type === null || $type === '') && ($value === null || $value === '')) {
+    // Blank type always means "inherit default chain", whatever the value field holds.
+    if ($type === null || trim((string) $type) === '') {
         return [null, null];
     }
     $t = strtoupper(trim((string) $type));
@@ -97,6 +98,57 @@ try {
         exit;
     }
 
+    // Issue 50: delete every lesson sharing one repeat series.
+    if ($action === 'delete_group') {
+        $lessonId = (int) ($_POST['lesson_id'] ?? 0);
+        if ($lessonId <= 0) {
+            lessons_error('Invalid lesson.');
+        }
+        $lesson = $lessonsManager->getLesson($lessonId);
+        if ($lesson === null) {
+            lessons_error('Lesson not found.');
+        }
+        $group = $lesson['recurrence_group'] ?? null;
+        if ($group === null || $group === '') {
+            lessons_error('This lesson is not part of a repeat series.');
+        }
+        $stmt = $db->prepare('SELECT lesson_id FROM lessons WHERE recurrence_group = :g');
+        $stmt->execute(['g' => $group]);
+        $ids = array_map('intval', $stmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+        if (empty($ids)) {
+            lessons_error('Repeat series is empty.');
+        }
+        $proofDir = realpath(__DIR__ . '/../uploads/proofs');
+        $paths = [];
+        $in = implode(',', array_fill(0, count($ids), '?'));
+        $stmt = $db->prepare("SELECT proof_path FROM lesson_enrollments WHERE lesson_id IN ($in)");
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $p) {
+            if (is_string($p) && $p !== '') {
+                $paths[] = $p;
+            }
+        }
+        $stmt = $db->prepare("SELECT commission_proof_path FROM lessons WHERE lesson_id IN ($in)");
+        $stmt->execute($ids);
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $p) {
+            if (is_string($p) && $p !== '') {
+                $paths[] = $p;
+            }
+        }
+        $stmt = $db->prepare('DELETE FROM lessons WHERE recurrence_group = :g');
+        $stmt->execute(['g' => $group]);
+        if ($proofDir !== false) {
+            foreach ($paths as $p) {
+                $full = realpath(__DIR__ . '/../' . $p);
+                if ($full !== false && strpos($full, $proofDir) === 0 && is_file($full)) {
+                    @unlink($full);
+                }
+            }
+        }
+        echo json_encode(['success' => true, 'data' => ['deleted' => $ids]]);
+        exit;
+    }
+
     if ($action === 'update') {
         $lessonId = (int) ($_POST['lesson_id'] ?? 0);
         if ($lessonId <= 0) {
@@ -121,6 +173,14 @@ try {
         $status = strtoupper(trim($_POST['status'] ?? $existing['status']));
         if (!in_array($status, ['SCHEDULED', 'COMPLETED', 'CANCELLED'], true)) {
             lessons_error('Invalid status.');
+        }
+        if ($status === 'COMPLETED') {
+            // Issue 37: COMPLETED only when the lesson time is over (auto-flip handles
+            // past lessons; this guards the manual path). CANCELLED stays always allowed.
+            $endTs = strtotime($date . ' ' . $end);
+            if ($endTs === false || $endTs > time()) {
+                lessons_error('A lesson can only be marked COMPLETED after its end time. Use CANCELLED to void it.');
+            }
         }
         [$ctype, $cvalue] = validate_commission(
             array_key_exists('commission_type', $_POST) ? $_POST['commission_type'] : $existing['commission_type'],
@@ -192,6 +252,85 @@ try {
         }
     }
 
+    // Issues 35/51: repeat modes (once | weekly | every 2 weeks | monthly same-date).
+    // UI supplies repeat_until (YYYY-MM); legacy repeat_count still supported.
+    // Unusable generated dates are skipped (reported) instead of failing the save.
+    $repeatMode = strtolower(trim($_POST['repeat_mode'] ?? 'once'));
+    if (!in_array($repeatMode, ['once', 'weekly', 'biweekly', 'monthly'], true)) {
+        $repeatMode = 'once';
+    }
+    $repeatCount = max(0, min(12, (int) ($_POST['repeat_count'] ?? 0)));
+    $repeatUntil = trim($_POST['repeat_until'] ?? '');
+    $useUntil = preg_match('/^\d{4}-\d{2}$/', $repeatUntil) === 1;
+    $skipped = [];
+    $addExtraDate = function (string $d) use (&$extraDates, &$skipped, $date, $start, $end, $lessonsManager): void {
+        if ($d === $date || in_array($d, $extraDates, true)) {
+            return;
+        }
+        [$rok] = $lessonsManager->checkSlot($d, $start, $end);
+        if (!$rok) {
+            $skipped[] = $d;
+            return;
+        }
+        $extraDates[] = $d;
+    };
+    if ($repeatMode !== 'once') {
+        if ($useUntil) {
+            if ($repeatUntil < substr($date, 0, 7)) {
+                lessons_error('Repeat-until month must not be before the lesson month.');
+            }
+            $untilEnd = date('Y-m-t', strtotime($repeatUntil . '-01'));
+            if ($repeatMode === 'monthly') {
+                $baseDay = (int) substr($date, 8, 2);
+                $cursor = DateTime::createFromFormat('Y-m-d', $date);
+                while (count($extraDates) < 24 && $cursor instanceof DateTime) {
+                    $cursor = (clone $cursor)->modify('+1 month');
+                    if ($cursor->format('Y-m-d') > $untilEnd) {
+                        break;
+                    }
+                    if ((int) $cursor->format('j') !== $baseDay) {
+                        $skipped[] = $cursor->format('Y-m') . ' (no such date)';
+                        continue;
+                    }
+                    $addExtraDate($cursor->format('Y-m-d'));
+                }
+            } else {
+                $step = $repeatMode === 'biweekly' ? 14 : 7;
+                $cursor = $date;
+                while (count($extraDates) < 24) {
+                    $cursor = date('Y-m-d', strtotime($cursor . ' +' . $step . ' days'));
+                    if ($cursor > $untilEnd) {
+                        break;
+                    }
+                    $addExtraDate($cursor);
+                }
+            }
+        } elseif ($repeatCount > 0) {
+            $baseDay = (int) substr($date, 8, 2);
+            for ($i = 1; $i <= $repeatCount; $i++) {
+                if ($repeatMode === 'weekly') {
+                    $d = date('Y-m-d', strtotime($date . ' +' . (7 * $i) . ' days'));
+                } elseif ($repeatMode === 'biweekly') {
+                    $d = date('Y-m-d', strtotime($date . ' +' . (14 * $i) . ' days'));
+                } else {
+                    $dt = DateTime::createFromFormat('Y-m-d', $date);
+                    if ($dt === false) {
+                        break;
+                    }
+                    $dt->modify('+' . $i . ' month');
+                    if ((int) $dt->format('j') !== $baseDay) {
+                        $skipped[] = $dt->format('Y-m') . ' (no such date)';
+                        continue;
+                    }
+                    $d = $dt->format('Y-m-d');
+                }
+                $addExtraDate($d);
+            }
+        } else {
+            lessons_error('Choose a repeat-until month, or set repeat back to Just once.');
+        }
+    }
+
     // Students + per-student fees.
     $studentIds = $_POST['student_ids'] ?? [];
     if (!is_array($studentIds)) {
@@ -247,7 +386,7 @@ try {
     }
     $db->commit();
 
-    echo json_encode(['success' => true, 'data' => ['lesson_ids' => $created]]);
+    echo json_encode(['success' => true, 'data' => ['lesson_ids' => $created, 'skipped' => $skipped]]);
 } catch (Throwable $e) {
     if ($db->inTransaction()) {
         $db->rollBack();
