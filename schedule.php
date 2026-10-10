@@ -118,6 +118,7 @@ $lessons = [];
 $selectedLesson = null;
 $selectedEnrollments = [];
 $groupSummary = [];
+$enrolledIds = [];
 $selectedTotals = ['student_count' => 0, 'total_fee' => 0, 'paid_total' => 0, 'unpaid_count' => 0];
 $resolvedCommission = ['PERCENT', 0.0];
 $myAvailability = [];
@@ -616,6 +617,9 @@ include __DIR__ . '/includes/header.php';
                     <legend>Repeat from this lesson</legend>
                     <div id="schedRepeatMsg" class="alert" style="display:none;"></div>
                     <form id="schedRepeatForm">
+                        <input type="hidden" name="skip_base" value="1">
+                        <input type="hidden" name="join_group" value="<?= e($selectedLesson['recurrence_group'] ?? '') ?>">
+                        <input type="hidden" name="base_lesson_id" value="<?= (int) $selectedLesson['lesson_id'] ?>">
                         <input type="hidden" name="title" value="<?= e($selectedLesson['title'] ?? '') ?>">
                         <input type="hidden" name="lesson_date" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>">
                         <input type="hidden" name="start_time" value="<?= e(substr((string) $selectedLesson['start_time'], 0, 5)) ?>">

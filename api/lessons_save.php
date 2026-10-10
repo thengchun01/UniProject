@@ -368,8 +368,29 @@ try {
     }
 
     $title = trim($_POST['title'] ?? '') ?: null;
-    $group = count($extraDates) > 0 ? bin2hex(random_bytes(8)) : null;
-    $allDates = array_merge([$date], $extraDates);
+    // Issue 66: repeat-from-existing clones only the NEW dates and joins the
+    // original series (starting one and stamping the original when needed).
+    $skipBase = !empty($_POST['skip_base']);
+    $joinGroup = trim($_POST['join_group'] ?? '');
+    $baseLessonId = (int) ($_POST['base_lesson_id'] ?? 0);
+    if ($skipBase) {
+        if (empty($extraDates)) {
+            lessons_error('No new lesson dates in the selected range.');
+        }
+        if ($joinGroup === '') {
+            if ($baseLessonId <= 0 || $lessonsManager->getLesson($baseLessonId) === null) {
+                lessons_error('Original lesson not found.');
+            }
+            $joinGroup = bin2hex(random_bytes(8));
+            $stmt = $db->prepare("UPDATE lessons SET recurrence_group = :g WHERE lesson_id = :id AND (recurrence_group IS NULL OR recurrence_group = '')");
+            $stmt->execute(['g' => $joinGroup, 'id' => $baseLessonId]);
+        }
+        $group = $joinGroup;
+        $allDates = $extraDates;
+    } else {
+        $group = count($extraDates) > 0 ? bin2hex(random_bytes(8)) : null;
+        $allDates = array_merge([$date], $extraDates);
+    }
 
     $db->beginTransaction();
     $created = [];

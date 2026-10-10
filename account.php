@@ -22,6 +22,11 @@ $summary = [
 $recentSessions = [];
 $recentProgress = [];
 $recentActivities = [];
+$scheduleSummary = [
+    'upcoming' => 0,
+    'unpaid_total' => 0.0,
+    'unpaid_rows' => 0,
+];
 $accountError = null;
 
 if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -252,6 +257,33 @@ if ($user && is_database_connected()) {
             $act['duration_seconds'] = $attr['duration_seconds'] ?? null;
         }
         unset($act);
+
+        // Primary account elements: upcoming schedule + unpaid transactions (role-scoped).
+        if ($lessonsManager !== null) {
+            try {
+                $schedFilters = ['from' => date('Y-m-d'), 'status' => 'SCHEDULED'];
+                if ($user['role'] === 'TEACHER') {
+                    $schedFilters['teacher_id'] = (int) $user['user_id'];
+                } elseif ($user['role'] === 'STUDENT') {
+                    $schedFilters['student_id'] = (int) $user['user_id'];
+                }
+                $scheduleSummary['upcoming'] = count($lessonsManager->listLessons($schedFilters, 'lesson_date', 'ASC', 200, 0));
+                if ($user['role'] === 'ADMIN') {
+                    $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee_amount), 0) AS t FROM lesson_enrollments WHERE payment_status <> 'PAID'");
+                    $unpaidStmt->execute();
+                } elseif ($user['role'] === 'TEACHER') {
+                    $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(e.fee_amount), 0) AS t FROM lesson_enrollments e INNER JOIN lessons l ON l.lesson_id = e.lesson_id WHERE l.teacher_id = :me AND e.payment_status <> 'PAID'");
+                    $unpaidStmt->execute(['me' => (int) $user['user_id']]);
+                } else {
+                    $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee_amount), 0) AS t FROM lesson_enrollments WHERE student_id = :me AND payment_status <> 'PAID'");
+                    $unpaidStmt->execute(['me' => (int) $user['user_id']]);
+                }
+                $unpaidRow = $unpaidStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                $scheduleSummary['unpaid_rows'] = (int) ($unpaidRow['n'] ?? 0);
+                $scheduleSummary['unpaid_total'] = (float) ($unpaidRow['t'] ?? 0);
+            } catch (Throwable $ignored) {
+            }
+        }
     } catch (Throwable $exception) {
         $accountError = 'Account data could not be loaded. Please confirm database/psm_schema.sql has been imported. <br>' . $exception->getMessage();
     }
@@ -435,6 +467,28 @@ include __DIR__ . '/includes/header.php';
         <div class="role-pill"><?php echo e($user['role']); ?></div>
     </div>
 
+    <div class="card-grid account-primary">
+        <div class="card">
+            <h3>Schedule</h3>
+            <strong><?php echo e($scheduleSummary['upcoming']); ?> upcoming</strong>
+            <p>Scheduled lessons</p>
+            <a href="<?= e(url_path('schedule.php')); ?>">
+                <button type="button">Open Schedule</button>
+            </a>
+        </div>
+
+        <div class="card">
+            <h3>Transactions</h3>
+            <strong>RM <?php echo e(number_format($scheduleSummary['unpaid_total'], 2)); ?></strong>
+            <p><?php echo e($scheduleSummary['unpaid_rows']); ?> unpaid rows</p>
+            <a href="<?= e(url_path('transactions.php')); ?>">
+                <button type="button">Open Transactions</button>
+            </a>
+        </div>
+    </div>
+
+    <section class="account-secondary" aria-label="Learning activity">
+    <h2>Learning activity</h2>
     <div class="card-grid account-summary">
         <div class="card">
             <h3>Tutorial Progress</h3>
@@ -599,6 +653,7 @@ include __DIR__ . '/includes/header.php';
                 </tbody>
             </table>
         <?php endif; ?>
+    </section>
     </section>
 <?php endif; ?>
 
@@ -846,6 +901,20 @@ body.modal-open {
 
 .modal-container {
     animation: modalShow 0.25s ease;
+}
+
+/* Primary schedule/transaction cards sit above the secondary learning activity. */
+.account-primary {
+    margin-bottom: 30px;
+}
+
+.account-secondary {
+    margin-top: 10px;
+}
+
+.account-secondary > h2 {
+    font-size: 1.3rem;
+    margin: 0 0 15px;
 }
 </style>
 

@@ -491,6 +491,13 @@ Status: SOLVED (28/09/2026)
 Status: SOLVED (28/09/2026)
 - Lessons can be saved with no teacher (Unassigned radio default in create, Unassigned option in edit; API accepts blank on create/update; commission falls back to the default chain; chips/details/transactions show Unassigned). Create-teacher form inside the lesson panel creates the account and auto-selects it in the picker.
 
+66. bring schedule + transaction functions to teacher/student roles, fix any bugs found, and rearrange the personal page so schedule, transactions and credentials lead with tutorial/game secondary
+
+Status: SOLVED (28/09/2026)
+- Audit: role scoping verified on both pages (admin full, teacher own lessons, student own enrolments; all mutations admin-only server-side); no role gaps found.
+- Bug fix: repeat-from-completed created a duplicate of the base date and left clones in a disconnected series. Repeat clones now skip the base date, join the original series (stamping it when it had none), and error clearly when the range yields no new dates.
+- account.php rearranged: credentials header, then Schedule (upcoming count) and Transactions (unpaid total/rows) cards, then a Learning activity section with the tutorial/game summaries. See docs/schedule_transactions_notes.md.
+
 66. can you add a function in setting.json to send verification code number using gmail and then make a new file to send email for verification number
 
 Status: PARTIAL (07/10/2026)
