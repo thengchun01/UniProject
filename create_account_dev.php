@@ -27,8 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             $stmt = db()->prepare(
-                'INSERT INTO users (username, email, password_hash, role, classroom_status) 
-                 VALUES (:username, :email, :password_hash, :role, :status)'
+                'INSERT INTO users (username, email, password_hash, role, classroom_status, email_verified_at) 
+                 VALUES (:username, :email, :password_hash, :role, :status, CURRENT_TIMESTAMP)'
             );
             
             $stmt->execute([

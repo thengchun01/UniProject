@@ -77,6 +77,24 @@ try {
         exit;
     }
 
+    // Issue 60: set one fee for every enrolled student of a lesson (series row edit).
+    if ($action === 'set_lesson_fees') {
+        $lessonId = (int) ($_POST['lesson_id'] ?? 0);
+        $fee = $_POST['fee_amount'] ?? null;
+        if ($lessonId <= 0 || !is_numeric($fee) || (float) $fee < 0) {
+            enroll_error('Invalid lesson or fee.');
+        }
+        $stmt = $db->prepare('SELECT COUNT(*) FROM lesson_enrollments WHERE lesson_id = :id');
+        $stmt->execute(['id' => $lessonId]);
+        if ((int) $stmt->fetchColumn() === 0) {
+            enroll_error('This lesson has no enrolled students.');
+        }
+        $stmt = $db->prepare('UPDATE lesson_enrollments SET fee_amount = :fee WHERE lesson_id = :id');
+        $stmt->execute(['fee' => round((float) $fee, 2), 'id' => $lessonId]);
+        echo json_encode(['success' => true, 'data' => ['lesson_id' => $lessonId]]);
+        exit;
+    }
+
     if ($action === 'set_payment') {
         $enrollmentId = (int) ($_POST['enrollment_id'] ?? 0);
         $status = strtoupper(trim($_POST['status'] ?? ''));

@@ -1,6 +1,7 @@
 <?php
 
 require_once '../includes/config.php';
+require_once '../includes/verification_mail.php';
 
 header('Content-Type: application/json');
 
@@ -29,26 +30,41 @@ try {
     $password = $_POST['password'] ?? '';
     $role = normalize_role($_POST['role'] ?? 'STUDENT');
 
-    if (empty($username) || empty($email) || empty($password)) {
+    if (empty($username) || empty($password)) {
         echo json_encode([
             'success' => false,
-            'message' => '❌ All fields are required: Username, Email, and Password'
+            'message' => '❌ Username and Password are required (email may be left blank)'
         ]);
         exit;
     }
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    // Issue 64: email is optional; validate format only when provided.
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         echo json_encode([
             'success' => false,
-            'message' => '❌ Invalid email format. Please enter a valid email address.'
+            'message' => '❌ Invalid email format. Leave it blank or enter a valid email address.'
         ]);
         exit;
     }
+    $emailDb = $email !== '' ? $email : null;
 
     if (strlen($password) < 6) {
         echo json_encode([
             'success' => false,
             'message' => '❌ Password must be at least 6 characters long.'
+        ]);
+        exit;
+    }
+
+    // Reject a username or email another account already uses. Enforced here as
+    // well as by the UNIQUE keys, because a unique email index cannot be created
+    // while the database still holds a duplicate address.
+    $conflict = psm_find_account_conflict($username, $email);
+
+    if ($conflict !== null) {
+        echo json_encode([
+            'success' => false,
+            'message' => '❌ ' . $conflict
         ]);
         exit;
     }
@@ -59,20 +75,22 @@ try {
             username,
             email,
             password_hash,
-            role
+            role,
+            email_verified_at
         )
         VALUES
         (
             :username,
             :email,
             :password_hash,
-            :role
+            :role,
+            CURRENT_TIMESTAMP
         )'
     );
 
     $stmt->execute([
         'username' => $username,
-        'email' => $email,
+        'email' => $emailDb,
         'password_hash' => password_hash($password, PASSWORD_DEFAULT),
         'role' => $role
     ]);

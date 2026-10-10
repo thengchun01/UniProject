@@ -168,8 +168,8 @@ include __DIR__ . '/../includes/header.php';
                 <input type="text" name="username" required>
             </div>
             <div class="form-group">
-                <label>Email</label>
-                <input type="email" name="email" required>
+                <label>Email (optional)</label>
+                <input type="email" name="email">
             </div>
             <div class="form-group">
                 <label>Password</label>

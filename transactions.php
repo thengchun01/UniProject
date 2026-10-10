@@ -21,6 +21,7 @@ $lessonStatus = strtoupper(trim($_GET['lesson_status'] ?? ''));
 $payStatus = strtoupper(trim($_GET['payment'] ?? ''));
 $teacherFilter = (int) ($_GET['teacher_id'] ?? 0);
 $lessonFilter = (int) ($_GET['lesson_id'] ?? 0);
+$studentFilter = (int) ($_GET['student_id'] ?? 0);
 if ($from !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $from)) {
     $from = '';
 }
@@ -48,6 +49,8 @@ $totals = ['fee' => 0.0, 'paid' => 0.0, 'unpaid_rows' => 0, 'lessons' => 0];
 $defaultCommission = ['PERCENT', 0.0];
 $teacherOverrides = [];
 $teachers = [];
+$students = [];
+$studentFilterName = null;
 $proofLogs = [];
 
 if ($txAvailable && is_database_connected()) {
@@ -57,6 +60,17 @@ if ($txAvailable && is_database_connected()) {
         $lessonsManager->autoCompletePast();
         $stmt = $db->query("SELECT user_id, username FROM users WHERE role = 'TEACHER' ORDER BY username ASC");
         $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $stmt = $db->query("SELECT user_id, username FROM users WHERE role = 'STUDENT' ORDER BY username ASC");
+        $students = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($studentFilter > 0) {
+            $stmt = $db->prepare('SELECT username FROM users WHERE user_id = :id AND role = \'STUDENT\' LIMIT 1');
+            $stmt->execute(['id' => $studentFilter]);
+            $studentFilterName = $stmt->fetchColumn();
+            if ($studentFilterName === false) {
+                $studentFilterName = null;
+                $studentFilter = 0;
+            }
+        }
         $defaultCommission = $lessonsManager->getDefaultCommission();
 
         $stmt = $db->query('SELECT teacher_id, commission_type, commission_value FROM teacher_commission');
@@ -88,11 +102,17 @@ if ($txAvailable && is_database_connected()) {
             $where[] = 'l.teacher_id = :me';
             $params['me'] = (int) $user['user_id'];
         } elseif ($role === 'STUDENT') {
+            // Students always see only their own rows, whatever the URL carries.
             $where[] = 'e.student_id = :me';
             $params['me'] = (int) $user['user_id'];
         } elseif ($teacherFilter > 0) {
             $where[] = 'l.teacher_id = :tfilter';
             $params['tfilter'] = $teacherFilter;
+        }
+        // Issue 62: filter to one student's transactions (admin/teacher scope applies above).
+        if ($role !== 'STUDENT' && $studentFilter > 0) {
+            $where[] = 'e.student_id = :sfilter';
+            $params['sfilter'] = $studentFilter;
         }
         $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
@@ -181,6 +201,7 @@ function txn_qs(array $overrides): string
         'payment' => $_GET['payment'] ?? '',
         'teacher_id' => $_GET['teacher_id'] ?? '',
         'lesson_id' => $_GET['lesson_id'] ?? '',
+        'student_id' => $_GET['student_id'] ?? '',
         'sort' => $_GET['sort'] ?? 'lesson_date',
         'order' => $_GET['order'] ?? 'DESC',
     ];
@@ -254,15 +275,26 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </select>
         </label>
+        <label>Student
+            <select name="student_id">
+                <option value="">All</option>
+                <?php foreach ($students as $s): ?>
+                    <option value="<?= (int) $s['user_id'] ?>" <?= $studentFilter === (int) $s['user_id'] ? 'selected' : '' ?>><?= e($s['username']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
         <?php if ($lessonFilter > 0): ?>
             <label>Lesson<input type="number" name="lesson_id" value="<?= $lessonFilter ?>"></label>
         <?php endif; ?>
         <?php endif; ?>
         <button type="submit" class="primary-btn">Apply</button>
-        <?php if ($lessonFilter > 0 || $from !== '' || $to !== '' || $lessonStatus !== '' || $payStatus !== '' || $teacherFilter > 0): ?>
+        <?php if ($lessonFilter > 0 || $studentFilter > 0 || $from !== '' || $to !== '' || $lessonStatus !== '' || $payStatus !== '' || $teacherFilter > 0): ?>
             <a href="<?= e(url_path('transactions.php')); ?>" class="text-button">Clear</a>
         <?php endif; ?>
     </form>
+    <?php if ($studentFilterName !== null): ?>
+        <div class="alert success">Showing all transactions for student <strong><?= e($studentFilterName) ?></strong>. <a href="<?= e(url_path('transactions.php?' . txn_qs(['student_id' => '']))) ?>">Show all</a></div>
+    <?php endif; ?>
 
     <div class="table-wrapper">
         <table class="data-table modern-table">
@@ -296,7 +328,7 @@ include __DIR__ . '/includes/header.php';
                         <tr>
                             <td><?= e(substr((string) $r['lesson_date'], 0, 10)) ?> <?= e(substr((string) $r['start_time'], 0, 5)) ?>–<?= e(substr((string) $r['end_time'], 0, 5)) ?><br><span style="color:#666;font-size:12px;"><?= e($r['title'] !== null && $r['title'] !== '' ? $r['title'] : 'Lesson #' . (int) $r['lesson_id']) ?> · <?= e($r['lesson_status']) ?> · total RM <?= e(number_format((float) $r['lesson_total'], 2)) ?></span></td>
                             <td><?= e($r['student_name']) ?></td>
-                            <td><?= e($r['teacher_name'] ?? '—') ?></td>
+                            <td><?= !empty($r['teacher_name']) ? e($r['teacher_name']) : 'Unassigned' ?></td>
                             <td><?= e(number_format((float) $r['fee_amount'], 2)) ?></td>
                             <td><span class="txn-badge <?= $r['payment_status'] === 'PAID' ? 'is-paid' : ($r['payment_status'] === 'PENDING' ? 'is-pending' : '') ?>"><?= e($r['payment_status']) ?></span></td>
                             <td><span class="txn-badge <?= $r['commission_status'] === 'PAID' ? 'is-paid' : ($r['commission_status'] === 'PENDING' ? 'is-pending' : '') ?>"><?= e($r['commission_status']) ?></span><br><span style="color:#666;font-size:12px;"><?= e($r['resolved_ctype']) ?> <?= e(number_format((float) $r['resolved_cvalue'], 2)) ?> → RM <?= e(number_format((float) $r['payout'], 2)) ?></span></td>

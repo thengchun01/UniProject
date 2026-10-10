@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
+require_once __DIR__ . '/includes/verification_mail.php';
 
 $user = current_user();
 $authError = null;
@@ -33,9 +34,13 @@ if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($loginUsername === '' || $password === '') {
             $authError = 'Please enter both username/email and password.';
         } else {
+            // Cancel registrations that were never activated before looking the
+            // account up, so an expired account cannot be signed in to.
+            psm_cancel_expired_registrations();
+
             try {
                 $stmt = db()->prepare(
-                'SELECT user_id, username, email, password_hash, role, classroom, classroom_status
+                'SELECT user_id, username, email, password_hash, role, classroom, classroom_status, email_verified_at
                     FROM users 
                     WHERE username = :username OR email = :email 
                     LIMIT 1'
@@ -48,6 +53,18 @@ if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
                 $loginUser = $stmt->fetch();
 
                 if ($loginUser && password_verify($password, $loginUser['password_hash'])) {
+                    // An unactivated account gets no session; it goes to activation
+                    // instead. Accounts without an email address are never gated,
+                    // because no code could ever reach them.
+                    if (empty($loginUser['email_verified_at']) && trim((string) $loginUser['email']) !== '') {
+                        session_regenerate_id(true);
+                        $_SESSION['pending_verify_user_id'] = (int) $loginUser['user_id'];
+                        $_SESSION['pending_verify_email'] = (string) $loginUser['email'];
+                        $_SESSION['pending_verify_username'] = (string) $loginUser['username'];
+                        flash_set('error', 'Your account is not activated yet. Enter the code we emailed you to activate it.');
+                        redirect_to('verify_email.php');
+                    }
+
                     session_regenerate_id(true);
                     $_SESSION['user_id'] = (int) $loginUser['user_id'];
                     $_SESSION['username'] = $loginUser['username'];
@@ -77,6 +94,11 @@ if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
             $authError = 'Please enter a valid email address.';
         } elseif (strlen($password) < 6) {
             $authError = 'Password must be at least 6 characters.';
+        } elseif (($registrationConflict = psm_registration_conflict($registerUsername, $registerEmail)) !== null) {
+            // That call also cancels accounts registered earlier but never
+            // activated, so an abandoned registration cannot reserve a username
+            // or email forever.
+            $authError = $registrationConflict;
         } else {
             try {
                 $stmt = db()->prepare(
@@ -90,12 +112,28 @@ if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
                     'role' => 'STUDENT',
                 ]);
                 
-                $newUserId = db()->lastInsertId();
+                $newUserId = (int) db()->lastInsertId();
                 if (isset($tutorialManager)) {
                     $tutorialManager->initUserProgress($newUserId);
                 }
 
-                flash_set('success', 'Account created successfully. Please log in.');
+                if (psm_mail_is_configured()) {
+                    $sendResult = send_verification_code($registerEmail, $registerUsername, $newUserId);
+
+                    if (!empty($sendResult['success'])) {
+                        session_regenerate_id(true);
+                        $_SESSION['pending_verify_user_id'] = $newUserId;
+                        $_SESSION['pending_verify_email'] = $registerEmail;
+                        $_SESSION['pending_verify_username'] = $registerUsername;
+                        flash_set('success', 'Account created. We emailed an activation link to ' . $registerEmail . ' — open it to activate your account.');
+                        redirect_to('verify_email.php');
+                    }
+                }
+
+                // Fail open: with no delivered code the account would be unusable,
+                // so activate it and say so instead of trapping the user.
+                psm_mark_email_verified($newUserId);
+                flash_set('success', 'Account created successfully. Email activation was skipped because the message could not be sent, so you can log in right away.');
                 redirect_to('account.php?mode=login');
             } catch (PDOException $exception) {
                 $authError = $exception->getCode() === '23000'

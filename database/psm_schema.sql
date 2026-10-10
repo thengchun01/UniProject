@@ -24,6 +24,24 @@ SET time_zone = "+00:00";
 -- --------------------------------------------------------
 
 --
+-- 表的结构 `email_verification`
+--
+
+CREATE TABLE `email_verification` (
+  `verification_id` int(11) NOT NULL,
+  `email` varchar(150) NOT NULL,
+  `user_id` int(11) DEFAULT NULL,
+  `code_hash` varchar(255) NOT NULL,
+  `token_hash` varchar(64) DEFAULT NULL,
+  `attempts` int(11) NOT NULL DEFAULT 0,
+  `expires_at` datetime NOT NULL,
+  `consumed_at` datetime DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- 表的结构 `midi_file`
 --
 
@@ -102,6 +120,7 @@ CREATE TABLE `users` (
   `username` varchar(100) NOT NULL,
   `password_hash` varchar(255) NOT NULL,
   `email` varchar(150) DEFAULT NULL,
+  `email_verified_at` datetime DEFAULT NULL,
   `role` varchar(50) DEFAULT 'student',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `last_login` timestamp NULL DEFAULT NULL,
@@ -162,6 +181,15 @@ CREATE TABLE `user_settings` (
 --
 
 --
+-- 表的索引 `email_verification`
+--
+ALTER TABLE `email_verification`
+  ADD PRIMARY KEY (`verification_id`),
+  ADD UNIQUE KEY `token_hash` (`token_hash`),
+  ADD KEY `email` (`email`),
+  ADD KEY `user_id` (`user_id`);
+
+--
 -- 表的索引 `midi_file`
 --
 ALTER TABLE `midi_file`
@@ -200,7 +228,8 @@ ALTER TABLE `tutorial_topic`
 --
 ALTER TABLE `users`
   ADD PRIMARY KEY (`user_id`),
-  ADD UNIQUE KEY `username` (`username`);
+  ADD UNIQUE KEY `username` (`username`),
+  ADD UNIQUE KEY `email` (`email`);
 
 --
 -- 表的索引 `user_activity_log`
@@ -226,6 +255,12 @@ ALTER TABLE `user_settings`
 --
 -- 在导出的表使用AUTO_INCREMENT
 --
+
+--
+-- 使用表AUTO_INCREMENT `email_verification`
+--
+ALTER TABLE `email_verification`
+  MODIFY `verification_id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- 使用表AUTO_INCREMENT `midi_file`
@@ -278,6 +313,12 @@ ALTER TABLE `user_progress`
 --
 -- 限制导出的表
 --
+
+--
+-- 限制表 `email_verification`
+--
+ALTER TABLE `email_verification`
+  ADD CONSTRAINT `email_verification_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
 
 --
 -- 限制表 `midi_file`

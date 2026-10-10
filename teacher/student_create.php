@@ -52,8 +52,8 @@ try {
     }
     
     $stmt = $db->prepare("
-        INSERT INTO users (username, email, password_hash, role, classroom, classroom_status) 
-        VALUES (:username, :email, :password_hash, 'STUDENT', :classroom, 'APPROVED')
+        INSERT INTO users (username, email, password_hash, role, classroom, classroom_status, email_verified_at) 
+        VALUES (:username, :email, :password_hash, 'STUDENT', :classroom, 'APPROVED', CURRENT_TIMESTAMP)
     ");
     $stmt->execute([
         'username' => $username,

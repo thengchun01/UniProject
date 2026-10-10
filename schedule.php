@@ -117,7 +117,7 @@ $lessonStudents = [];
 $lessons = [];
 $selectedLesson = null;
 $selectedEnrollments = [];
-$groupLessons = [];
+$groupSummary = [];
 $selectedTotals = ['student_count' => 0, 'total_fee' => 0, 'paid_total' => 0, 'unpaid_count' => 0];
 $resolvedCommission = ['PERCENT', 0.0];
 $myAvailability = [];
@@ -207,10 +207,14 @@ if ($lessonsAvailable && is_database_connected()) {
                     $selectedLesson['commission_type'],
                     $selectedLesson['commission_value']
                 );
-                // Issue 50: sibling lessons of the same repeat series.
+                // Issue 50/56: aggregated series rows for the details table.
                 if (!empty($selectedLesson['recurrence_group'])) {
-                    $groupLessons = $lessonsManager->getGroupLessons((string) $selectedLesson['recurrence_group']);
+                    $groupSummary = $lessonsManager->getGroupSummary((string) $selectedLesson['recurrence_group']);
                 }
+                // Issue 63: students not yet enrolled, for the add-student picker.
+                $enrolledIds = array_map(function ($e) {
+                    return (int) $e['student_id'];
+                }, $selectedEnrollments);
             }
         }
 
@@ -234,9 +238,10 @@ function sched_min(string $t): int
     $p = explode(':', $t);
     return ((int) ($p[0] ?? 0)) * 60 + ((int) ($p[1] ?? 0));
 }
-// index lessons by date for the grid + calendar dots (issue 34)
+// index lessons by date for the grid + calendar dots (issue 34) + empty counts (issue 61)
 $lessonsByDate = [];
 $dayCounts = [];
+$dayEmpty = [];
 foreach ($lessons as $l) {
     $d = substr((string) ($l['lesson_date'] ?? ''), 0, 10);
     if ($d < $calStart || $d > $calEnd) {
@@ -244,6 +249,9 @@ foreach ($lessons as $l) {
     }
     $lessonsByDate[$d][] = $l;
     $dayCounts[$d] = ($dayCounts[$d] ?? 0) + 1;
+    if ((int) ($l['student_count'] ?? 0) === 0) {
+        $dayEmpty[$d] = ($dayEmpty[$d] ?? 0) + 1;
+    }
 }
 
 // teacher availability map for the create form (admin)
@@ -339,23 +347,24 @@ include __DIR__ . '/includes/header.php';
     </form>
     <div class="sched-panel sched-cal-panel">
         <div class="sched-cal-head">
-            <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $prevMonth, 'week' => '', 'lesson_id' => '']))) ?>" aria-label="Previous month">‹ Prev</a>
-            <strong><?= e(date('F Y', strtotime($monthStart . 'T12:00:00'))) ?></strong>
-            <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $nextMonth, 'week' => '', 'lesson_id' => '']))) ?>" aria-label="Next month">Next ›</a>
+                <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $prevMonth, 'week' => '', 'lesson_id' => ''])) . '#schedGrid') ?>" aria-label="Previous month">‹ Prev</a>
+                <strong><?= e(date('F Y', strtotime($monthStart . 'T12:00:00'))) ?></strong>
+                <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $nextMonth, 'week' => '', 'lesson_id' => ''])) . '#schedGrid') ?>" aria-label="Next month">Next ›</a>
         </div>
         <table class="sched-cal" aria-label="Month calendar">
             <thead><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr></thead>
             <tbody>
                 <?php foreach ($calWeeks as $cw): ?>
                     <?php $cwSel = ($cw['monday'] === $weekMonday); ?>
-                    <tr class="sched-cal-week<?= $cwSel ? ' is-selected' : '' ?>" data-href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $month, 'week' => $cw['monday'], 'lesson_id' => '']))) ?>" tabindex="0" title="Show week of <?= e($cw['monday']) ?>">
+                    <tr class="sched-cal-week<?= $cwSel ? ' is-selected' : '' ?>" data-href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $month, 'week' => $cw['monday'], 'lesson_id' => ''])) . '#schedGrid') ?>" tabindex="0" title="Show week of <?= e($cw['monday']) ?>">
                         <?php foreach ($cw['days'] as $cdd): ?>
                             <?php
                             $cdDow = (int) date('N', strtotime($cdd . 'T12:00:00'));
                             $cdCls = 'sched-cal-day' . (substr($cdd, 0, 7) === $month ? '' : ' is-dim') . ($cdDow === 7 ? ' is-sun' : '') . ($cdd === $todayYmd ? ' is-today' : '');
                             $cdCnt = $dayCounts[$cdd] ?? 0;
+                            $cdEmpty = $dayEmpty[$cdd] ?? 0;
                             ?>
-                            <td class="<?= $cdCls ?>"><span class="sched-cal-num"><?= e((int) substr($cdd, 8, 2)) ?></span><?php if ($cdCnt > 0): ?><span class="sched-cal-dot"><?= $cdCnt ?>•</span><?php endif; ?></td>
+                            <td class="<?= $cdCls ?>"><span class="sched-cal-num"><?= e((int) substr($cdd, 8, 2)) ?></span><?php if ($cdCnt > 0): ?><span class="sched-cal-dot"><?= $cdCnt ?>•</span><?php endif; ?><?php if ($cdEmpty > 0): ?><span class="sched-cal-empty" title="<?= $cdEmpty ?> lesson(s) with no students">∅<?= $cdEmpty ?></span><?php endif; ?></td>
                         <?php endforeach; ?>
                     </tr>
                 <?php endforeach; ?>
@@ -373,38 +382,67 @@ include __DIR__ . '/includes/header.php';
             $payout = $lessonsManager !== null
                 ? $lessonsManager->commissionPayout($resolvedCommission[0], (float) $resolvedCommission[1], (float) ($selectedTotals['total_fee'] ?? 0))
                 : 0.0;
-            // Issue 50: first and next upcoming lesson of the series.
-            $glFirst = $groupLessons[0] ?? null;
+            // Issue 50/56: first and next upcoming lesson of the series.
+            $glFirst = $groupSummary[0] ?? null;
             $glNext = null;
-            foreach ($groupLessons as $gl) {
-                if ($gl['status'] === 'SCHEDULED' && strtotime($gl['lesson_date'] . ' ' . $gl['end_time']) >= time()) {
-                    $glNext = $gl;
+            foreach ($groupSummary as $gs) {
+                if ($gs['status'] === 'SCHEDULED' && strtotime($gs['lesson_date'] . ' ' . $gs['end_time']) >= time()) {
+                    $glNext = $gs;
                     break;
                 }
             }
             ?>
-            <div class="sched-detail-list">
-                <div><strong><?= e($sl['title'] !== null && $sl['title'] !== '' ? $sl['title'] : 'Lesson') ?></strong>
-                    <span class="role-badge role-student"><?= e($sl['status']) ?></span></div>
-                <div>Date: <?= e(substr((string) $sl['lesson_date'], 0, 10)) ?> · <?= e(substr((string) $sl['start_time'], 0, 5)) ?>–<?= e(substr((string) $sl['end_time'], 0, 5)) ?></div>
-                <div>Teacher: <?= e($sl['teacher_name'] ?? '—') ?></div>
-                <div>Students: <?= (int) ($selectedTotals['student_count'] ?? 0) ?> · Total fee: RM <?= e(number_format((float) ($selectedTotals['total_fee'] ?? 0), 2)) ?> · Paid: RM <?= e(number_format((float) ($selectedTotals['paid_total'] ?? 0), 2)) ?> · Unpaid rows: <?= (int) ($selectedTotals['unpaid_count'] ?? 0) ?></div>
-                <div>Commission: <?= e($resolvedCommission[0]) ?> <?= e(number_format((float) $resolvedCommission[1], 2)) ?> → payout RM <?= e(number_format($payout, 2)) ?> (status: <?= e($sl['commission_status']) ?>)</div>
-            </div>
-            <?php if (!empty($groupLessons)): ?>
-            <div style="margin-top:10px;padding:10px;border:1px solid var(--border-color,#eaeaea);border-radius:10px;">
-                <strong>Repeat series (<?= count($groupLessons) ?> lessons · #<?= e(substr((string) $sl['recurrence_group'], 0, 8)) ?>)</strong>
-                <div class="sched-empty">First: <?= $glFirst ? e(substr((string) $glFirst['lesson_date'], 0, 10)) : '—' ?> · Next: <?= $glNext ? e(substr((string) $glNext['lesson_date'], 0, 10) . ' ' . substr((string) $glNext['start_time'], 0, 5)) : '—' ?></div>
-                <div style="margin-top:6px;display:flex;flex-direction:column;gap:4px;font-size:13px;">
-                    <?php foreach ($groupLessons as $gl): ?>
-                        <div><a href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => (int) $gl['lesson_id']]))) ?>"><?= e(substr((string) $gl['lesson_date'], 0, 10)) ?> <?= e(substr((string) $gl['start_time'], 0, 5)) ?>–<?= e(substr((string) $gl['end_time'], 0, 5)) ?></a> · <?= e($gl['status']) ?><?= (int) $gl['lesson_id'] === (int) $sl['lesson_id'] ? ' (this lesson)' : '' ?></div>
+            <table class="sched-detail-table">
+                <tbody>
+                    <tr><th>Lesson</th><td><strong><?= e($sl['title'] !== null && $sl['title'] !== '' ? $sl['title'] : 'Lesson') ?></strong> <span class="role-badge role-student"><?= e($sl['status']) ?></span></td></tr>
+                    <tr><th>Date</th><td><?= e(substr((string) $sl['lesson_date'], 0, 10)) ?> · <?= e(substr((string) $sl['start_time'], 0, 5)) ?>–<?= e(substr((string) $sl['end_time'], 0, 5)) ?></td></tr>
+                    <tr><th>Teacher</th><td><?= !empty($sl['teacher_name']) ? e($sl['teacher_name']) : 'Unassigned' ?></td></tr>
+                    <tr><th>Fees</th><td><?= (int) ($selectedTotals['student_count'] ?? 0) ?> student(s) · Total RM <?= e(number_format((float) ($selectedTotals['total_fee'] ?? 0), 2)) ?> · Paid RM <?= e(number_format((float) ($selectedTotals['paid_total'] ?? 0), 2)) ?> · Unpaid <?= (int) ($selectedTotals['unpaid_count'] ?? 0) ?></td></tr>
+                    <tr><th>Comm.</th><td><?= e($resolvedCommission[0]) ?> <?= e(number_format((float) $resolvedCommission[1], 2)) ?> → RM <?= e(number_format($payout, 2)) ?> (<?= e($sl['commission_status']) ?>)</td></tr>
+                    <?php if (!empty($groupSummary)): ?>
+                    <tr><th>Series</th><td>#<?= e(substr((string) $sl['recurrence_group'], 0, 8)) ?> · <?= count($groupSummary) ?> lessons · First <?= $glFirst ? e(substr((string) $glFirst['lesson_date'], 0, 10)) : '—' ?> · Next <?= $glNext ? e(substr((string) $glNext['lesson_date'], 0, 10)) : '—' ?></td></tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+            <?php if (!empty($groupSummary)): ?>
+            <table class="sched-detail-table sched-series-table">
+                <thead><tr><th>Date</th><th>Time</th><th>Students</th><th>Fee</th><th>Paid</th><th>Status</th></tr></thead>
+                <tbody>
+                    <?php foreach ($groupSummary as $gs): ?>
+                        <?php
+                        // Issue 57.1: navigate to the clicked lesson's own week, not the current one.
+                        $gsDow = (int) date('N', strtotime($gs['lesson_date'] . 'T12:00:00'));
+                        $gsMon = date('Y-m-d', strtotime($gs['lesson_date'] . ' -' . ($gsDow - 1) . ' days'));
+                        $gsUrl = url_path('schedule.php?' . sched_qs(['month' => substr((string) $gs['lesson_date'], 0, 7), 'week' => $gsMon, 'lesson_id' => (int) $gs['lesson_id']])) . '#schedGrid';
+                        ?>
+                        <?php $gsCls = trim(((int) $gs['lesson_id'] === (int) $sl['lesson_id'] ? 'is-this ' : '') . ((int) $gs['student_count'] === 0 ? 'is-empty' : '')); ?>
+                        <tr data-href="<?= e($gsUrl) ?>"<?= $gsCls !== '' ? ' class="' . $gsCls . '"' : '' ?>>
+                            <td><a href="<?= e($gsUrl) ?>"><?= e(substr((string) $gs['lesson_date'], 0, 10)) ?></a></td>
+                            <td><?= e(substr((string) $gs['start_time'], 0, 5)) ?>–<?= e(substr((string) $gs['end_time'], 0, 5)) ?></td>
+                            <td><?= $gs['student_names'] !== null && $gs['student_names'] !== '' ? e($gs['student_names']) : '—' ?></td>
+                            <?php if ($role === 'ADMIN'): ?>
+                            <td class="sched-editable" data-lesson-fee="<?= (int) $gs['lesson_id'] ?>" data-fee="<?= e(number_format((float) $gs['total_fee'] / max(1, (int) $gs['student_count']), 2, '.', '')) ?>" data-count="<?= (int) $gs['student_count'] ?>" title="Click to set fee"><?= e(number_format((float) $gs['total_fee'], 2)) ?></td>
+                            <?php else: ?>
+                            <td><?= e(number_format((float) $gs['total_fee'], 2)) ?></td>
+                            <?php endif; ?>
+                            <td><?= (int) $gs['paid_count'] ?>/<?= (int) $gs['student_count'] ?></td>
+                            <?php if ($role === 'ADMIN'): ?>
+                            <td class="sched-editable" data-lesson-status="<?= (int) $gs['lesson_id'] ?>" data-status="<?= e($gs['status']) ?>" title="Click to change status"><?= e($gs['status']) ?></td>
+                            <?php else: ?>
+                            <td><?= e($gs['status']) ?></td>
+                            <?php endif; ?>
+                        </tr>
                     <?php endforeach; ?>
-                </div>
-                <?php if ($role === 'ADMIN'): ?>
-                    <button type="button" class="btn-outline-danger" id="schedDeleteSeriesBtn" style="margin-top:8px;">Delete entire series (<?= count($groupLessons) ?>)</button>
-                <?php endif; ?>
+                </tbody>
+            </table>
+            <?php if ($role === 'ADMIN'): ?>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;">
+                <button type="button" class="btn-outline-danger" data-del-lesson>Delete lesson</button>
+                <button type="button" class="btn-outline-danger" id="schedDeleteSeriesBtn">Delete entire series (<?= count($groupSummary) ?>)</button>
             </div>
             <?php endif; ?>
+            <?php endif; ?>
+            <h3 class="sched-detail-sub">Students &amp; payments</h3>
             <div class="table-wrapper" style="margin-top:12px;">
                 <table class="data-table modern-table sched-sortable">
                     <thead><tr><th class="sortable" data-sortkey="name">Student <span class="sort-arrow">↕</span></th><th class="sortable" data-sortkey="fee">Fee (RM) <span class="sort-arrow">↕</span></th><th class="sortable" data-sortkey="pay">Payment <span class="sort-arrow">↕</span></th><?php if ($role === 'ADMIN'): ?><th>Actions</th><?php endif; ?></tr></thead>
@@ -412,34 +450,37 @@ include __DIR__ . '/includes/header.php';
                         <?php if (empty($selectedEnrollments)): ?>
                             <tr><td colspan="<?= $role === 'ADMIN' ? 4 : 3 ?>">No students yet.</td></tr>
                         <?php else: ?>
-                            <?php foreach ($selectedEnrollments as $en): ?>
-                                <tr data-name="<?= e(strtolower($en['student_name'])) ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>" data-pay="<?= e($en['payment_status']) ?>">
-                                    <td><?= e($en['student_name']) ?></td>
-                                    <td><?= e(number_format((float) $en['fee_amount'], 2)) ?></td>
-                                    <td><?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></td>
-                                    <?php if ($role === 'ADMIN'): ?>
-                                    <td>
-                                        <button type="button" class="action-btn edit-btn" data-enroll-fee="<?= (int) $en['enrollment_id'] ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>">Fee</button>
-                                        <button type="button" class="action-btn delete-btn" data-enroll-remove="<?= (int) $en['enrollment_id'] ?>">Remove</button>
-                                    </td>
-                                    <?php endif; ?>
-                                </tr>
-                            <?php endforeach; ?>
+                                <?php foreach ($selectedEnrollments as $en): ?>
+                                    <tr data-name="<?= e(strtolower($en['student_name'])) ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>" data-pay="<?= e($en['payment_status']) ?>">
+                                        <td><a href="<?= e(url_path('transactions.php?student_id=' . (int) $en['student_id'])) ?>" title="All transactions for this student"><?= e($en['student_name']) ?></a></td>
+                                        <?php if ($role === 'ADMIN'): ?>
+                                        <td class="sched-editable" data-enroll-fee-cell="<?= (int) $en['enrollment_id'] ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>" title="Click to edit fee"><?= e(number_format((float) $en['fee_amount'], 2)) ?></td>
+                                        <td><?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></td>
+                                        <td>
+                                            <a class="action-btn view-btn" href="<?= e(url_path('transactions.php?lesson_id=' . (int) $sl['lesson_id'])) ?>">Pay</a>
+                                            <button type="button" class="action-btn delete-btn" data-enroll-remove="<?= (int) $en['enrollment_id'] ?>">Remove</button>
+                                        </td>
+                                        <?php else: ?>
+                                        <td><?= e(number_format((float) $en['fee_amount'], 2)) ?></td>
+                                        <td><?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></td>
+                                        <?php endif; ?>
+                                    </tr>
+                                <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </div>
-            <?php if ($role === 'ADMIN'): ?>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-                <button type="button" class="secondary-btn" id="schedStatusBtn">Set status</button>
-                <button type="button" class="secondary-btn" id="schedAddStudentBtn">Add student</button>
-                <button type="button" class="btn-outline-danger" id="schedDeleteBtn">Delete lesson</button>
-                <a class="text-button" href="<?= e(url_path('transactions.php?lesson_id=' . (int) $sl['lesson_id'])) ?>">Open in Transactions →</a>
-            </div>
-            <?php endif; ?>
+                <?php if ($role === 'ADMIN'): ?>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+                    <button type="button" class="secondary-btn" id="schedAddStudentBtn">Add student</button>
+                    <?php if (empty($groupSummary)): ?>
+                    <button type="button" class="btn-outline-danger" data-del-lesson>Delete lesson</button>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
         <?php endif; ?>
     </div>
-    <div class="sched-grid" role="region" aria-label="Weekly timetable">
+    <div class="sched-grid" id="schedGrid" role="region" aria-label="Weekly timetable">
         <table class="sched-table">
             <thead>
                 <tr>
@@ -488,11 +529,12 @@ include __DIR__ . '/includes/header.php';
                                         $chipDur = sched_min((string) $l['end_time']) - sched_min((string) $l['start_time']);
                                         $chipTitle = $l['title'] !== null && $l['title'] !== '' ? $l['title'] : 'Lesson';
                                         $chipStCls = $l['status'] === 'COMPLETED' ? 'is-ok' : ($l['status'] === 'CANCELLED' ? 'is-bad' : 'is-muted');
+                                        $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                         ?>
-                                        <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs)) ?>">
+                                        <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
                                             <span class="sched-chip-time"><?= e(substr((string) $l['start_time'], 0, 5)) ?>–<?= e(substr((string) $l['end_time'], 0, 5)) ?> · <?= $chipDur ?>m · <?= e($chipTitle) ?></span>
                                             <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
-                                            <span class="sched-chip-teacher"><?= e($l['teacher_name'] ?? '—') ?></span>
+                                            <span class="sched-chip-teacher"><?= !empty($l['teacher_name']) ? e($l['teacher_name']) : 'Unassigned' ?></span>
                                             <span class="sched-chip-status <?= $chipStCls ?>"><?= e($l['status']) ?></span>
                                         </a>
                                     <?php endforeach; ?>
@@ -508,11 +550,13 @@ include __DIR__ . '/includes/header.php';
         <div class="sched-panel sched-side">
             <?php if ($role === 'ADMIN'): ?>
                 <?php if ($selectedLesson !== null): ?>
-                <h2><?= e($selectedLesson['title'] !== null && $selectedLesson['title'] !== '' ? $selectedLesson['title'] : 'Untitled lesson') ?></h2>
+                <div class="sched-edit-head">
+                    <h2><?= e($selectedLesson['title'] !== null && $selectedLesson['title'] !== '' ? $selectedLesson['title'] : 'Untitled lesson') ?></h2>
+                    <a class="sched-x-btn" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => ''])) . '#schedGrid') ?>" title="Unload lesson and back to create">×</a>
+                </div>
                 <p style="margin:-6px 0 12px;color:var(--text-muted,#666);font-size:13px;">Lesson #<?= (int) $selectedLesson['lesson_id'] ?> · <?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?> <?= e(substr((string) $selectedLesson['start_time'], 0, 5)) ?>–<?= e(substr((string) $selectedLesson['end_time'], 0, 5)) ?></p>
                 <div style="display:flex;gap:8px;margin-bottom:12px;">
-                    <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => '']))) ?>">＋ New lesson</a>
-                    <button type="button" class="btn-outline-danger" id="schedEditDeleteBtn">Delete</button>
+                    <button type="button" class="btn-outline-danger" data-del-lesson>Delete</button>
                 </div>
                 <div id="schedEditMsg" class="alert" style="display:none;"></div>
                 <form id="schedEditForm">
@@ -536,6 +580,7 @@ include __DIR__ . '/includes/header.php';
                         <legend>Teacher &amp; commission</legend>
                         <div class="form-field"><label>Teacher
                             <select name="teacher_id" required>
+                                <option value="" <?= $selectedLesson['teacher_id'] === null ? 'selected' : '' ?>>— Unassigned —</option>
                                 <?php foreach ($teachers as $t): ?>
                                     <option value="<?= (int) $t['user_id'] ?>" <?= (int) $selectedLesson['teacher_id'] === (int) $t['user_id'] ? 'selected' : '' ?>><?= e($t['username']) ?></option>
                                 <?php endforeach; ?>
@@ -552,11 +597,17 @@ include __DIR__ . '/includes/header.php';
                         <?php else: ?>
                             <div class="sched-detail-list">
                                 <?php foreach ($selectedEnrollments as $en): ?>
-                                    <div><?= e($en['student_name']) ?> · RM <?= e(number_format((float) $en['fee_amount'], 2)) ?> · <?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></div>
+                                    <div class="sched-student-row">
+                                        <span><?= e($en['student_name']) ?> · RM <?= e(number_format((float) $en['fee_amount'], 2)) ?> · <?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></span>
+                                        <span class="sched-row-actions">
+                                            <button type="button" class="action-btn edit-btn" data-enroll-fee="<?= (int) $en['enrollment_id'] ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>">Fee</button>
+                                            <button type="button" class="action-btn delete-btn" data-enroll-remove="<?= (int) $en['enrollment_id'] ?>">Remove</button>
+                                        </span>
+                                    </div>
                                 <?php endforeach; ?>
                             </div>
                         <?php endif; ?>
-                        <p class="sched-empty" style="margin:8px 0 0;">Fees and removals are managed in Lesson details below.</p>
+                        <button type="button" class="secondary-btn" id="schedEditAddStudentBtn" style="margin-top:8px;">Add student</button>
                     </fieldset>
                     <button type="submit" class="primary-btn" style="width:100%;">Save changes</button>
                 </form>
@@ -630,6 +681,11 @@ include __DIR__ . '/includes/header.php';
                                 <table class="sched-pick-table sched-sortable" id="schedTeacherTable" aria-label="Pick teacher">
                                     <thead><tr><th class="sortable" data-sortkey="name">Teacher <span class="sort-arrow">↕</span></th><th>Availability</th><th class="sortable" data-sortkey="status">Status <span class="sort-arrow">↕</span></th></tr></thead>
                                     <tbody>
+                                        <tr data-teacher="0" data-name="~" data-status="3">
+                                            <td><label class="sched-pick-label"><input type="radio" name="teacher_id" value="" checked> <em>— Leave unassigned —</em></label></td>
+                                            <td class="sched-t-avail sched-empty">—</td>
+                                            <td class="sched-t-status"><span class="sched-pill is-muted">—</span></td>
+                                        </tr>
                                         <?php foreach ($teachers as $t): ?>
                                             <tr data-teacher="<?= (int) $t['user_id'] ?>" data-name="<?= e(strtolower($t['username'])) ?>" data-status="3">
                                                 <td><label class="sched-pick-label"><input type="radio" name="teacher_id" value="<?= (int) $t['user_id'] ?>" required> <?= e($t['username']) ?></label></td>
@@ -644,6 +700,14 @@ include __DIR__ . '/includes/header.php';
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
                             <div class="form-field"><label>Commission<select name="commission_type"><option value="">Default</option><option value="PERCENT">Percent %</option><option value="FIXED">Fixed RM</option></select></label></div>
                             <div class="form-field"><label>Value<input type="number" name="commission_value" min="0" step="0.01" placeholder="e.g. 20"></label></div>
+                        </div>
+                        <p style="margin:10px 0 4px;font-size:13px;"><a href="#" id="schedNewTeacherToggle">＋ Create new teacher account</a></p>
+                        <div id="schedNewTeacherBox" style="display:none;border-top:1px solid var(--border-color,#eaeaea);padding-top:12px;margin-top:4px;">
+                            <div id="schedNewTeacherMsg" class="alert" style="display:none;"></div>
+                            <div class="form-field"><label>Username<input type="text" id="schedNewTeacherUsername" maxlength="100" autocomplete="off"></label></div>
+                            <div class="form-field"><label>Email (optional)<input type="email" id="schedNewTeacherEmail" maxlength="100" autocomplete="off"></label></div>
+                            <div class="form-field"><label>Password (min 6 characters)<input type="password" id="schedNewTeacherPassword" autocomplete="new-password"></label></div>
+                            <button type="button" class="secondary-btn" id="schedNewTeacherCreate" style="width:100%;">Create teacher</button>
                         </div>
                     </fieldset>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -680,6 +744,39 @@ include __DIR__ . '/includes/header.php';
     </div><!-- /.sched-layout -->
 </div>
 
+<?php if ($role === 'ADMIN' && $selectedLesson !== null): ?>
+<dialog class="sched-dialog" id="schedAddStudentDialog" aria-labelledby="schedAddStudentTitle">
+    <form method="dialog" id="schedAddStudentDialogForm">
+        <h2 id="schedAddStudentTitle">Add student</h2>
+        <div class="form-field"><label>Student
+            <select id="schedAddStudentSelect" required>
+                <?php $hasOptions = false; ?>
+                <?php foreach ($students as $s): ?>
+                    <?php if (in_array((int) $s['user_id'], $enrolledIds, true)) continue; ?>
+                    <?php $hasOptions = true; ?>
+                    <option value="<?= (int) $s['user_id'] ?>"><?= e($s['username']) ?><?= $s['email'] !== '' ? ' (' . e($s['email']) . ')' : '' ?></option>
+                <?php endforeach; ?>
+                <?php if (!$hasOptions): ?>
+                    <option value="">No more students to add</option>
+                <?php endif; ?>
+            </select></label></div>
+        <div class="form-field"><label>Fee (RM)<input type="number" id="schedAddStudentFee" min="0" step="0.01" value="0" required></label></div>
+        <p style="margin:0 0 4px;font-size:13px;"><a href="#" id="schedNewStudentToggle">＋ Create new student account</a></p>
+        <div id="schedNewStudentBox" style="display:none;border-top:1px solid var(--border-color,#eaeaea);padding-top:12px;margin-top:4px;">
+            <div id="schedNewStudentMsg" class="alert" style="display:none;"></div>
+            <div class="form-field"><label>Username<input type="text" id="schedNewUsername" maxlength="100" autocomplete="off"></label></div>
+            <div class="form-field"><label>Email (optional — may be left blank)<input type="email" id="schedNewEmail" maxlength="100" autocomplete="off"></label></div>
+            <div class="form-field"><label>Password (min 6 characters)<input type="password" id="schedNewPassword" autocomplete="new-password"></label></div>
+            <button type="button" class="secondary-btn" id="schedNewStudentCreate" style="width:100%;">Create account</button>
+        </div>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" id="schedAddStudentCancel">Cancel</button>
+            <button type="submit" class="primary-btn" <?= $hasOptions ? '' : 'disabled' ?>>Add</button>
+        </div>
+    </form>
+</dialog>
+<?php endif; ?>
+
 <script>
 (function () {
     var lessonsWeek = <?= json_encode(array_map(function ($l) {
@@ -715,6 +812,17 @@ include __DIR__ . '/includes/header.php';
     }
     window.addEventListener('resize', syncHeadOffset);
     syncHeadOffset();
+
+    // Issue 55.1: come back to the timetable instead of page top after refresh.
+    function schedReload() {
+        try { sessionStorage.setItem('schedScrollY', String(window.scrollY || 0)); } catch (e) {}
+        window.location.reload();
+    }
+    (function restoreSchedScroll() {
+        var y = null;
+        try { y = sessionStorage.getItem('schedScrollY'); sessionStorage.removeItem('schedScrollY'); } catch (e) {}
+        if (y !== null && y !== '') { window.scrollTo(0, parseInt(y, 10) || 0); }
+    })();
 
     // Issue 29: scroll the grid to today's column when visible.
     var todayCol = document.getElementById('schedTodayCol');
@@ -885,7 +993,7 @@ include __DIR__ . '/includes/header.php';
         var params = new URLSearchParams(window.location.search);
         params.set('month', dateValue.slice(0, 7));
         params.set('week', mondayOf(dateValue));
-        window.location.search = params.toString();
+        window.location.href = window.location.pathname + '?' + params.toString() + '#schedGrid';
     }
     var schedDateInput = document.getElementById('schedDate');
     if (schedDateInput) schedDateInput.addEventListener('change', function () { maybeJumpToDate(schedDateInput.value, 'schedCreateForm', 'schedDraftCreate'); });
@@ -989,7 +1097,7 @@ include __DIR__ . '/includes/header.php';
                     if (data.success) {
                         var skipped = (data.data && data.data.skipped) || [];
                         if (skipped.length) { alert('Saved. Skipped ' + skipped.length + ' date(s) outside working hours: ' + skipped.join(', ')); }
-                        window.location.reload();
+                        schedReload();
                     }
                     else { showMsg('schedCreateMsg', data.error || 'Save failed.', false); btn.disabled = false; btn.textContent = 'Save timetable'; }
                 })
@@ -1008,7 +1116,7 @@ include __DIR__ . '/includes/header.php';
             fetch('<?= e(url_path('api/lessons_save.php')) ?>', { method: 'POST', body: fd })
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
-                    if (data.success) { window.location.reload(); }
+                    if (data.success) { schedReload(); }
                     else { showMsg('schedEditMsg', data.error || 'Save failed.', false); btn.disabled = false; btn.textContent = 'Save changes'; }
                 })
                 .catch(function (err) { showMsg('schedEditMsg', 'Network error: ' + err.message, false); btn.disabled = false; btn.textContent = 'Save changes'; });
@@ -1032,7 +1140,7 @@ include __DIR__ . '/includes/header.php';
                         if (skipped.length) { alert('Repeats created. Skipped ' + skipped.length + ' date(s): ' + skipped.join(', ')); }
                         var params = new URLSearchParams(window.location.search);
                         params.set('lesson_id', String((data.data.lesson_ids || [])[0] || ''));
-                        window.location.search = params.toString();
+                        window.location.href = window.location.pathname + '?' + params.toString() + '#schedGrid';
                     }
                     else { showMsg('schedRepeatMsg', data.error || 'Repeat failed.', false); btn.disabled = false; btn.textContent = 'Create repeats as new scheduled lessons'; }
                 })
@@ -1044,10 +1152,10 @@ include __DIR__ . '/includes/header.php';
     function postForm(url, fd, onOk) {
         fetch(url, { method: 'POST', body: fd })
             .then(function (r) { return r.json(); })
-            .then(function (data) { if (data.success) { window.location.reload(); } else { alert(data.error || 'Failed.'); } })
+            .then(function (data) { if (data.success) { schedReload(); } else { alert(data.error || 'Failed.'); } })
             .catch(function (err) { alert('Network error: ' + err.message); });
     }
-    document.querySelectorAll('#schedDeleteBtn, #schedEditDeleteBtn').forEach(function (delBtn) {
+    document.querySelectorAll('[data-del-lesson]').forEach(function (delBtn) {
         delBtn.addEventListener('click', function () {
             if (!window.confirm('Delete this lesson and its enrollments?')) return;
             var fd = new FormData(); fd.append('action', 'delete'); fd.append('lesson_id', String(selectedLessonId));
@@ -1066,30 +1174,143 @@ include __DIR__ . '/includes/header.php';
                 if (data.success) {
                     var params = new URLSearchParams(window.location.search);
                     params.delete('lesson_id');
-                    window.location.search = params.toString();
+                    window.location.href = window.location.pathname + '?' + params.toString() + '#schedGrid';
                 } else { alert(data.error || 'Failed.'); }
             })
             .catch(function (err) { alert('Network error: ' + err.message); });
     });
-    var stBtn = document.getElementById('schedStatusBtn');
-    if (stBtn) stBtn.addEventListener('click', function () {
-        var v = window.prompt('Status (SCHEDULED / COMPLETED / CANCELLED). COMPLETED only works after the end time:', 'COMPLETED');
-        if (!v) return;
-        var fd = new FormData(); fd.append('action', 'update'); fd.append('lesson_id', String(selectedLessonId));
-        fd.append('status', v.toUpperCase());
-        var sl = <?= json_encode($selectedLesson, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-        if (sl) { fd.append('teacher_id', String(sl.teacher_id || '')); fd.append('lesson_date', (sl.lesson_date || '').substr(0, 10)); fd.append('start_time', (sl.start_time || '').substr(0, 5)); fd.append('end_time', (sl.end_time || '').substr(0, 5)); }
-        postForm('<?= e(url_path('api/lessons_save.php')) ?>', fd);
+    // Issue 63: pick from the student list instead of typing an ID manually.
+    var addDialog = document.getElementById('schedAddStudentDialog');
+    document.querySelectorAll('#schedAddStudentBtn, #schedEditAddStudentBtn').forEach(function (addBtn) {
+        addBtn.addEventListener('click', function () {
+            if (addDialog && typeof addDialog.showModal === 'function') { addDialog.showModal(); }
+        });
     });
-    var addBtn = document.getElementById('schedAddStudentBtn');
-    if (addBtn) addBtn.addEventListener('click', function () {
-        var sid = window.prompt('Student user ID to add:');
+    var addCancel = document.getElementById('schedAddStudentCancel');
+    if (addCancel) addCancel.addEventListener('click', function () { if (addDialog) addDialog.close(); });
+    var addDialogForm = document.getElementById('schedAddStudentDialogForm');
+    if (addDialogForm) addDialogForm.addEventListener('submit', function (ev) {
+        ev.preventDefault();
+        var sid = document.getElementById('schedAddStudentSelect').value;
+        var fee = document.getElementById('schedAddStudentFee').value;
         if (!sid) return;
-        var fee = window.prompt('Fee (RM):', '0');
-        if (fee === null) return;
+        if (addDialog) addDialog.close();
         var fd = new FormData(); fd.append('action', 'add'); fd.append('lesson_id', String(selectedLessonId));
         fd.append('student_id', sid); fd.append('fee_amount', fee);
         postForm('<?= e(url_path('api/enrollments_save.php')) ?>', fd);
+    });
+    // Issue 63 follow-up: create a student account without leaving the dialog.
+    var newToggle = document.getElementById('schedNewStudentToggle');
+    var newBox = document.getElementById('schedNewStudentBox');
+    if (newToggle && newBox) newToggle.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var open = newBox.style.display === 'none';
+        newBox.style.display = open ? 'block' : 'none';
+        newToggle.textContent = open ? '– Hide new account form' : '＋ Create new student account';
+    });
+    var newCreateBtn = document.getElementById('schedNewStudentCreate');
+    if (newCreateBtn) newCreateBtn.addEventListener('click', function () {
+        var u = document.getElementById('schedNewUsername').value.trim();
+        var m = document.getElementById('schedNewEmail').value.trim();
+        var p = document.getElementById('schedNewPassword').value;
+        var msg = document.getElementById('schedNewStudentMsg');
+        function newMsg(text, ok) {
+            msg.style.display = 'block';
+            msg.className = 'alert ' + (ok ? 'success' : 'error');
+            msg.textContent = text;
+        }
+        if (u === '' || p === '') { newMsg('Username and password are required (email may be left blank).', false); return; }
+        newCreateBtn.disabled = true; newCreateBtn.textContent = 'Creating...';
+        var fd = new FormData();
+        fd.append('username', u); fd.append('email', m); fd.append('password', p); fd.append('role', 'STUDENT');
+        fetch('<?= e(url_path('admin/user_create.php')) ?>', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                newCreateBtn.disabled = false; newCreateBtn.textContent = 'Create account';
+                if (data.success && data.user) {
+                    var sel = document.getElementById('schedAddStudentSelect');
+                    var opt = document.createElement('option');
+                    opt.value = String(data.user.user_id);
+                    opt.textContent = data.user.username + ' (' + data.user.email + ')';
+                    sel.appendChild(opt);
+                    sel.value = String(data.user.user_id);
+                    document.getElementById('schedNewUsername').value = '';
+                    document.getElementById('schedNewEmail').value = '';
+                    document.getElementById('schedNewPassword').value = '';
+                    newMsg('Account created — press Add to enroll ' + data.user.username + '.', true);
+                } else {
+                    newMsg(data.message || 'Account creation failed.', false);
+                }
+            })
+            .catch(function (err) {
+                newCreateBtn.disabled = false; newCreateBtn.textContent = 'Create account';
+                newMsg('Network error: ' + err.message, false);
+            });
+    });
+    // Issue 65 follow-up: create a teacher account without leaving the lesson form.
+    var newTToggle = document.getElementById('schedNewTeacherToggle');
+    var newTBox = document.getElementById('schedNewTeacherBox');
+    if (newTToggle && newTBox) newTToggle.addEventListener('click', function (ev) {
+        ev.preventDefault();
+        var open = newTBox.style.display === 'none';
+        newTBox.style.display = open ? 'block' : 'none';
+        newTToggle.textContent = open ? '– Hide new teacher form' : '＋ Create new teacher account';
+    });
+    var newTBtn = document.getElementById('schedNewTeacherCreate');
+    if (newTBtn) newTBtn.addEventListener('click', function () {
+        var u = document.getElementById('schedNewTeacherUsername').value.trim();
+        var m = document.getElementById('schedNewTeacherEmail').value.trim();
+        var p = document.getElementById('schedNewTeacherPassword').value;
+        var msg = document.getElementById('schedNewTeacherMsg');
+        function newTMsg(text, ok) {
+            msg.style.display = 'block';
+            msg.className = 'alert ' + (ok ? 'success' : 'error');
+            msg.textContent = text;
+        }
+        if (u === '' || p === '') { newTMsg('Username and password are required (email may be left blank).', false); return; }
+        newTBtn.disabled = true; newTBtn.textContent = 'Creating...';
+        var fd = new FormData();
+        fd.append('username', u); fd.append('email', m); fd.append('password', p); fd.append('role', 'TEACHER');
+        fetch('<?= e(url_path('admin/user_create.php')) ?>', { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                newTBtn.disabled = false; newTBtn.textContent = 'Create teacher';
+                if (data.success && data.user) {
+                    var tbody = document.querySelector('#schedTeacherTable tbody');
+                    if (tbody) {
+                        var tr = document.createElement('tr');
+                        tr.setAttribute('data-teacher', String(data.user.user_id));
+                        tr.setAttribute('data-name', String(data.user.username).toLowerCase());
+                        tr.setAttribute('data-status', '3');
+                        var radio = document.createElement('input');
+                        radio.type = 'radio'; radio.name = 'teacher_id';
+                        radio.value = String(data.user.user_id); radio.checked = true;
+                        var lab = document.createElement('label');
+                        lab.className = 'sched-pick-label';
+                        lab.appendChild(radio);
+                        lab.appendChild(document.createTextNode(' ' + data.user.username));
+                        var tdName = document.createElement('td'); tdName.appendChild(lab);
+                        var tdAv = document.createElement('td');
+                        tdAv.className = 'sched-t-avail sched-empty'; tdAv.textContent = 'No info';
+                        var tdSt = document.createElement('td');
+                        tdSt.className = 'sched-t-status';
+                        tdSt.innerHTML = '<span class="sched-pill is-muted">—</span>';
+                        tr.appendChild(tdName); tr.appendChild(tdAv); tr.appendChild(tdSt);
+                        tbody.appendChild(tr);
+                    }
+                    document.getElementById('schedNewTeacherUsername').value = '';
+                    document.getElementById('schedNewTeacherEmail').value = '';
+                    document.getElementById('schedNewTeacherPassword').value = '';
+                    refreshTeacherTable();
+                    newTMsg('Teacher account created and selected.', true);
+                } else {
+                    newTMsg(data.message || 'Account creation failed.', false);
+                }
+            })
+            .catch(function (err) {
+                newTBtn.disabled = false; newTBtn.textContent = 'Create teacher';
+                newTMsg('Network error: ' + err.message, false);
+            });
     });
     document.querySelectorAll('[data-enroll-remove]').forEach(function (b) {
         b.addEventListener('click', function () {
@@ -1104,6 +1325,101 @@ include __DIR__ . '/includes/header.php';
             if (v === null) return;
             var fd = new FormData(); fd.append('action', 'set_fee'); fd.append('enrollment_id', b.getAttribute('data-enroll-fee')); fd.append('fee_amount', v);
             postForm('<?= e(url_path('api/enrollments_save.php')) ?>', fd);
+        });
+    });
+
+    // Issue 57: whole series rows navigate to that schedule date.
+    document.querySelectorAll('.sched-series-table tr[data-href]').forEach(function (row) {
+        row.addEventListener('click', function () { window.location.href = row.getAttribute('data-href'); });
+    });
+
+    // Issue 60: click-to-edit fees and option-select statuses.
+    function inlineFeeEdit(cell, current, onSave) {
+        if (cell.querySelector('input')) return;
+        var orig = cell.textContent;
+        cell.textContent = '';
+        var input = document.createElement('input');
+        input.type = 'number'; input.min = '0'; input.step = '0.01'; input.value = current;
+        input.className = 'sched-fee-input';
+        input.style.width = '100%';
+        input.setAttribute('aria-label', 'Fee in RM');
+        cell.appendChild(input);
+        input.focus();
+        if (input.select) input.select();
+        var done = false;
+        function finish(save) {
+            if (done) return; done = true;
+            if (save && input.value !== '' && !isNaN(parseFloat(input.value)) && parseFloat(input.value) >= 0) {
+                if (onSave(parseFloat(input.value).toFixed(2)) === false) { cell.textContent = orig; }
+            } else {
+                cell.textContent = orig;
+            }
+        }
+        input.addEventListener('keydown', function (ev) {
+            if (ev.key === 'Enter') { ev.preventDefault(); finish(true); }
+            else if (ev.key === 'Escape') { finish(false); }
+            ev.stopPropagation();
+        });
+        input.addEventListener('blur', function () { finish(true); });
+        input.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    }
+    function inlineStatusPick(cell, options, current, onPick) {
+        if (cell.querySelector('select')) return;
+        var orig = cell.innerHTML;
+        var sel = document.createElement('select');
+        sel.className = 'sched-inline-select';
+        sel.setAttribute('aria-label', 'Status');
+        options.forEach(function (o) {
+            var op = document.createElement('option'); op.value = o; op.textContent = o;
+            if (o === current) op.selected = true;
+            sel.appendChild(op);
+        });
+        cell.innerHTML = '';
+        cell.appendChild(sel);
+        sel.focus();
+        var done = false;
+        function close(restore) { if (done) return; done = true; if (restore) cell.innerHTML = orig; }
+        sel.addEventListener('change', function () { done = true; onPick(sel.value); });
+        sel.addEventListener('keydown', function (ev) { if (ev.key === 'Escape') { ev.stopPropagation(); close(true); } ev.stopPropagation(); });
+        sel.addEventListener('blur', function () { setTimeout(function () { close(true); }, 150); });
+        sel.addEventListener('click', function (ev) { ev.stopPropagation(); });
+    }
+    var apiLessonsUrl = '<?= e(url_path('api/lessons_save.php')) ?>';
+    var apiEnrollUrl = '<?= e(url_path('api/enrollments_save.php')) ?>';
+    document.querySelectorAll('[data-enroll-fee-cell]').forEach(function (cell) {
+        cell.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            inlineFeeEdit(cell, cell.getAttribute('data-fee') || '0', function (v) {
+                var fd = new FormData(); fd.append('action', 'set_fee');
+                fd.append('enrollment_id', cell.getAttribute('data-enroll-fee-cell'));
+                fd.append('fee_amount', v);
+                postForm(apiEnrollUrl, fd);
+            });
+        });
+    });
+    document.querySelectorAll('[data-lesson-fee]').forEach(function (cell) {
+        cell.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            var n = parseInt(cell.getAttribute('data-count') || '0', 10);
+            if (!n) { alert('No enrolled students in this lesson.'); return; }
+            inlineFeeEdit(cell, cell.getAttribute('data-fee') || '0', function (v) {
+                if (!window.confirm('Set RM ' + v + ' fee for all ' + n + ' student(s) in this lesson?')) return false;
+                var fd = new FormData(); fd.append('action', 'set_lesson_fees');
+                fd.append('lesson_id', cell.getAttribute('data-lesson-fee'));
+                fd.append('fee_amount', v);
+                postForm(apiEnrollUrl, fd);
+            });
+        });
+    });
+    document.querySelectorAll('[data-lesson-status]').forEach(function (cell) {
+        cell.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            inlineStatusPick(cell, ['SCHEDULED', 'COMPLETED', 'CANCELLED'], cell.getAttribute('data-status') || 'SCHEDULED', function (v) {
+                var fd = new FormData(); fd.append('action', 'update');
+                fd.append('lesson_id', cell.getAttribute('data-lesson-status'));
+                fd.append('status', v);
+                postForm(apiLessonsUrl, fd);
+            });
         });
     });
 

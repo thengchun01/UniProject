@@ -158,10 +158,15 @@ try {
         if ($existing === null) {
             lessons_error('Lesson not found.');
         }
-        $teacherId = (int) ($_POST['teacher_id'] ?? $existing['teacher_id']);
-        $role = $teacherId > 0 ? fetch_user_role($db, $teacherId) : null;
-        if ($teacherId <= 0 || $role !== 'TEACHER') {
-            lessons_error('Choose a valid teacher.');
+        // Issue 65: empty teacher_id clears the assignment.
+        $teacherRaw = array_key_exists('teacher_id', $_POST) ? trim((string) $_POST['teacher_id']) : null;
+        if ($teacherRaw === null) {
+            $teacherId = $existing['teacher_id'] !== null ? (int) $existing['teacher_id'] : null;
+        } else {
+            $teacherId = $teacherRaw === '' ? null : (int) $teacherRaw;
+        }
+        if ($teacherId !== null && ($teacherId <= 0 || fetch_user_role($db, $teacherId) !== 'TEACHER')) {
+            lessons_error('Choose a valid teacher, or leave it unassigned.');
         }
         $date = trim($_POST['lesson_date'] ?? $existing['lesson_date']);
         $start = trim($_POST['start_time'] ?? $existing['start_time']);
@@ -207,9 +212,11 @@ try {
     }
 
     // Default: create (single + optional recurrence clones on extra dates).
-    $teacherId = (int) ($_POST['teacher_id'] ?? 0);
-    if ($teacherId <= 0 || fetch_user_role($db, $teacherId) !== 'TEACHER') {
-        lessons_error('Choose a valid teacher.');
+    // Issue 65: teacher may be left blank (unassigned) temporarily.
+    $teacherRaw = trim($_POST['teacher_id'] ?? '');
+    $teacherId = $teacherRaw === '' ? null : (int) $teacherRaw;
+    if ($teacherId !== null && ($teacherId <= 0 || fetch_user_role($db, $teacherId) !== 'TEACHER')) {
+        lessons_error('Choose a valid teacher, or leave it unassigned.');
     }
     $date = trim($_POST['lesson_date'] ?? '');
     $start = trim($_POST['start_time'] ?? '');

@@ -1,0 +1,7 @@
+# Local, machine-specific settings. This file may hold credentials such as the
+# Gmail app password, so it must never be committed. includes/config.php loads it
+# automatically when it is present.
+includes/config.local.php
+
+# Runtime log produced by the application, not source.
+debug.log

@@ -291,6 +291,30 @@ class Lessons
         }
     }
 
+    // Issue 56: one aggregated row per series lesson for the details table.
+    public function getGroupSummary(string $group): array
+    {
+        try {
+            $stmt = $this->db->prepare(
+                "SELECT l.lesson_id, l.lesson_date, l.start_time, l.end_time, l.status,
+                        COUNT(e.enrollment_id) AS student_count,
+                        COALESCE(SUM(e.fee_amount), 0) AS total_fee,
+                        SUM(CASE WHEN e.payment_status = 'PAID' THEN 1 ELSE 0 END) AS paid_count,
+                        GROUP_CONCAT(DISTINCT su.username ORDER BY su.username SEPARATOR ', ') AS student_names
+                 FROM lessons l
+                 LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+                 LEFT JOIN users su ON su.user_id = e.student_id
+                 WHERE l.recurrence_group = :g
+                 GROUP BY l.lesson_id
+                 ORDER BY l.lesson_date ASC, l.start_time ASC"
+            );
+            $stmt->execute(['g' => $group]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        } catch (Throwable $e) {
+            return [];
+        }
+    }
+
     public function logProof(string $kind, ?int $lessonId, ?int $enrollmentId, string $filePath, string $action, ?int $performedBy): void
     {
         $stmt = $this->db->prepare(

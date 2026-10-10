@@ -170,3 +170,18 @@
         padding: 32px 24px;
     }
 }
+
+/* verify_email.php — account activation */
+.account-activation-form + .account-activation-form {
+    margin-top: 18px;
+}
+
+.auth-panel-links {
+    margin-top: 18px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.auth-panel-links a {
+    font-weight: 700;
+}

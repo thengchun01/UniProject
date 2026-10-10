@@ -80,6 +80,36 @@ fieldset.sched-group legend { font-weight: 700; font-size: 13px; padding: 0 6px;
     border-radius: 10px; font-size: 14px; box-sizing: border-box;
 }
 .sched-detail-list { display: flex; flex-direction: column; gap: 8px; font-size: 14px; }
+/* Issue 56: compact tabular lesson details (one pane, small text). */
+.sched-detail-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px; }
+.sched-detail-table th { text-align: left; color: var(--text-muted, #666); font-weight: 700; padding: 4px 8px 4px 0; vertical-align: top; white-space: nowrap; width: 74px; }
+.sched-detail-table td { padding: 4px 0; overflow-wrap: anywhere; }
+.sched-series-table th { background: #fafafa; border-bottom: 1px solid var(--border-color, #eaeaea); padding: 5px 6px; white-space: nowrap; }
+.sched-series-table td { border-bottom: 1px solid var(--border-color, #eaeaea); padding: 5px 6px; vertical-align: top; }
+.sched-series-table tr.is-this td { background: #f3e8ff; font-weight: 700; }
+/* Issues 57-60: clickable series rows, X unload, inline editors, student rows. */
+.sched-edit-head { display: flex; justify-content: space-between; align-items: start; gap: 8px; }
+.sched-edit-head h2 { margin: 0; }
+.sched-x-btn { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: none; border: 2px solid var(--text-color, #111); border-radius: 50%; font-size: 20px; font-weight: 700; line-height: 1; color: var(--text-color, #111); text-decoration: none; }
+.sched-x-btn:hover { background: var(--text-color, #111); color: #fff; }
+.sched-series-table tbody tr[data-href] { cursor: pointer; }
+.sched-series-table tbody tr[data-href]:hover td { background: #f4f4f5; }
+.sched-series-table tbody tr.is-this[data-href]:hover td { background: #e9d5ff; }
+td.sched-editable, .sched-editable { cursor: pointer; }
+td.sched-editable:hover, .sched-editable:hover { background: #f3e8ff; }
+.sched-inline-select { width: 100%; padding: 6px 8px; border: 1px solid var(--primary-color, #7c3aed); border-radius: 8px; font-size: 13px; background: #fff; }
+.sched-student-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.sched-student-row .sched-row-actions { display: flex; gap: 6px; flex: none; }
+/* Issue 63: add-student picker dialog. */
+dialog.sched-dialog { border: 1px solid var(--border-color, #eaeaea); border-radius: 16px; padding: 20px; width: min(420px, 92vw); margin: auto; box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.08)); }
+dialog.sched-dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+dialog.sched-dialog h2 { margin: 0 0 12px; font-size: 1.1rem; }
+dialog.sched-dialog .form-field { margin-bottom: 12px; }
+dialog.sched-dialog .form-field label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; }
+dialog.sched-dialog .form-field input, dialog.sched-dialog .form-field select { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color, #eaeaea); border-radius: 10px; font-size: 14px; box-sizing: border-box; background: #fff; }
+.sched-dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; }
+@media (prefers-reduced-motion: reduce) { dialog.sched-dialog { transition: none; } }
+.sched-detail-sub { font-size: 0.95rem; margin: 14px 0 0; }
 /* Issue 34: month calendar week picker (Monday-first). */
 .sched-cal-panel { padding: 12px 14px; }
 .sched-cal-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
@@ -91,6 +121,12 @@ fieldset.sched-group legend { font-weight: 700; font-size: 13px; padding: 0 6px;
 .sched-cal-num { font-weight: 600; }
 .sched-cal-day.is-today .sched-cal-num { background: var(--primary-color, #7c3aed); color: #fff; border-radius: 50%; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; }
 .sched-cal-dot { display: block; font-size: 10px; color: var(--primary-color, #7c3aed); font-weight: 700; }
+/* Issue 61: red marker for student-lessons days. */
+.sched-cal-empty { display: block; font-size: 10px; color: #dc2626; font-weight: 700; }
+/* Issue 61: red indicator for student-less lessons. */
+.sched-chip.is-empty { border-color: var(--studio-danger, #dc2626); background: #fef2f2; }
+.sched-chip.is-empty .sched-chip-students { color: #c62828; }
+.sched-series-table tr.is-empty td { background: #fef2f2; color: #c62828; }
 .sched-cal-week { cursor: pointer; }
 .sched-cal-week:hover td, .sched-cal-week:focus-visible td { background: #f4f4f5; outline: none; }
 .sched-cal-week.is-selected td { background: #f3e8ff; }

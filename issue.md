@@ -431,8 +431,111 @@ Status: SOLVED (28/09/2026)
 Status: SOLVED (28/09/2026)
 - Create/edit date fields show a live weekday badge (e.g. Mon, 29 Sep 2026); timetable headers stack a small weekday over a big date (29 Sep).
 
-55. when the date is choose in the form, it should change the timetable to include the date
-    1. make sure the page position back to the time table instead of top of the page when refresh
+ 55. when the date is choose in the form, it should change the timetable to include the date
+     1. make sure the page position back to the time table instead of top of the page when refresh
 
 Status: SOLVED (28/09/2026)
 - Picking a form date outside the shown Mon–Sat week reloads the timetable on that date's week (Sunday resolves to its Monday week); the half-typed form is stashed to sessionStorage first and restored after reload so nothing is lost.
+- 55.1: save/delete actions restore the exact scroll position via a one-time session flag; chips, calendar, month nav, series links and week/repeat jumps land on the grid through a schedGrid anchor.
+
+56. Schedule page, can you fit the repeat series into the payment table, you may need to make the text smaller to fix them in one pane. Can you also rephrase or redesign the content in the lesson details. I think make them into a table would be a better solution instead of using all text. For class that have two student, would it better to make them include within a single row
+
+Status: SOLVED (28/09/2026)
+- Lesson details is now one compact pane of small tables: a key-value summary, a series table with one row per slot (date/time/joined students/fee/paid-count/status, current lesson highlighted), then the per-student payment table for fee/proof management. Series rows come from Lessons::getGroupSummary() so two students share a single row.
+
+57. for the series table, can you make it clickable to goes schedule date
+    1. For some reason, the schedule page, when the series table clicked, it refresh but doesn't load them into the calendar, and time table
+Status: SOLVED (28/09/2026)
+- Whole series rows navigate to that lesson's schedule week (same target as the date link).
+
+58. When a course is loaded to the create lesson, instead of have a new lesson button, can you make it a X button on right top, when press, unload the current course and back to create lesson.
+
+Status: SOLVED (28/09/2026)
+- New-lesson link replaced with a top-right × button that unloads the lesson back to create mode (filters kept, lands on the grid).
+
+59. A loaded lesson, the student page, I need you to have a button to edit, modify, add and delete the student for that student. Instead of just inside the student & payment
+
+Status: SOLVED (28/09/2026)
+- Edit-form Students list gained per-student Fee/Remove buttons plus an Add student button, reusing the same endpoints as the details table.
+
+60. The schedule page, the students & payments, can you move the button open in transaction to the action column of table of students & payments. Instead of fee button, make the fee column can be edi in both the series table and students & payment table. Move the delete lesson beside the delete entire series. Set status button is also unnescessary just make the status column and be press and select from option.
+    1. Txn button looked confusing, instead can you marked it as pay button, and lead to transaction, and the unpaid column should not be editable actually
+
+Status: SOLVED (28/09/2026)
+- Per-row Txn link lives in the Actions column; standalone link removed. Fee cells edit inline (Enter/blur saves, Esc cancels): per-enrolment in the payments table, and per-head-for-all-students with confirm in the series table via new set_lesson_fees. Status/Payment cells open option selects (lesson COMPLETED guard still enforced server-side); Set-status button removed. Delete lesson sits beside Delete-entire-series when a series exists, else in the admin row; all delete buttons share one guarded flow.
+
+61. a lesson have no student by remove the student, can you make a indicator like red color on the schedule, series table, and time table. And maybe you need to remove the lesson that have no classroom.
+
+Status: SOLVED (28/09/2026)
+- Student-less lessons show red everywhere: red-bordered chips with red names on the timetable, red rows in the series table, and a red empty-count marker on calendar days. No auto-delete: empty lessons are kept and flagged (create flow already confirms empty saves), so nothing disappears silently.
+
+62. the student & payment table, can you it so that when the student name is clicked, led to transaction table that display all transaction of that student 
+
+Status: SOLVED (28/09/2026)
+- Student names link to transactions.php filtered by that student (new student_id filter with name chip, clear link and admin dropdown; teacher/student scoping enforced server-side).
+
+63. when adding student, can you give the list of student instead of typing the student name manually.
+
+Status: SOLVED (28/09/2026)
+- Manual ID prompt replaced with a picker dialog listing unenrolled students plus fee field, used by both Add buttons.
+- Follow-up fix: dialog markup moved above the page script — it was parsed after the script ran, so the open-button lookup found nothing and clicks did nothing.
+- Follow-up: dialog forced centered with explicit margin (global resets defeat native centering); added in-dialog Create new student account (username/email/password via admin/user_create.php, new account auto-selected for enrolment).
+
+64. when add new account, there is no option to fill in new email, or left blank
+
+Status: SOLVED (28/09/2026)
+- Email is now optional everywhere accounts are created: admin/user_create.php stores NULL when blank (format validated only if given); dialog label/validation and the admin-panel modal updated to match.
+
+65. lesson, also there is no option to leave the Teacher value as blank temporary or create a new teacher account.  
+
+Status: SOLVED (28/09/2026)
+- Lessons can be saved with no teacher (Unassigned radio default in create, Unassigned option in edit; API accepts blank on create/update; commission falls back to the default chain; chips/details/transactions show Unassigned). Create-teacher form inside the lesson panel creates the account and auto-selects it in the picker.
+
+66. can you add a function in setting.json to send verification code number using gmail and then make a new file to send email for verification number
+
+Status: PARTIAL (07/10/2026)
+- Sender and code storage are done; the registration flow is not wired up yet. There is no settings.json in the project, so the settings went into includes/config.php (PSM_MAIL_*): host/port/encryption/username/from are committable, while the Google app password is read from the PSM_MAIL_APP_PASSWORD environment variable only (never in the repo, page output, error messages or logs). Lookup checks $_SERVER (Apache SetEnv) then getenv (setx/shell).
+- New includes/verification_mail.php: 6-digit code from random_int, stored as a password_hash in the new email_verification table (10-minute expiry, 5-attempt cap, 60-second resend cooldown, only the newest code live), plus a dependency-free SMTP client (STARTTLS 587 / implicit TLS 465, AUTH LOGIN, multipart/alternative base64 parts, RFC 2047 headers, dot-stuffed body). Entry point send_verification_code() lives in config.php and lazily loads the file so pages that never send mail do not load the SMTP client; psm_verify_email_code() checks a submitted code.
+- database/psm_schema.sql gained email_verification (PK, email + user_id keys, FK to users ON DELETE CASCADE), and the same DDL was applied to the live psm_2 database (structure verified identical, table empty). Applying only the email_verification statements matters: psm_schema.sql starts with DROP TABLE statements, so importing the whole file into a live database would wipe it.
+- App password handling: never stored in the repo (this is a git repository, so a committed secret would live in history forever). It is read from the user environment and config.php strips the spaces Google displays, so the real 16-character value reaches Gmail. Confirmed with a live send: Gmail accepted the message (250) over STARTTLS + AUTH LOGIN and the code landed in psm_2.
+- Clock bug found and fixed while inspecting that live row: created_at (written by MySQL, Asia/Singapore) and expires_at (written by PHP, Europe/Berlin) were 6 hours apart, and psm_verification_cooldown_remaining() subtracted MySQL's created_at from PHP's time(), so the 60-second cooldown reported 60s remaining for roughly 6 hours and blocked every resend. All three verification timestamps now come from the database clock (DATE_ADD(NOW(), INTERVAL n SECOND), TIMESTAMPDIFF(SECOND, created_at, NOW()), expires_at <= NOW()); PHP's date.timezone no longer participates.
+- Still missing: account.php neither sends nor checks a code, and there is no screen for typing one.
+- Verified against a scratch database (schema file imports clean; store/verify/expiry/attempt-cap/replay/cooldown round-trip) and a loopback SMTP session (AUTH LOGIN, dot-stuffing, terminator, rejection handling): 39/39 checks. Scratch database dropped afterwards.
+
+67. The verification code is successfully sent, but there is no page that link to entering the password, or page to activate the account
+
+Status: SOLVED (07/10/2026)
+- New root page verify_email.php: the activation screen (reuses the account.css auth card, so it matches the login/register screens). Enter the 6-digit code, or request a new one; with no pending account in the session it falls back to asking for the email address first. Resend replies are deliberately neutral for unknown or already-activated addresses, so the page cannot be used to discover which emails have accounts.
+- users gained email_verified_at (datetime NULL). Applied to live psm_2 as: ALTER TABLE users ADD COLUMN email_verified_at datetime DEFAULT NULL AFTER email; UPDATE users SET email_verified_at = created_at WHERE email_verified_at IS NULL; That backfill is a one-time statement — running it again would wrongly verify accounts registered since. All 5 existing accounts (admin, teacher, student, jun0318, thengchun001) are marked verified so nobody is locked out.
+- account.php: registration now emails a code and redirects to verify_email.php (pending account kept in the session, not in the URL). Login refuses to create a session for an unverified account and redirects to activation with an explanation. Accounts with no email are never gated, since no code could reach them.
+- Fail-open, as chosen: if mail is unconfigured or the send fails, the account is activated immediately and the user is told verification was skipped, so a Gmail problem cannot block signups.
+- Accounts created on someone's behalf insert email_verified_at = CURRENT_TIMESTAMP so they keep working: admin/user_create.php, teacher/student_create.php, create_account_dev.php.
+- psm_verify_email_code() now accepts an optional user id and prefers it, because users.email has no unique constraint — matching on user id avoids activating the wrong account when an address is shared.
+- Verified: 11/11 HTTP integration checks against a scratch database (fail-open registration, login gate, wrong code, correct code, post-activation login, resend, neutral resend) plus a real Gmail registration that stored a code, redirected to activation and was blocked from logging in until activated. Scratch database dropped; psm_2 users/email_verification left untouched.
+- Not done: no admin view of who is still unactivated, and expired codes are never pruned from email_verification.
+
+68. The join classroom cancel button look oval instead of circle or square.
+
+69. I tried to register for an account, but the email still only sends a code instead of a link for activation. Can you make it send a activation email, and when certain period of time without activation the account will get cancel, also I will like you to make sure the email and name doesn't duplicate with others account
+
+Status: SOLVED (07/10/2026)
+- The email is link-first now: an "Activate my account" button plus the raw URL, with the 6-digit code kept underneath as a fallback for clients that break links. Subject is "Activate your Piano Course account"; the link/code window is stated in the message.
+- Links carry a 256-bit token (random_bytes(32)) stored only as a SHA-256 hash in the new email_verification.token_hash column (UNIQUE). A fast hash is correct here because the token is high-entropy, unlike the 6-digit code which needs password_hash(). verify_email.php handles ?token=..., is single-use through consumed_at, and reports expired separately from unknown. Applied to live psm_2.
+- Grace period: PSM_VERIFICATION_GRACE_HOURS (default 24) is now both how long a link/code stays valid and how long an unactivated account survives. psm_cancel_expired_registrations() deletes unactivated accounts older than that, cascading their codes away and freeing the username and email. It runs best-effort (never fatal) on self-registration, on the login POST before the lookup, and on every verify_email.php request, so expiry is enforced by user activity rather than by cron. Verified accounts and accounts with no email are never touched.
+- Duplicate protection: psm_find_account_conflict() rejects a taken username or email with a specific message, called from account.php registration and admin/user_create.php. UNIQUE KEY email was added to users in psm_schema.sql for fresh installs, but it could NOT be applied to live psm_2: users 2 and 3 (teacher and student) both use 123@gmail.com, so the ALTER failed with error 1062 (Duplicate entry). The code-level check is what protects psm_2 until that duplicate is resolved.
+- Links are absolute through psm_site_url(): PSM_SITE_URL when set, otherwise scheme + sanitised Host + app_base_url(). Set PSM_SITE_URL in production, because the Host header is client-supplied.
+- Verified over HTTP on a scratch database: duplicate username, duplicate email and UPPERCASE-duplicate username all rejected; link activation; link single-use; expired link rejected; bogus token rejected; a 30-hour-old unactivated account cancelled with its codes cascaded while a recent unactivated one, a verified one and a no-email one all survived; the freed username and email reusable; code entry still working; and the email body carrying the button, the URL and the code.
+- Open duplicate resolved in live psm_2 using the rule "keep whoever registered first": user 3 (student, registered 14:31:43, never logged in, zero dependent rows) was deleted after dumping its row, and user 2 (teacher, registered 14:31:10, still teaches 5 lessons) was kept. UNIQUE KEY email was then applied successfully, and the database now rejects a duplicate address itself with error 1062.
+- Warning for any future duplicate cleanup: deleting a user cascades lesson_enrollments, performance_session, user_progress, user_settings, user_activity_log, teacher_commission and email_verification, and nulls lessons.teacher_id / lessons.created_by / midi_file.user_id / proof_logs.performed_by. Check those counts before deleting; here every count was zero for the account being removed.
+- Follow-up fix (07/10/2026): registration was creating pre-verified accounts without sending anything. Two clues proved it was the fail-open path, not a bad password: email_verification had 0 rows (the code/link row is written before the SMTP attempt, so a failed send would still leave one), and email_verified_at equalled created_at to the same second (psm_mark_email_verified() ran immediately). The credential itself was fine — a TLS connect plus AUTH LOGIN against Gmail was accepted. Cause: setx only reaches processes started after it runs, and the PHP server (VS Code's PHP Server extension, per its phpserver.phpPath setting) had been launched from an already-open editor, so it never inherited PSM_MAIL_*.
+- Fix: includes/config.local.php, git-ignored, returns an array of setting overrides that config.php loads when present and that take precedence over $_SERVER/getenv. A .gitignore file did not exist and was added (it also ignores debug.log). Values now come from disk on every request, so no restart or process inheritance is involved. Verified with every mail variable removed from the server process: registration 302s to verify_email.php, stores a token row, and leaves the account unverified; removing the file falls back to the environment with no fatal error. Warning: the file holds the app password, so it must never be committed and should be excluded if the project is zipped or submitted.
+
+70. The activation link opened 127.0.0.1:8127 and was refused; can the link open the page with the activation code filled in, and can the email look organised like a card with the activation code in the middle and a button under it
+
+Status: SOLVED (07/10/2026)
+- The refused address was a temporary test server started while verifying the previous fix and shut down during cleanup (its scratch database was dropped too), so it was not a fault in the application. Real registration links are built from whatever address the request arrived on.
+- The activation email is now a card: light background, a white rounded card, the site label, a title, the activation code in a dashed panel in the middle (large, letter-spaced, centred) and the "Activate my account" button underneath, then the validity line, the raw URL as a fallback, and the ignore line. Colours are the ones already used by the account screens (#241047, #f3f1f8, #ddd6fe); all styles are inline because mail clients strip stylesheets. The plain-text version leads with the code as well.
+- The link now carries token, email and code through psm_verification_link($token, $email, $code). Clicking it still activates in one click through the single-use token; if that token is dead the page opens with the email and code already filled in, so the visitor only presses the button.
+- verify_email.php accepts email + code with no session at all, so a link works on another device or after the browser session is gone. The code input deliberately has no `required` attribute, because the same form carries the "Send a new activation link" button which submits an empty code; an empty code is rejected server-side instead. Both buttons carry name="verify_action" with different values, so no hidden field can override the other.
+- Verified over HTTP on a scratch database: the one-click token link activates and redirects; a link with a dead token shows the complaint with the code and email prefilled; a session-less POST of email + code activates; an empty code is rejected server-side; and the second button reaches the resend branch with its neutral reply.
+- PSM_SITE_URL is now pinned to http://localhost:3000 — the address the app is opened on (VS Code's PHP Server extension defaults to that port) — in includes/config.local.php, so emailed links no longer depend on the Host header of whichever request triggered the send. Commenting that line out restores deriving the URL from the request.
