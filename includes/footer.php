@@ -11,6 +11,8 @@
             <a href="<?= e(url_path('tutorial.php')); ?>">Tutorials</a>
             <a href="<?= e(url_path('songs.php')); ?>">Songs</a>
             <a href="<?= e(url_path('piano.php')); ?>">Piano</a>
+            <a href="<?= e(url_path('schedule.php')); ?>">Schedule</a>
+            <a href="<?= e(url_path('transactions.php')); ?>">Transactions</a>
             <a href="<?= e(url_path('account.php')); ?>">Account</a>
         </nav>
         <p class="site-footer-copyright">&copy; <?= date('Y'); ?> Piano Course</p>
@@ -19,6 +21,7 @@
 
 <button id="scroll-top-btn" type="button" aria-label="Back to top" title="Back to top">↑</button>
 
+<script src="<?php echo e(url_path('assets/js/psm-modal.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/psm-modal.js')); ?>"></script>
 <script src="<?php echo e(url_path('assets/js/main.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/main.js')); ?>"></script>
 <script src="<?php echo e(url_path('assets/js/midi-manager.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/midi-manager.js')); ?>"></script>
 <script src="<?php echo e(url_path('assets/js/piano-core.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/piano-core.js')); ?>"></script>

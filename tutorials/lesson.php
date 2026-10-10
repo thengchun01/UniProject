@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Only require piano interaction if it's a Practice Exercise
             if (!isCompleted && expectedSequence.length > 0 && isPracticeExercise) {
                 e.preventDefault();
-                alert("This is a Practice Exercise! Please complete it on the piano first.");
+                PSMModal.alert({ title: 'Practice Exercise', message: 'This is a Practice Exercise! Please complete it on the piano first.' });
             } else if (!isCompleted) {
                 e.preventDefault();
                 const href = this.href;

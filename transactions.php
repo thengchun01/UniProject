@@ -230,8 +230,10 @@ include __DIR__ . '/includes/header.php';
                 <?php if ($role === 'STUDENT'): ?>Your lesson fees and payment status. Contact admin for receipts.<?php endif; ?>
             </p>
         </div>
-        <div style="display:flex;gap:8px;">
-            <a href="<?= e(url_path('schedule.php')); ?>" class="text-button">Open Schedule →</a>
+        <div style="display:flex;gap:10px;align-items:center;">
+            <a href="<?= e(url_path('schedule.php')); ?>" class="btn secondary-btn" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;padding:8px 16px;">
+                <span>📅</span> View Timetable Schedule
+            </a>
             <a href="<?= e(url_path('account.php')); ?>" class="text-button">← Account</a>
         </div>
     </div>
@@ -325,8 +327,11 @@ include __DIR__ . '/includes/header.php';
                     <tr><td colspan="<?= $role === 'ADMIN' ? 8 : 7 ?>">No transactions match this filter.</td></tr>
                 <?php else: ?>
                     <?php foreach ($rows as $r): ?>
-                        <tr>
-                            <td><?= e(substr((string) $r['lesson_date'], 0, 10)) ?> <?= e(substr((string) $r['start_time'], 0, 5)) ?>–<?= e(substr((string) $r['end_time'], 0, 5)) ?><br><span style="color:#666;font-size:12px;"><?= e($r['title'] !== null && $r['title'] !== '' ? $r['title'] : 'Lesson #' . (int) $r['lesson_id']) ?> · <?= e($r['lesson_status']) ?> · total RM <?= e(number_format((float) $r['lesson_total'], 2)) ?></span></td>
+                            <td>
+                                <strong><?= e(substr((string) $r['lesson_date'], 0, 10)) ?></strong> <?= e(substr((string) $r['start_time'], 0, 5)) ?>–<?= e(substr((string) $r['end_time'], 0, 5)) ?>
+                                <br><span style="color:#666;font-size:12px;"><?= e($r['title'] !== null && $r['title'] !== '' ? $r['title'] : 'Lesson #' . (int) $r['lesson_id']) ?> · <?= e($r['lesson_status']) ?> · RM <?= e(number_format((float) $r['lesson_total'], 2)) ?></span>
+                                <br><a class="action-btn view-btn" style="margin-top:4px;display:inline-flex;align-items:center;gap:4px;padding:2px 8px;font-size:11px;text-decoration:none;" href="<?= e(url_path('schedule.php?month=' . substr((string) $r['lesson_date'], 0, 7) . '&lesson_id=' . (int) $r['lesson_id'] . '#schedGrid')) ?>" title="View on schedule">📅 Schedule</a>
+                            </td>
                             <td><?= e($r['student_name']) ?></td>
                             <td><?= !empty($r['teacher_name']) ? e($r['teacher_name']) : 'Unassigned' ?></td>
                             <td><?= e(number_format((float) $r['fee_amount'], 2)) ?></td>
@@ -450,31 +455,93 @@ include __DIR__ . '/includes/header.php';
 
     document.querySelectorAll('[data-txn-fee]').forEach(function (b) {
         b.addEventListener('click', function () {
-            var v = window.prompt('New fee (RM):', b.getAttribute('data-fee') || '0');
-            if (v === null) return;
-            var fd = new FormData(); fd.append('action', 'set_fee');
-            fd.append('enrollment_id', b.getAttribute('data-txn-fee')); fd.append('fee_amount', v);
-            postForm(apiEnroll, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+            var curr = b.getAttribute('data-fee') || '0';
+            PSMModal.prompt({
+                title: 'Update Enrollment Fee',
+                label: 'New fee amount in RM:',
+                value: curr,
+                type: 'number',
+                confirmText: 'Save Fee'
+            }).then(function (v) {
+                if (v === null || v === '') return;
+                var fd = new FormData(); fd.append('action', 'set_fee');
+                fd.append('enrollment_id', b.getAttribute('data-txn-fee')); fd.append('fee_amount', v);
+                postForm(apiEnroll, fd).then(function (d) {
+                    if (d && d.success) {
+                        PSMModal.toast('Fee updated successfully!', 'success');
+                        setTimeout(function () { window.location.reload(); }, 400);
+                    } else {
+                        PSMModal.toast((d && d.error) || 'Failed to update fee.', 'error');
+                    }
+                }).catch(function (err) {
+                    PSMModal.toast('Network error: ' + err.message, 'error');
+                });
+            });
         });
     });
+
     document.querySelectorAll('[data-txn-pay]').forEach(function (b) {
         b.addEventListener('click', function () {
-            var v = window.prompt('Payment status (UNPAID / PENDING / PAID):', b.getAttribute('data-status') || 'PAID');
-            if (!v) return;
-            var fd = new FormData(); fd.append('action', 'set_payment');
-            fd.append('enrollment_id', b.getAttribute('data-txn-pay')); fd.append('status', v.toUpperCase());
-            postForm(apiEnroll, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+            var curr = (b.getAttribute('data-status') || 'PAID').toUpperCase();
+            PSMModal.select({
+                title: 'Update Payment Status',
+                label: 'Choose payment status for this student:',
+                current: curr,
+                options: [
+                    { value: 'UNPAID', label: 'UNPAID', desc: 'No payment made yet', color: 'bad' },
+                    { value: 'PENDING', label: 'PENDING', desc: 'Payment awaiting verification/receipt', color: 'warn' },
+                    { value: 'PAID', label: 'PAID', desc: 'Payment received and confirmed', color: 'ok' }
+                ],
+                confirmText: 'Update Status'
+            }).then(function (v) {
+                if (!v) return;
+                var fd = new FormData(); fd.append('action', 'set_payment');
+                fd.append('enrollment_id', b.getAttribute('data-txn-pay')); fd.append('status', v.toUpperCase());
+                postForm(apiEnroll, fd).then(function (d) {
+                    if (d && d.success) {
+                        PSMModal.toast('Payment status updated to ' + v + '!', 'success');
+                        setTimeout(function () { window.location.reload(); }, 400);
+                    } else {
+                        PSMModal.toast((d && d.error) || 'Failed to update payment status.', 'error');
+                    }
+                }).catch(function (err) {
+                    PSMModal.toast('Network error: ' + err.message, 'error');
+                });
+            });
         });
     });
+
     document.querySelectorAll('[data-txn-cstatus]').forEach(function (b) {
         b.addEventListener('click', function () {
-            var v = window.prompt('Commission status for the whole lesson (UNPAID / PENDING / PAID):', b.getAttribute('data-status') || 'PAID');
-            if (!v) return;
-            var fd = new FormData(); fd.append('action', 'set_commission_status');
-            fd.append('lesson_id', b.getAttribute('data-txn-cstatus')); fd.append('status', v.toUpperCase());
-            postForm(apiEnroll, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+            var curr = (b.getAttribute('data-status') || 'PAID').toUpperCase();
+            PSMModal.select({
+                title: 'Update Lesson Commission Status',
+                label: 'Choose commission status for the whole lesson:',
+                current: curr,
+                options: [
+                    { value: 'UNPAID', label: 'UNPAID', desc: 'Commission not yet paid to teacher', color: 'bad' },
+                    { value: 'PENDING', label: 'PENDING', desc: 'Commission pending payout', color: 'warn' },
+                    { value: 'PAID', label: 'PAID', desc: 'Commission paid to teacher', color: 'ok' }
+                ],
+                confirmText: 'Update Commission Status'
+            }).then(function (v) {
+                if (!v) return;
+                var fd = new FormData(); fd.append('action', 'set_commission_status');
+                fd.append('lesson_id', b.getAttribute('data-txn-cstatus')); fd.append('status', v.toUpperCase());
+                postForm(apiEnroll, fd).then(function (d) {
+                    if (d && d.success) {
+                        PSMModal.toast('Commission status updated to ' + v + '!', 'success');
+                        setTimeout(function () { window.location.reload(); }, 400);
+                    } else {
+                        PSMModal.toast((d && d.error) || 'Failed to update commission status.', 'error');
+                    }
+                }).catch(function (err) {
+                    PSMModal.toast('Network error: ' + err.message, 'error');
+                });
+            });
         });
     });
+
     document.querySelectorAll('[data-txn-upload]').forEach(function (input) {
         input.addEventListener('change', function () {
             if (!input.files.length) return;
@@ -484,39 +551,105 @@ include __DIR__ . '/includes/header.php';
             fd.append('enrollment_id', input.getAttribute('data-enroll') || '');
             fd.append('proof', input.files[0]);
             input.disabled = true;
-            postForm(apiProofUp, fd).then(function (d) { if (d.success) window.location.reload(); else { alert(d.error || 'Upload failed.'); input.disabled = false; } });
+            PSMModal.toast('Uploading proof file...', 'info', 2000);
+            postForm(apiProofUp, fd).then(function (d) {
+                if (d && d.success) {
+                    PSMModal.toast('Proof file uploaded successfully!', 'success');
+                    setTimeout(function () { window.location.reload(); }, 500);
+                } else {
+                    PSMModal.toast((d && d.error) || 'Upload failed.', 'error');
+                    input.disabled = false;
+                }
+            }).catch(function (err) {
+                PSMModal.toast('Upload error: ' + err.message, 'error');
+                input.disabled = false;
+            });
         });
     });
+
     document.querySelectorAll('[data-txn-delproof]').forEach(function (b) {
         b.addEventListener('click', function () {
-            if (!window.confirm('Delete this proof file? The delete is logged.')) return;
-            var fd = new FormData();
-            fd.append('kind', b.getAttribute('data-txn-delproof'));
-            fd.append('lesson_id', b.getAttribute('data-lesson'));
-            fd.append('enrollment_id', b.getAttribute('data-enroll') || '');
-            postForm(apiProofDel, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+            PSMModal.confirm({
+                title: 'Delete Proof File?',
+                message: 'Delete this proof file permanently? This deletion will be logged in the audit trail.',
+                danger: true,
+                confirmText: 'Delete Proof'
+            }).then(function (yes) {
+                if (!yes) return;
+                var fd = new FormData();
+                fd.append('kind', b.getAttribute('data-txn-delproof'));
+                fd.append('lesson_id', b.getAttribute('data-lesson'));
+                fd.append('enrollment_id', b.getAttribute('data-enroll') || '');
+                postForm(apiProofDel, fd).then(function (d) {
+                    if (d && d.success) {
+                        PSMModal.toast('Proof file deleted.', 'success');
+                        setTimeout(function () { window.location.reload(); }, 400);
+                    } else {
+                        PSMModal.toast((d && d.error) || 'Failed to delete proof.', 'error');
+                    }
+                }).catch(function (err) {
+                    PSMModal.toast('Network error: ' + err.message, 'error');
+                });
+            });
         });
     });
+
     document.querySelectorAll('[data-txn-del]').forEach(function (b) {
         b.addEventListener('click', function () {
-            if (!window.confirm('Delete this transaction? The student enrollment, fee and its proof file will be removed. This cannot be undone.')) return;
-            var fd = new FormData();
-            fd.append('action', 'remove');
-            fd.append('enrollment_id', b.getAttribute('data-txn-del'));
-            postForm(apiEnroll, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+            PSMModal.confirm({
+                title: 'Delete Transaction?',
+                message: 'Are you sure you want to delete this transaction? The student enrollment, fee, and any attached proof file will be permanently removed.',
+                danger: true,
+                confirmText: 'Delete Transaction'
+            }).then(function (yes) {
+                if (!yes) return;
+                var fd = new FormData();
+                fd.append('action', 'remove');
+                fd.append('enrollment_id', b.getAttribute('data-txn-del'));
+                postForm(apiEnroll, fd).then(function (d) {
+                    if (d && d.success) {
+                        PSMModal.toast('Transaction deleted successfully.', 'success');
+                        setTimeout(function () { window.location.reload(); }, 400);
+                    } else {
+                        PSMModal.toast((d && d.error) || 'Failed to delete transaction.', 'error');
+                    }
+                }).catch(function (err) {
+                    PSMModal.toast('Network error: ' + err.message, 'error');
+                });
+            });
         });
     });
+
     var defForm = document.getElementById('txnDefaultForm');
     if (defForm) defForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
         var fd = new FormData(defForm); fd.append('action', 'default');
-        postForm(apiComm, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+        postForm(apiComm, fd).then(function (d) {
+            if (d && d.success) {
+                PSMModal.toast('Default commission rate saved!', 'success');
+                setTimeout(function () { window.location.reload(); }, 500);
+            } else {
+                PSMModal.toast((d && d.error) || 'Failed to save default rate.', 'error');
+            }
+        }).catch(function (err) {
+            PSMModal.toast('Network error: ' + err.message, 'error');
+        });
     });
+
     var tForm = document.getElementById('txnTeacherForm');
     if (tForm) tForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
         var fd = new FormData(tForm); fd.append('action', 'teacher');
-        postForm(apiComm, fd).then(function (d) { if (d.success) window.location.reload(); else alert(d.error || 'Failed.'); });
+        postForm(apiComm, fd).then(function (d) {
+            if (d && d.success) {
+                PSMModal.toast('Teacher commission rate saved!', 'success');
+                setTimeout(function () { window.location.reload(); }, 500);
+            } else {
+                PSMModal.toast((d && d.error) || 'Failed to save teacher rate.', 'error');
+            }
+        }).catch(function (err) {
+            PSMModal.toast('Network error: ' + err.message, 'error');
+        });
     });
 })();
 </script>

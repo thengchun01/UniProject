@@ -558,15 +558,15 @@ document.getElementById('confirmDeleteClassroomBtn')?.addEventListener('click', 
         const data = await response.json();
         
         if (data.success) {
-            alert('Classroom deleted successfully!');
-            window.location.href = "<?= BASE_URL .'account.php'?>";
+            PSMModal.toast('Classroom deleted successfully!', 'success');
+            setTimeout(function () { window.location.href = "<?= BASE_URL .'account.php'?>"; }, 900);
         } else {
-            alert(data.message);
+            PSMModal.toast(data.message, 'error');
             btn.textContent = originalText;
             btn.disabled = false;
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        PSMModal.toast('Error: ' + error.message, 'error');
         btn.textContent = originalText;
         btn.disabled = false;
     }
@@ -605,8 +605,8 @@ document.getElementById('createStudentForm')?.addEventListener('submit', async (
         const data = await response.json();
         
         if (data.success) {
-            alert('Student created successfully!');
-            window.location.reload();
+            PSMModal.toast('Student created successfully!', 'success');
+            setTimeout(function () { window.location.reload(); }, 900);
         } else {
             errorDiv.textContent = data.message || 'Failed to create student';
             errorDiv.style.display = 'block';
@@ -659,8 +659,8 @@ document.getElementById('editStudentForm')?.addEventListener('submit', async (e)
         const data = await response.json();
         
         if (data.success) {
-            alert('Student updated successfully!');
-            window.location.reload();
+            PSMModal.toast('Student updated successfully!', 'success');
+            setTimeout(function () { window.location.reload(); }, 900);
         } else {
             errorDiv.textContent = data.message || 'Failed to update student';
             errorDiv.style.display = 'block';
@@ -733,7 +733,7 @@ document.getElementById('resetPasswordForm')?.addEventListener('submit', async (
         const data = await response.json();
         
         if (data.success) {
-            alert('Password reset successfully!');
+            PSMModal.toast('Password reset successfully!', 'success');
             closeResetModal();
         } else {
             errorDiv.textContent = data.message || 'Failed to reset password';
@@ -785,15 +785,15 @@ document.getElementById('confirmDeleteBtn')?.addEventListener('click', async () 
         const data = await response.json();
         
         if (data.success) {
-            alert('Student removed successfully');
-            window.location.reload();
+            PSMModal.toast('Student removed successfully', 'success');
+            setTimeout(function () { window.location.reload(); }, 900);
         } else {
-            alert(data.message);
+            PSMModal.toast(data.message, 'error');
             btn.textContent = originalText;
             btn.disabled = false;
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        PSMModal.toast('Error: ' + error.message, 'error');
         btn.textContent = originalText;
         btn.disabled = false;
     }
@@ -804,7 +804,12 @@ document.getElementById('confirmDeleteBtn')?.addEventListener('click', async () 
 // ============================================
 
 window.approveRequest = async function(studentId) {
-    if (!confirm('Approve this student\'s request?')) return;
+    const approved = await PSMModal.confirm({
+        title: 'Approve Request?',
+        message: 'Approve this student\'s request to join your classroom?',
+        confirmText: 'Approve'
+    });
+    if (!approved) return;
     
     try {
         const response = await fetch('request_approve.php', {
@@ -815,18 +820,24 @@ window.approveRequest = async function(studentId) {
         const data = await response.json();
         
         if (data.success) {
-            alert('Student approved successfully!');
-            window.location.reload();
+            PSMModal.toast('Student approved successfully!', 'success');
+            setTimeout(function () { window.location.reload(); }, 900);
         } else {
-            alert(data.message);
+            PSMModal.toast(data.message, 'error');
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        PSMModal.toast('Error: ' + error.message, 'error');
     }
 };
 
 window.rejectRequest = async function(studentId) {
-    if (!confirm('Reject this student\'s request?')) return;
+    const rejected = await PSMModal.confirm({
+        title: 'Reject Request?',
+        message: 'Reject this student\'s request to join your classroom?',
+        danger: true,
+        confirmText: 'Reject'
+    });
+    if (!rejected) return;
     
     try {
         const response = await fetch('request_reject.php', {
@@ -837,13 +848,13 @@ window.rejectRequest = async function(studentId) {
         const data = await response.json();
         
         if (data.success) {
-            alert('Request rejected');
-            window.location.reload();
+            PSMModal.toast('Request rejected', 'info');
+            setTimeout(function () { window.location.reload(); }, 900);
         } else {
-            alert(data.message);
+            PSMModal.toast(data.message, 'error');
         }
     } catch (error) {
-        alert('Error: ' + error.message);
+        PSMModal.toast('Error: ' + error.message, 'error');
     }
 };
 
@@ -892,12 +903,12 @@ async function saveSettings() {
         });
         const data = await response.json();
         if (data.success) {
-            alert('Settings saved successfully!');
+            PSMModal.toast('Settings saved successfully!', 'success');
         } else {
-            alert('Error: ' + data.message);
+            PSMModal.toast('Error: ' + data.message, 'error');
         }
     } catch (error) {
-        alert('Network error: ' + error.message);
+        PSMModal.toast('Network error: ' + error.message, 'error');
     }
 }
 </script>

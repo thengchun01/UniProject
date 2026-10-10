@@ -748,6 +748,9 @@ include __DIR__ . '/includes/header.php';
 .close-btn {
     width: 36px;
     height: 36px;
+    padding: 0;
+    line-height: 1;
+    box-sizing: border-box;
     border: none;
     background: #f0f0f0;
     font-size: 24px;
@@ -968,8 +971,8 @@ document.getElementById('createClassroomForm')?.addEventListener('submit', async
         const data = await response.json();
         
         if (data.success) {
-            alert('Classroom created successfully!');
-            window.location.reload();
+            PSMModal.toast('Classroom created successfully!', 'success');
+            setTimeout(function () { window.location.reload(); }, 900);
         } else {
             errorDiv.textContent = data.message;
             errorDiv.style.display = 'block';
@@ -1002,8 +1005,8 @@ document.getElementById('joinClassroomForm')?.addEventListener('submit', async (
         const data = await response.json();
         
         if (data.success) {
-            alert(data.message);
-            window.location.reload();
+            PSMModal.toast(data.message, 'success');
+            setTimeout(function () { window.location.reload(); }, 900);
         } else {
             errorDiv.textContent = data.message;
             errorDiv.style.display = 'block';

@@ -1,0 +1,125 @@
+[33mcommit e23db88cd8b98bd3b75c6b9b161f35fcae7c68e9[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31mUniProject/main[m[33m, [m[1;31mUniProject/HEAD[m[33m)[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sat Oct 10 13:46:51 2026 +0800
+
+    Before: Whole Renovation
+
+[33mcommit fcd341e5a87ff8bdd880b96663f2dbb10e2b3f5d[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sat Oct 10 13:31:28 2026 +0800
+
+    Before: Whole Renovation
+
+[33mcommit 35fae540e9746ddc8dac1b1052033c76e06eb528[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 29 11:58:56 2026 +0800
+
+    09/29/2026 11:58:56: Still adjusting schedule page
+
+[33mcommit 46d4814c400c7105e58b95048313aa7531c685d3[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Mon Sep 28 19:01:37 2026 +0800
+
+    09/28/2026 19:01:37: after schedule, ...
+
+[33mcommit 07222bad7be7bde498474bac0016cb0b63533ee0[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Mon Sep 28 18:05:21 2026 +0800
+
+    09/28/2026 18:05:21: After meeting, Before DB changes, Schedule, and Commission
+
+[33mcommit 11e36fb7e0b68e624ba95385d1148b4500198fb2[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 23:47:01 2026 +0800
+
+    09/22/2026 23:47:01: piano keybind
+
+[33mcommit f0734bd67c1ec99a8cd68bc287e756e7bef7a0ed[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 21:03:57 2026 +0800
+
+    09/22/2026 21:03:57: piano, before adding user's setting
+
+[33mcommit 922cd5d7706fe1a5298bda96bfbf29ca05ac5077[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 18:42:44 2026 +0800
+
+    09/22/2026 18:42:44: piano, before redesign
+
+[33mcommit 668db4849ef2998edd49c900e6e5658b261276b8[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 18:07:04 2026 +0800
+
+    09/22/2026 18:07:03: working on tutorial page, before skill
+
+[33mcommit 9ed87ddff4655a8c91b91b487a15a045e84c6a2d[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 17:56:10 2026 +0800
+
+    09/22/2026 17:56:10: working on tutorial page
+
+[33mcommit 3397db2e8923d4c178d373a1d57f0cda7a9476dd[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 17:40:51 2026 +0800
+
+    Global MIDI manager with cross-page toast prompt and docs
+
+[33mcommit 7d862918fe1278c799ec521f1fd4f69c02d41f45[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 16:41:25 2026 +0800
+
+    09/22/2026 16:41:25: role, logout popup
+
+[33mcommit 972a3b318729cd6c49a720aadea439fe69c85fb4[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 14:04:09 2026 +0800
+
+    Center logout confirmation dialog
+
+[33mcommit 7746e4d4f80cc901323c41bba79a355d23457652[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Tue Sep 22 13:59:17 2026 +0800
+
+    Update logout to use a styled pop-up dialog instead of browser alert
+
+[33mcommit 4d714d8bdb6e3f2633435361d48654092c2f5292[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sun Sep 20 18:30:16 2026 +0800
+
+    09/20/2026 18:30:16: 0.4.3 (gpt: animation)
+
+[33mcommit 9196e05ddfa93e2adeb66244ecaf222efcf578fb[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sun Sep 20 17:58:33 2026 +0800
+
+    09/20/2026 17:58:33: 0.4.3 (gpt: animation:home&tuto)
+
+[33mcommit 05c230ba220be5397387da32484fe35526e5ca61[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sun Sep 20 17:43:57 2026 +0800
+
+    09/20/2026 17:43:57: 0.4.3 (animation:home&tuto)
+
+[33mcommit c2b98e672ef04d7fe7be7123422b7e392785a3ae[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sun Sep 20 17:35:36 2026 +0800
+
+    09/20/2026 17:35:36: 0.4.3 (animation)
+
+[33mcommit 3f79b5e4ca80fbed313a0ca4b8236b1fb5a50e81[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sun Sep 20 17:22:42 2026 +0800
+
+    09/20/2026 17:22:42: 0.4.2
+
+[33mcommit 7ef2de3179d164f6e074356350dfd77803eb4326[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Sun Sep 20 17:03:20 2026 +0800
+
+    : 0.4.1
+
+[33mcommit bb954373bba4e93b7096a865b4ce8964115b77a1[m
+Author: Hasee <johnng20040127@gmail.com>
+Date:   Fri Sep 11 12:35:00 2026 +0800
+
+    first commit %date%

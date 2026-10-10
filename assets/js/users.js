@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const data = await res.json();
 
         if (!data.success) 
-            return alert(data.message);
+            return PSMModal.toast(data.message, 'error');
 
         const u = data.user;
 
@@ -85,7 +85,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const data = await res.json();
 
-        if (!data.success) return alert(data.message);
+        if (!data.success) return PSMModal.toast(data.message, 'error');
 
         const u = data.user;
 
@@ -106,7 +106,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const res = await fetch(`user_delete.php?id=${id}`);
         const data = await res.json();
 
-        if (!data.success) return alert(data.message);
+        if (!data.success) return PSMModal.toast(data.message, 'error');
 
         document.querySelector(`tr[data-id="${id}"]`).remove();
 

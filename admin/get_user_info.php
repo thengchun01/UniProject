@@ -45,10 +45,12 @@ try {
         $stmt = $db->prepare("SELECT classroom FROM users WHERE user_id = :user_id");
         $stmt->execute(['user_id' => $user['user_id']]);
         $teacher = $stmt->fetch();
-        $teacherClassroom = $teacher['classroom'];
+        $teacherClassroom = $teacher['classroom'] ?? null;
         
-        // Check if target user is a student in teacher's classroom
-        $isViewingOwnStudent = ($targetUser['role'] === 'STUDENT' && $targetUser['classroom'] === $teacherClassroom);
+        // Check if target user is a student in teacher's classroom.
+        // normalize_role: the column stores lowercase (admin/teacher/student)
+        // while the code compares uppercase, so compare normalized values.
+        $isViewingOwnStudent = (normalize_role($targetUser['role'] ?? '') === 'STUDENT' && ($targetUser['classroom'] ?? null) === $teacherClassroom);
     }
     
     if (!$isAdmin && !$isViewingOwnStudent) {

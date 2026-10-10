@@ -66,6 +66,11 @@ or fixed amount.
 - Pages: `schedule.php`, `transactions.php`; styles
   `assets/css/schedule.css` (`.sched-*`), `assets/css/transactions.css`
   (`.txn-*`); shared header/footer, design tokens per skill `psm-web-style`.
+- All user-facing dialogs go through `assets/js/psm-modal.js` (`PSMModal`
+  prompt/select/confirm/alert/toast, loaded globally from
+  `includes/footer.php`); do not use native `alert`/`confirm`/`prompt` in
+  app code. Success-then-navigate flows toast first and reload after ~0.9s
+  so the message is seen.
 - Account page (`account.php`): credentials + Schedule/Transactions highlight
   cards are primary; tutorial/game summaries sit under Learning activity.
 - Timetable chips show time/duration/title, student names, teacher (or

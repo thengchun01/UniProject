@@ -523,6 +523,10 @@ Status: SOLVED (07/10/2026)
 
 68. The join classroom cancel button look oval instead of circle or square.
 
+Status: SOLVED (10/10/2026)
+- Root cause: the global `button` rule in assets/css/style.css puts 12px 24px padding on every button, which stretched the 36x36 `border-radius: 50%` `.close-btn` in account.php into an oval. Fix: `.close-btn` now sets `padding: 0; line-height: 1; box-sizing: border-box;`, so it renders as a true circle.
+- Verified: php -l clean on account.php; no other page overrides affected (the rule is page-scoped to account.php).
+
 69. I tried to register for an account, but the email still only sends a code instead of a link for activation. Can you make it send a activation email, and when certain period of time without activation the account will get cancel, also I will like you to make sure the email and name doesn't duplicate with others account
 
 Status: SOLVED (07/10/2026)
@@ -546,3 +550,51 @@ Status: SOLVED (07/10/2026)
 - verify_email.php accepts email + code with no session at all, so a link works on another device or after the browser session is gone. The code input deliberately has no `required` attribute, because the same form carries the "Send a new activation link" button which submits an empty code; an empty code is rejected server-side instead. Both buttons carry name="verify_action" with different values, so no hidden field can override the other.
 - Verified over HTTP on a scratch database: the one-click token link activates and redirects; a link with a dead token shows the complaint with the code and email prefilled; a session-less POST of email + code activates; an empty code is rejected server-side; and the second button reaches the resend branch with its neutral reply.
 - PSM_SITE_URL is now pinned to http://localhost:3000 — the address the app is opened on (VS Code's PHP Server extension defaults to that port) — in includes/config.local.php, so emailed links no longer depend on the Host header of whichever request triggered the send. Commenting that line out restores deriving the URL from the request.
+
+71. Remaining native window.alert / window.confirm calls outside schedule.php and transactions.php should use the PSMModal pop-ups instead.
+
+Status: SOLVED (10/10/2026)
+- Finished the migration started for schedule.php/transactions.php: account.php classroom create/join successes now toast then reload after ~0.9s; teacher/teacher_classroom.php delete-classroom, create/edit student, reset-password, delete-student, approve/reject (confirm → PSMModal.confirm) and settings-save messages all use toast/confirm; tutorials/lesson.php practice-exercise warning uses PSMModal.alert; assets/js/users.js error alerts use PSMModal.toast.
+- Note: assets/js/users.js is currently not loaded by any page (admin/users.php runs its own inline script), so those three replacements are dormant consistency fixes only.
+- Fixed a listener leak in assets/js/psm-modal.js: the document-level Escape handler in select()/confirm()/alert() is now removed inside finish(), so dismissed dialogs no longer leave stale handlers behind.
+- Verified: php -l clean on account.php, teacher_classroom.php, lesson.php, schedule.php, transactions.php, admin/users.php; node --check clean on psm-modal.js and users.js; git diff --check clean; repo-wide search confirms zero remaining native prompt/confirm/alert calls in app code.
+
+72. Check all font and style to make all consistent, especially the schedule page, some space is just too crowded and some are out of its frame. Give the timetable more horizontal space for each cell to fit one sentence per line, some button is too oval, make the time table can be scroll directly to the next day instead of solely relying on schedule.
+
+Status: SOLVED (10/10/2026)
+- Fonts unified to a whole-px scale across assets/css/schedule.css (13.5px to 14px, 12.5px to 12/13px by role, 11.5px to 12px, 10.5px to 11px, 9.5px to 10px, week title 15px to 16px); page/h2 titles unchanged.
+- Crowding/overflow: timetable cells widened to 190px with 8px 10px padding (table floor recomputed to an exact 5070px = 130px corner + 26 slots, fixing a 6px right-edge clip); vertical grid given a 1020px floor inside its existing scroll wrapper; chip text wraps on word boundaries (break-word) instead of mid-word (anywhere).
+- Oval buttons: .sched-x-btn was missing padding: 0, so the global pill-button padding stretched the 32px circle into an oval (same bug class as issue 68); fixed with padding: 0, line-height: 1, box-sizing: border-box.
+- Day scroll: the horizontal timeline now renders this week plus next week (12 day-rows, Sundays skipped, data range extended past month-end when needed), so days can be scrolled to directly; the form-date week-jump range was extended to match.
+- Also fixed a latent bug found while working: $weekDays entries lacked the dowLabel/dateLabel keys the headers already read, which raised undefined-index warnings; keys added at construction.
+- Verified: php -l clean on schedule.php; git diff --check clean.
+
+73. Fetching some data shows an error even though the data is there (teacher viewing a student fails).
+
+Status: SOLVED (10/10/2026)
+- Root cause: live psm_2.users.role stores lowercase (admin/teacher/student) while admin/get_user_info.php compared the freshly fetched row with strict uppercase ($targetUser['role'] === 'STUDENT'). current_user() and User::getUser() normalize, but this one comparison did not — so every teacher opening View on their own student got "Unauthorized to view this user". Verified against live psm_2: old expression false, fixed expression true for a matching lowercase student row; non-matching rows still correctly denied.
+- Fix: compare normalize_role($targetUser['role'] ?? '') === 'STUDENT' and null-guarded the teacher-classroom fetch on the same lines so a missing row cannot corrupt the JSON response.
+- Audited the same bug class repo-wide: all other role checks run on normalized values; schema and FKs verified intact on psm_2 (zero orphan lessons/enrollments/proofs/commissions).
+- Verified: php -l clean on admin/get_user_info.php; git diff --check clean. Live data untouched.
+
+74. Make the schedule page design better; the timetable should always show only seven days and the header is misplaced.
+
+Status: SOLVED (10/10/2026)
+- Timetable is back to exactly seven days (Mon–Sun) in both views: reverted the 12-day horizontal stretch, vertical grid renders the same 7 days, and Sunday renders as a dimmed Closed column/row instead of being skipped. Fetch range, jump-to-date bounds and week label already follow the selected week.
+- Header: both thead structures verified column-exact (corner 130px + 26 × 190px = 5070px floor; vertical floor raised to 1120px for 7 day-columns), Sunday headers dimmed, and the leftover 75vh inner scroll on the vertical wrapper removed so the sticky header docks below the nav consistently in both views instead of fighting an inner scroll box.
+- Design polish: placeholder/Closed markers darkened for readability; dead 'label' key removed from day construction.
+- Verified: php -l clean on schedule.php; git diff --check clean.
+
+75. Why is the timetable header not on top of the table?
+
+Status: SOLVED (10/10/2026)
+- Root cause: position: sticky only pins inside its nearest scrolling ancestor. .sched-h-scroll (overflow-x: auto, which forces overflow-y to auto), .sched-v-scroll (overflow: auto) and .sched-main-stage (overflow: hidden) each trap the sticky thead cells — and none of those boxes ever scrolls vertically itself (no height limit), so the header could never pin and scrolled away with the page. Removing the traps is impossible: the 5070px-wide table needs its horizontal scroll box.
+- Fix: capped both scroll boxes at max-height: 70vh with overflow: auto so the box scrolls internally when the timetable is tall, and scoped the header pin to the top of the box (top: 0 override — the nav-height offset is box-meaningless and would leave a gap). Day-column left-pinning is untouched. When the timetable fits in 70vh no scrollbar appears and the header simply sits on top.
+- Verified: CSS braces balanced 144/144; php -l clean on schedule.php; git diff --check clean.
+
+76. The schedule page does not show which week of the month is displayed.
+
+Status: SOLVED (10/10/2026)
+- Ruled out corruption first: the "Week of ..." label bytes are valid UTF-8 (byte-checked E2 80 93 en-dash, C2 B7 middots) and the calendar week highlight (is-selected) works — the title only ever showed a date range, never a week-of-month number.
+- Fix: week-of-month follows the week's Thursday (the month holding most of Mon–Sun), shown as a pill next to the title, e.g. "Week of 5 Oct – 10 Oct 2026 | Week 2 of October". Boundary weeks resolve truthfully (Mon 28 Sep shows Week 1 of October). Pill reuses the existing light-purple token colors.
+- Verified: simulated 7 Mondays incl. month boundaries — all correct; php -l clean on schedule.php; git diff --check clean.

@@ -55,6 +55,10 @@ window.PSM_CONFIG = {
         <a href="<?php echo BASE_URL . 'songs.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'songs.php' ? 'class="active"' : ''; ?>>Songs</a>
         <a href="<?php echo BASE_URL . 'piano.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'piano.php' ? 'class="active"' : ''; ?>>Piano</a>
         <a href="<?php echo BASE_URL . 'game.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'game.php' ? 'class="active"' : ''; ?>>Game</a>
+        <?php if ($currentUser): ?>
+            <a href="<?php echo BASE_URL . 'schedule.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'schedule.php' ? 'class="active"' : ''; ?>>Schedule</a>
+            <a href="<?php echo BASE_URL . 'transactions.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'transactions.php' ? 'class="active"' : ''; ?>>Transactions</a>
+        <?php endif; ?>
         <a href="<?php echo BASE_URL . 'account.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'account.php' ? 'class="active"' : ''; ?>>Account</a>
         <?php if ($currentUser): ?>
             <a href="<?php echo BASE_URL . 'logout.php'; ?>" data-logout-confirm>Logout</a>
@@ -144,6 +148,12 @@ if (!$_ufw_hide):
             </a>
             <a href="<?= BASE_URL ?>tutorial.php" class="ufw-action-btn">
                 <span class="ufw-icon">🎹</span> Tutorials
+            </a>
+            <a href="<?= BASE_URL ?>schedule.php" class="ufw-action-btn">
+                <span class="ufw-icon">📅</span> Schedule
+            </a>
+            <a href="<?= BASE_URL ?>transactions.php" class="ufw-action-btn">
+                <span class="ufw-icon">💳</span> Transactions
             </a>
             <div class="ufw-divider" style="margin:4px -18px 4px;"></div>
             <a href="<?= BASE_URL ?>logout.php" class="ufw-action-btn danger" data-logout-confirm>
