@@ -26,7 +26,7 @@
 }
 
 .tutorial-hero h1 {
-    font-size: 42px;
+    font-size: clamp(2rem, 5vw, 2.625rem);
     margin: 0 0 12px;
     color: var(--text-color, #111);
 }
@@ -216,6 +216,7 @@
     background: var(--primary-color, #7c3aed);
     color: #fff;
     font-weight: 600;
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
 }
 
 .lesson-sidebar .section-status {

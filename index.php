@@ -31,6 +31,7 @@ if (!empty($currentUser) && is_database_connected()) {
     <div class="hero-background" style="background-image: url('https://images.unsplash.com/photo-1552422535-c45813c61732?auto=format&fit=crop&q=80&w=1600');"></div>
     <div class="hero-overlay"></div>
     <div class="hero-content hero-entrance">
+        <p class="hero-kicker">Interactive piano learning</p>
         <h1>Piano Learning System</h1>
         <p>
             Learn piano through interactive tutorials, piano practice,

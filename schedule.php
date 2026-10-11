@@ -255,6 +255,25 @@ function sched_min(string $t): int
     $p = explode(':', $t);
     return ((int) ($p[0] ?? 0)) * 60 + ((int) ($p[1] ?? 0));
 }
+// Human-readable commission setting ("20%", "RM 50.00", "Default").
+function sched_comm_label($type, $value): string
+{
+    $type = strtoupper(trim((string) $type));
+    if ($type === 'PERCENT') {
+        $v = trim((string) $value);
+        if ($v !== '' && is_numeric($v)) {
+            $v = (string) (float) $v;
+            if (strpos($v, '.') !== false) {
+                $v = rtrim(rtrim($v, '0'), '.');
+            }
+        }
+        return $v . '%';
+    }
+    if ($type === 'FIXED') {
+        return 'RM ' . (is_numeric($value) ? number_format((float) $value, 2) : trim((string) $value));
+    }
+    return 'Default';
+}
 // index lessons by date for the grid + calendar dots (issue 34) + empty counts (issue 61)
 $lessonsByDate = [];
 $dayCounts = [];
@@ -270,6 +289,200 @@ foreach ($lessons as $l) {
         $dayEmpty[$d] = ($dayEmpty[$d] ?? 0) + 1;
     }
 }
+
+// Issue 86: week metadata — per-day counts, week totals, series identity.
+// Everything derives from the already role/filter-scoped $lessons.
+$weekStats = ['lessons' => 0, 'minutes' => 0, 'done' => 0, 'groups' => []];
+$dayCountLabel = [];
+foreach ($hDays as $day) {
+    $dayList = $lessonsByDate[$day['ymd']] ?? [];
+    $n = count($dayList);
+    $dayCountLabel[$day['ymd']] = $n === 0 ? 'No lessons' : $n . ' lesson' . ($n === 1 ? '' : 's');
+    foreach ($dayList as $l) {
+        $weekStats['lessons']++;
+        $weekStats['minutes'] += max(0, sched_min((string) $l['end_time']) - sched_min((string) $l['start_time']));
+        if (($l['status'] ?? '') === 'COMPLETED') {
+            $weekStats['done']++;
+        }
+        $g = (string) ($l['recurrence_group'] ?? '');
+        if ($g !== '') {
+            $weekStats['groups'][$g] = true;
+        }
+    }
+}
+$weekGroupIds = array_keys($weekStats['groups']);
+// Series display name: most common non-empty title in the loaded range,
+// falling back to the existing #hash convention.
+$seriesNames = [];
+$allGroupIds = [];
+$titleVotes = [];
+foreach ($lessons as $l) {
+    $g = (string) ($l['recurrence_group'] ?? '');
+    if ($g === '') {
+        continue;
+    }
+    if (!in_array($g, $allGroupIds, true)) {
+        $allGroupIds[] = $g;
+    }
+    $t = trim((string) ($l['title'] ?? ''));
+    if ($t !== '') {
+        $titleVotes[$g][$t] = ($titleVotes[$g][$t] ?? 0) + 1;
+    }
+}
+foreach ($allGroupIds as $g) {
+    if (!empty($titleVotes[$g])) {
+        arsort($titleVotes[$g]);
+        $seriesNames[$g] = (string) array_key_first($titleVotes[$g]);
+    } else {
+        $seriesNames[$g] = 'Series #' . substr($g, 0, 8);
+    }
+}
+// Whole-series progress in one query (groups already limited to loaded lessons).
+$groupTotals = [];
+if ($allGroupIds !== [] && $lessonsAvailable && is_database_connected()) {
+    try {
+        $placeholders = implode(',', array_fill(0, count($allGroupIds), '?'));
+        $stmt = db()->prepare(
+            "SELECT recurrence_group, COUNT(*) AS total,
+                    SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS done
+             FROM lessons WHERE recurrence_group IN ($placeholders) GROUP BY recurrence_group"
+        );
+        $stmt->execute($allGroupIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $groupTotals[(string) $row['recurrence_group']] = [
+                'total' => (int) $row['total'],
+                'done' => (int) $row['done'],
+            ];
+        }
+    } catch (Throwable $e) {
+        $groupTotals = [];
+    }
+}
+// Series detail roll-up (teacher, commission, per-student fees) in one query.
+$seriesDetails = [];
+if ($allGroupIds !== [] && $lessonsAvailable && is_database_connected()) {
+    try {
+        $placeholders = implode(',', array_fill(0, count($allGroupIds), '?'));
+        $stmt = db()->prepare(
+            "SELECT l.recurrence_group AS g, tu.username AS teacher_name,
+                    l.commission_type, l.commission_value,
+                    e.student_id, su.username AS student_name,
+                    e.fee_amount, e.payment_status
+             FROM lessons l
+             LEFT JOIN users tu ON tu.user_id = l.teacher_id
+             LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+             LEFT JOIN users su ON su.user_id = e.student_id
+             WHERE l.recurrence_group IN ($placeholders)"
+        );
+        $stmt->execute($allGroupIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $g = (string) $row['g'];
+            if (!isset($seriesDetails[$g])) {
+                $seriesDetails[$g] = ['teachers' => [], 'comm' => [], 'students' => []];
+            }
+            $tn = trim((string) ($row['teacher_name'] ?? ''));
+            if ($tn !== '') {
+                $seriesDetails[$g]['teachers'][$tn] = ($seriesDetails[$g]['teachers'][$tn] ?? 0) + 1;
+            }
+            $ck = strtoupper(trim((string) ($row['commission_type'] ?? ''))) . '|' . trim((string) ($row['commission_value'] ?? ''));
+            $seriesDetails[$g]['comm'][$ck] = ($seriesDetails[$g]['comm'][$ck] ?? 0) + 1;
+            if ($row['student_id'] !== null) {
+                $sid = (int) $row['student_id'];
+                if (!isset($seriesDetails[$g]['students'][$sid])) {
+                    $seriesDetails[$g]['students'][$sid] = [
+                        'name' => (string) ($row['student_name'] ?? ('#' . $sid)),
+                        'lessons' => 0, 'total' => 0.0, 'unpaid' => 0,
+                    ];
+                }
+                $seriesDetails[$g]['students'][$sid]['lessons']++;
+                $seriesDetails[$g]['students'][$sid]['total'] += (float) ($row['fee_amount'] ?? 0);
+                if (strtoupper((string) ($row['payment_status'] ?? '')) !== 'PAID') {
+                    $seriesDetails[$g]['students'][$sid]['unpaid']++;
+                }
+            }
+        }
+    } catch (Throwable $e) {
+        $seriesDetails = [];
+    }
+}
+// Per-series month stats: class count + frequency in the calendar month,
+// typical slot, and jump target. One-off month lessons counted separately.
+$seriesMeta = [];
+$monthGroupIds = [];
+$monthOneOffs = 0;
+$weekdayNames = [1 => 'Mon', 2 => 'Tue', 3 => 'Wed', 4 => 'Thu', 5 => 'Fri', 6 => 'Sat', 7 => 'Sun'];
+foreach ($allGroupIds as $g) {
+    $monthCount = 0;
+    $uniqDates = [];
+    $slotVotes = [];
+    $nextDate = null;
+    $lastDate = null;
+    foreach ($lessons as $l) {
+        if ((string) ($l['recurrence_group'] ?? '') !== $g) {
+            continue;
+        }
+        $d = substr((string) ($l['lesson_date'] ?? ''), 0, 10);
+        if ($lastDate === null || $d > $lastDate) {
+            $lastDate = $d;
+        }
+        if (($l['status'] ?? '') === 'SCHEDULED' && $d >= $todayYmd && ($nextDate === null || $d < $nextDate)) {
+            $nextDate = $d;
+        }
+        if (substr($d, 0, 7) !== $month) {
+            continue;
+        }
+        $monthCount++;
+        $uniqDates[$d] = true;
+        $slotKey = date('N', strtotime($d . 'T12:00:00')) . '|' . substr((string) $l['start_time'], 0, 5);
+        $slotVotes[$slotKey] = ($slotVotes[$slotKey] ?? 0) + 1;
+    }
+    if ($monthCount > 0) {
+        $monthGroupIds[] = $g;
+    }
+    $cadence = '';
+    $uniqDates = array_keys($uniqDates);
+    sort($uniqDates);
+    if (count($uniqDates) >= 2) {
+        $gaps = [];
+        for ($gi = 1; $gi < count($uniqDates); $gi++) {
+            $gaps[] = (int) round((strtotime($uniqDates[$gi]) - strtotime($uniqDates[$gi - 1])) / 86400);
+        }
+        $uniform = count(array_unique($gaps)) === 1 ? $gaps[0] : null;
+        if ($uniform === 1) {
+            $cadence = 'Daily';
+        } elseif ($uniform === 7) {
+            $cadence = 'Weekly';
+        } elseif ($uniform === 14) {
+            $cadence = 'Every 2 weeks';
+        } elseif ($uniform !== null && $uniform > 0) {
+            $cadence = 'Every ' . $uniform . ' days';
+        }
+    }
+    $slotLabel = '';
+    if ($slotVotes !== []) {
+        arsort($slotVotes);
+        $parts = explode('|', (string) array_key_first($slotVotes));
+        $slotLabel = trim(($weekdayNames[(int) $parts[0]] ?? '') . ' ' . ($parts[1] ?? ''));
+    }
+    $jumpDate = $nextDate ?? $lastDate;
+    $jumpMonday = null;
+    $jumpMonth = null;
+    if ($jumpDate !== null) {
+        $dow = (int) date('N', strtotime($jumpDate . 'T12:00:00'));
+        $jumpMonday = date('Y-m-d', strtotime($jumpDate . ' -' . ($dow - 1) . ' days'));
+        $jumpMonth = substr($jumpDate, 0, 7);
+    }
+    $seriesMeta[$g] = [
+        'slot' => $slotLabel, 'jumpMonday' => $jumpMonday, 'jumpMonth' => $jumpMonth,
+        'monthCount' => $monthCount, 'cadence' => $cadence,
+    ];
+}
+foreach ($lessons as $l) {
+    if ((string) ($l['recurrence_group'] ?? '') === '' && substr((string) ($l['lesson_date'] ?? ''), 0, 7) === $month) {
+        $monthOneOffs++;
+    }
+}
+$monthLabel = date('F Y', strtotime($month . '-01T12:00:00'));
 
 // teacher availability map for the create form (admin)
 $availMap = [];
@@ -419,6 +632,98 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div><!-- /.sched-controls-deck -->
 
+    <!-- Classes this month: every series with its frequency, plus one-offs -->
+    <div class="sched-panel sched-series-panel">
+        <h2>Classes · <?= e($monthLabel) ?></h2>
+        <?php if ($monthGroupIds === [] && $monthOneOffs === 0): ?>
+            <p class="sched-empty" style="text-align:left;">No classes this month.</p>
+        <?php else: ?>
+            <ul class="sched-series-list">
+                <?php foreach ($monthGroupIds as $si => $g): ?>
+                    <?php
+                    $gt = $groupTotals[$g] ?? ['total' => 0, 'done' => 0];
+                    $gpct = $gt['total'] > 0 ? (int) round($gt['done'] / $gt['total'] * 100) : 0;
+                    $gm = $seriesMeta[$g] ?? ['slot' => '', 'jumpMonday' => null, 'jumpMonth' => null, 'monthCount' => 0, 'cadence' => ''];
+                    $jumpQs = $gm['jumpMonday'] !== null ? sched_qs(['month' => $gm['jumpMonth'], 'week' => $gm['jumpMonday'], 'lesson_id' => '']) : '';
+                    $gd = $seriesDetails[$g] ?? ['teachers' => [], 'comm' => [], 'students' => []];
+                    $teacherLabel = 'Unassigned';
+                    if ($gd['teachers'] !== []) {
+                        arsort($gd['teachers']);
+                        $teacherLabel = (string) array_key_first($gd['teachers']);
+                        $teacherExtra = count($gd['teachers']) - 1;
+                        if ($teacherExtra > 0) {
+                            $teacherLabel .= ' +' . $teacherExtra;
+                        }
+                    }
+                    $commLabel = 'Default';
+                    if ($gd['comm'] !== []) {
+                        arsort($gd['comm']);
+                        $commParts = explode('|', (string) array_key_first($gd['comm']), 2);
+                        $commLabel = sched_comm_label($commParts[0] ?? '', $commParts[1] ?? '');
+                    }
+                    $studentList = $gd['students'];
+                    uasort($studentList, function ($a, $b) { return strcmp((string) $a['name'], (string) $b['name']); });
+                    $studentCount = count($studentList);
+                    $freqLabel = ((int) $gm['monthCount']) . ' lesson' . ((int) $gm['monthCount'] === 1 ? '' : 's');
+                    if ($gm['cadence'] !== '') {
+                        $freqLabel .= ' · ' . $gm['cadence'];
+                    }
+                    $freqLabel .= ' · ' . $studentCount . ' student' . ($studentCount === 1 ? '' : 's');
+                    ?>
+                    <li class="sched-series-row">
+                        <div class="sched-series-main">
+                            <strong><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></strong>
+                            <span class="sched-series-hash">#<?= e(substr($g, 0, 8)) ?></span>
+                            <?php if ($gm['slot'] !== ''): ?><span class="sched-series-slot"><?= e($gm['slot']) ?></span><?php endif; ?>
+                        </div>
+                        <span class="sched-series-freq"><?= e($freqLabel) ?></span>
+                        <span class="sched-series-teacher">by <?= e($teacherLabel) ?></span>
+                        <div class="sched-series-prog">
+                            <div class="sched-series-track"><div class="sched-series-fill" style="width:<?= $gpct ?>%;"></div></div>
+                            <span><?= (int) $gt['done'] ?>/<?= (int) $gt['total'] ?></span>
+                        </div>
+                        <?php if ($jumpQs !== ''): ?>
+                            <a class="btn secondary-btn sched-series-jump" href="<?= e(url_path('schedule.php?' . $jumpQs) . '#schedGrid') ?>">Jump to</a>
+                        <?php endif; ?>
+                        <button type="button" class="sched-series-toggle" aria-expanded="false" aria-controls="sched-series-body-<?= (int) $si ?>">Details <span class="sched-series-arrow" aria-hidden="true">▾</span></button>
+                        <div class="sched-series-body" id="sched-series-body-<?= (int) $si ?>" hidden>
+                            <dl class="sched-series-facts">
+                                <div><dt>Teacher</dt><dd><?= e($teacherLabel) ?></dd></div>
+                                <div><dt>Commission</dt><dd><?= e($commLabel) ?></dd></div>
+                                <div><dt>Students</dt><dd><?= $studentCount ?></dd></div>
+                            </dl>
+                            <?php if ($studentList === []): ?>
+                                <p class="sched-empty" style="text-align:left;">No students enrolled.</p>
+                            <?php else: ?>
+                                <table class="sched-series-students">
+                                    <thead><tr><th>Student</th><th>Lessons</th><th>Total fee</th><th>Status</th></tr></thead>
+                                    <tbody>
+                                        <?php foreach ($studentList as $st): ?>
+                                            <tr>
+                                                <td><?= e($st['name']) ?></td>
+                                                <td><?= (int) $st['lessons'] ?></td>
+                                                <td>RM <?= e(number_format((float) $st['total'], 2)) ?></td>
+                                                <td><?= ((int) $st['unpaid'] > 0 ? '<span class="sched-pill is-warn">' . (int) $st['unpaid'] . ' unpaid</span>' : '<span class="sched-pill is-ok">Paid</span>') ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            <?php endif; ?>
+                        </div>
+                    </li>
+                <?php endforeach; ?>
+                <?php if ($monthOneOffs > 0): ?>
+                    <li class="sched-series-row is-oneoff">
+                        <div class="sched-series-main">
+                            <strong>One-off lessons</strong>
+                        </div>
+                        <span class="sched-series-freq"><?= (int) $monthOneOffs ?> lesson<?= $monthOneOffs === 1 ? '' : 's' ?></span>
+                    </li>
+                <?php endif; ?>
+            </ul>
+        <?php endif; ?>
+    </div>
+
     <!-- Main Stage: Weekly Timetable -->
     <div class="sched-panel sched-main-stage" id="schedGrid" role="region" aria-label="Weekly timetable">
         <div class="sched-stage-header">
@@ -439,6 +744,17 @@ include __DIR__ . '/includes/header.php';
                     <span>⇅</span> Vertical Grid
                 </button>
             </div>
+        </div>
+
+        <?php
+        $weekHours = $weekStats['minutes'] > 0 ? rtrim(rtrim(number_format($weekStats['minutes'] / 60, 1), '0'), '.') : '0';
+        $weekDonePct = $weekStats['lessons'] > 0 ? (int) round($weekStats['done'] / $weekStats['lessons'] * 100) . '%' : '—';
+        ?>
+        <div class="sched-week-strip" aria-label="This week at a glance">
+            <span><strong><?= (int) $weekStats['lessons'] ?></strong> lessons</span>
+            <span><strong><?= e($weekHours) ?></strong> hrs</span>
+            <span><strong><?= count($weekGroupIds) ?></strong> series</span>
+            <span><strong><?= e($weekDonePct) ?></strong> done</span>
         </div>
 
         <!-- HORIZONTAL TIMELINE VIEW (Days as rows, Time as columns) -->
@@ -462,6 +778,7 @@ include __DIR__ . '/includes/header.php';
                                     <div class="sched-h-day-badge">
                                         <span class="sched-h-day"><?= e($day['dowLabel']) ?></span>
                                         <span class="sched-h-date"><?= e($day['dateLabel']) ?></span>
+                                        <span class="sched-day-count"><?= e($dayCountLabel[$day['ymd']] ?? '') ?></span>
                                         <?php if ($isToday): ?>
                                             <span class="sched-today-pill">TODAY</span>
                                         <?php endif; ?>
@@ -502,6 +819,10 @@ include __DIR__ . '/includes/header.php';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
                                                 <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
+                                                    <?php $chipGroup = (string) ($l['recurrence_group'] ?? ''); ?>
+                                                    <?php if ($chipGroup !== ''): ?>
+                                                        <span class="sched-chip-series"><?= e($seriesNames[$chipGroup] ?? ('#' . substr($chipGroup, 0, 8))) ?></span>
+                                                    <?php endif; ?>
                                                     <span class="sched-chip-time"><?= e(substr((string) $l['start_time'], 0, 5)) ?>–<?= e(substr((string) $l['end_time'], 0, 5)) ?> · <?= $chipDur ?>m · <?= e($chipTitle) ?></span>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
                                                     <span class="sched-chip-teacher"><?= !empty($l['teacher_name']) ? e($l['teacher_name']) : 'Unassigned' ?></span>
@@ -528,7 +849,7 @@ include __DIR__ . '/includes/header.php';
                             <?php foreach ($hDays as $day): ?>
                                 <?php $isToday = ($day['ymd'] === $todayYmd); ?>
                                 <?php $thCls = trim(($isToday ? 'sched-today ' : '') . ($day['dow'] === 7 ? 'is-sun' : '')); ?>
-                                <th<?= $thCls !== '' ? ' class="' . $thCls . '"' : '' ?><?= $isToday ? ' id="schedTodayCol"' : '' ?>><span class="sched-h-day"><?= e($day['dowLabel']) ?></span> <span class="sched-h-date"><?= e($day['dateLabel']) ?></span></th>
+                                <th<?= $thCls !== '' ? ' class="' . $thCls . '"' : '' ?><?= $isToday ? ' id="schedTodayCol"' : '' ?>><span class="sched-h-day"><?= e($day['dowLabel']) ?></span> <span class="sched-h-date"><?= e($day['dateLabel']) ?></span> <span class="sched-day-count"><?= e($dayCountLabel[$day['ymd']] ?? '') ?></span></th>
                             <?php endforeach; ?>
                         </tr>
                     </thead>
@@ -573,6 +894,10 @@ include __DIR__ . '/includes/header.php';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
                                                 <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
+                                                    <?php $chipGroup = (string) ($l['recurrence_group'] ?? ''); ?>
+                                                    <?php if ($chipGroup !== ''): ?>
+                                                        <span class="sched-chip-series"><?= e($seriesNames[$chipGroup] ?? ('#' . substr($chipGroup, 0, 8))) ?></span>
+                                                    <?php endif; ?>
                                                     <span class="sched-chip-time"><?= e(substr((string) $l['start_time'], 0, 5)) ?>–<?= e(substr((string) $l['end_time'], 0, 5)) ?> · <?= $chipDur ?>m · <?= e($chipTitle) ?></span>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
                                                     <span class="sched-chip-teacher"><?= !empty($l['teacher_name']) ? e($l['teacher_name']) : 'Unassigned' ?></span>
@@ -728,7 +1053,7 @@ include __DIR__ . '/includes/header.php';
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
                         <div class="form-field"><label>Title (optional)<input type="text" name="title" maxlength="200" value="<?= e($selectedLesson['title'] ?? '') ?>"></label></div>
-                        <div class="form-field"><label>Date<input type="date" name="lesson_date" id="schedEditDate" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>" required></label><div class="sched-date-day" id="schedEditDateDay"><?= e(date('D, j M Y', strtotime(substr((string) $selectedLesson['lesson_date'], 0, 10) . 'T12:00:00'))) ?></div></div>
+                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedEditDate" data-date-picker data-disable-sunday="1" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label><div class="sched-date-day" id="schedEditDateDay"><?= e(date('D, j M Y', strtotime(substr((string) $selectedLesson['lesson_date'], 0, 10) . 'T12:00:00'))) ?></div></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-field"><label>Start (HH:MM)<input type="text" name="start_time" id="schedEditStart" value="<?= e(substr((string) $selectedLesson['start_time'], 0, 5)) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
                             <div class="form-field"><label>End (HH:MM)<input type="text" name="end_time" id="schedEditEnd" value="<?= e(substr((string) $selectedLesson['end_time'], 0, 5)) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
@@ -799,7 +1124,7 @@ include __DIR__ . '/includes/header.php';
                                 <option value="weekly">Every week</option>
                                 <option value="biweekly">Every 2 weeks</option>
                             </select></label></div>
-                            <div class="form-field"><label>Until month<input type="month" name="repeat_until" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 7)) ?>"></label></div>
+                            <div class="form-field"><label>Until month<input type="text" name="repeat_until" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 7)) ?>" placeholder="YYYY-MM" pattern="^\d{4}-\d{2}$" maxlength="7" inputmode="numeric" autocomplete="off" title="Month as YYYY-MM"></label></div>
                         </div>
                         <button type="submit" class="secondary-btn" style="width:100%;">Create repeats as new scheduled lessons</button>
                     </form>
@@ -812,7 +1137,7 @@ include __DIR__ . '/includes/header.php';
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
                         <div class="form-field"><label>Title (optional)<input type="text" name="title" maxlength="200" placeholder="e.g. Beginner piano"></label></div>
-                        <div class="form-field"><label>Date<input type="date" name="lesson_date" id="schedDate" value="<?= e($defaultDate) ?>" required></label><div class="sched-date-day" id="schedDateDay"><?= e(date('D, j M Y', strtotime($defaultDate . 'T12:00:00'))) ?></div></div>
+                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedDate" data-date-picker data-disable-sunday="1" value="<?= e($defaultDate) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label><div class="sched-date-day" id="schedDateDay"><?= e(date('D, j M Y', strtotime($defaultDate . 'T12:00:00'))) ?></div></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-field"><label>Start (HH:MM)<input type="text" name="start_time" id="schedStart" value="<?= e($defaultStart) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
                             <div class="form-field"><label>End (HH:MM)<input type="text" name="end_time" id="schedEnd" value="<?= e($defaultEnd) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
@@ -882,7 +1207,7 @@ include __DIR__ . '/includes/header.php';
                             <option value="weekly">Every week</option>
                             <option value="biweekly">Every 2 weeks</option>
                         </select></label></div>
-                        <div class="form-field"><label>Until month<input type="month" name="repeat_until" value="<?= e($month) ?>"></label></div>
+                        <div class="form-field"><label>Until month<input type="text" name="repeat_until" value="<?= e($month) ?>" placeholder="YYYY-MM" pattern="^\d{4}-\d{2}$" maxlength="7" inputmode="numeric" autocomplete="off" title="Month as YYYY-MM"></label></div>
                     </div>
                     <p class="sched-empty" style="margin:0 0 12px;font-size:12px;">Same weekday and time each occurrence. Dates outside working hours are skipped automatically.</p>
                     <button type="submit" class="primary-btn" style="width:100%;">Save Timetable</button>
@@ -989,6 +1314,17 @@ include __DIR__ . '/includes/header.php';
         try { y = sessionStorage.getItem('schedScrollY'); sessionStorage.removeItem('schedScrollY'); } catch (e) {}
         if (y !== null && y !== '') { window.scrollTo(0, parseInt(y, 10) || 0); }
     })();
+
+    // Issue 88: expandable series rows (month classes panel).
+    document.querySelectorAll('.sched-series-toggle').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var body = document.getElementById(btn.getAttribute('aria-controls'));
+            if (!body) return;
+            var open = body.hidden;
+            body.hidden = !open;
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+    });
 
     // Timetable View Switcher (Horizontal Timeline vs Vertical Grid)
     var viewBtnH = document.getElementById('schedViewBtnH');

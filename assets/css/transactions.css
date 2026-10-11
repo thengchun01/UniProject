@@ -11,13 +11,17 @@
 .txn-total-card {
     background: var(--surface-color, #fff); border: 1px solid var(--border-color, #eaeaea);
     border-radius: var(--radius-md, 12px); padding: 14px; box-shadow: var(--shadow-sm, 0 2px 8px rgba(0,0,0,0.04));
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
-.txn-total-card strong { font-size: 1.3rem; display: block; }
+.txn-total-card:hover {
+    transform: translateY(-3px); box-shadow: var(--shadow-md, 0 8px 24px rgba(0,0,0,0.08));
+}
+.txn-total-card strong { font-size: 1.3rem; display: block; font-family: var(--font-display, 'Poppins', sans-serif); letter-spacing: -0.02em; }
 .txn-total-card span { color: var(--text-muted, #666); font-size: 13px; }
 .txn-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; background: #f4f4f5; border: 1px solid var(--border-color, #eaeaea); }
-.txn-badge.is-paid { background: #e8f5e9; border-color: #81c784; color: #2e7d32; }
-.txn-badge.is-pending { background: #fff3e0; border-color: #ffb74d; color: #e65100; }
-.txn-badge.is-cancelled { background: #ffebee; border-color: #ef9a9a; color: #c62828; }
+.txn-badge.is-paid { background: var(--color-success-bg, #dcfce7); border-color: #81c784; color: var(--color-success, #166534); }
+.txn-badge.is-pending { background: var(--color-warning-bg, #fef3c7); border-color: #ffb74d; color: var(--color-warning, #92400e); }
+.txn-badge.is-cancelled { background: var(--color-danger-bg, #fee2e2); border-color: #ef9a9a; color: var(--color-danger, #dc2626); }
 .txn-proof-link { font-size: 12px; }
 .txn-row-actions { display: flex; gap: 6px; flex-wrap: wrap; }
 .txn-commission { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }

@@ -82,6 +82,8 @@
     font-size: 28px;
     display: block;
     margin-top: 8px;
+    font-family: var(--font-display, 'Poppins', sans-serif);
+    letter-spacing: -0.02em;
 }
 
 .account-summary .card p {

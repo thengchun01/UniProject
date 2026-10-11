@@ -17,6 +17,11 @@ class Lessons
     // Returns [bool $ok, string $error].
     public function checkSlot(string $date, string $start, string $end): array
     {
+        // Strict calendar date: rejects impossible dates (e.g. Feb 30) that
+        // strtotime would silently roll over, and any non-YYYY-MM-DD input.
+        if (!preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $date, $m) || !checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return [false, 'Invalid lesson date. Use YYYY-MM-DD.'];
+        }
         $ts = strtotime($date);
         if ($ts === false) {
             return [false, 'Invalid lesson date.'];

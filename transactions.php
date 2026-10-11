@@ -232,7 +232,7 @@ include __DIR__ . '/includes/header.php';
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
             <a href="<?= e(url_path('schedule.php')); ?>" class="btn secondary-btn" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;padding:8px 16px;">
-                <span>📅</span> View Timetable Schedule
+                <span aria-hidden="true">📅</span> View Timetable Schedule
             </a>
             <a href="<?= e(url_path('account.php')); ?>" class="text-button">← Account</a>
         </div>
@@ -250,8 +250,8 @@ include __DIR__ . '/includes/header.php';
     </div>
 
     <form class="txn-filters" method="get" action="<?= e(url_path('transactions.php')); ?>">
-        <label>From<input type="date" name="from" value="<?= e($from) ?>"></label>
-        <label>To<input type="date" name="to" value="<?= e($to) ?>"></label>
+        <label>From<input type="text" name="from" data-date-picker value="<?= e($from) ?>" placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label>
+        <label>To<input type="text" name="to" data-date-picker value="<?= e($to) ?>" placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label>
         <label>Lesson status
             <select name="lesson_status">
                 <option value="">All</option>

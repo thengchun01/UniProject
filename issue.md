@@ -598,3 +598,121 @@ Status: SOLVED (10/10/2026)
 - Ruled out corruption first: the "Week of ..." label bytes are valid UTF-8 (byte-checked E2 80 93 en-dash, C2 B7 middots) and the calendar week highlight (is-selected) works — the title only ever showed a date range, never a week-of-month number.
 - Fix: week-of-month follows the week's Thursday (the month holding most of Mon–Sun), shown as a pill next to the title, e.g. "Week of 5 Oct – 10 Oct 2026 | Week 2 of October". Boundary weeks resolve truthfully (Mon 28 Sep shows Week 1 of October). Pill reuses the existing light-purple token colors.
 - Verified: simulated 7 Mondays incl. month boundaries — all correct; php -l clean on schedule.php; git diff --check clean.
+
+77. Regenerate the website design using the ui-ux-pro-max skill (Phase 1: tokens + shared chrome).
+
+Status: IN PROGRESS (10/10/2026)
+- Skill workflow followed: --design-system for a piano-learning platform (Vibrant & Block-based + Righteous/Poppins + red/amber suggested), supplemented with product (Educational App: Claymorphism + micro-interactions), color, and ux (visible focus, focus-not-obscured) domain searches. Dataset red/amber rejected per repo brand rule; structure/energy adapted to existing purple (#7c3aed) identity. User confirmed: keep purple, phased rollout.
+- Phase 1 changes (assets/css/style.css only, +42/-1): Poppins display font import; :root gains --font-display, --color-on-primary, success/warning/danger (+bg) tokens, --focus-ring; h1/h2 use display font; html scroll-padding-top: 96px so sticky bars never cover keyboard focus; .primary-btn (purple) and .secondary-btn (light outline) variants defined — previously missing globally.
+- Safety: page stylesheets with their own variants (account_log, admin, homepage hero with higher specificity) still win by cascade; only pages without overrides gain the new variants. Reduced-motion already covered in CSS + main.js.
+- Verified: CSS braces balanced 158/158; git diff --check clean. Next: Phase 2 page groups.
+
+Phase 2a (homepage, 10/10/2026): hero overlay shifted to black/purple duotone; h1 fluid clamp(2.5rem, 6vw, 3.75rem) with Poppins from Phase 1 (redundant 768px override removed); eyebrow kicker added; feature-card image zoom on hover (stretched-link overlay preserved); CTA rebuilt as purple gradient block with scoped white/outline buttons. Quiet info-cards, reveal animations, and reduced-motion fallback untouched.
+- Verified: php -l clean on index.php; homepage.css braces 64/64; git diff --check clean.
+
+Phase 2b (piano + tutorial lesson, 10/10/2026): piano.css — .btn.primary text #06231f to white and hover teal #50d4c8 to brand #6d28d9 (contrast + leftover-theme fix), .btn.secondary.danger text to readable danger red, harsh 2px black page frame softened to 1px border + 16px radius, active tabs gain purple affordance, stat/chart cards to 12px radius + soft shadow. piano.php — song-load banner indigo (#6c63ff) moved to brand accent tokens. tutorial.css — hero h1 fluid clamp, sidebar active item gains glow. All piano/lesson key-state colors (active/hint/correct/wrong/dim) and one-by-one hint behavior untouched.
+- Verified: php -l clean on piano.php; piano.css braces 239/239; tutorial.css braces 94/94; no off-brand hex leftovers; git diff --check clean.
+
+Phase 2c-i (transactions + schedule touch-ups, 10/10/2026): transactions.css — total figures in Poppins display font, cards gain hover lift, status badges mapped to semantic success/warning/danger tokens. schedule.css — week title in display font. transactions.php — decorative emoji hidden from assistive tech. Global focus-visible already covers chips/buttons; tables inherit admin styling (dashboards group next).
+- Verified: php -l clean on transactions.php; transactions.css braces 25/25; schedule.css braces 146/146; git diff --check clean.
+
+Phase 2c-ii (dashboards + account, 10/10/2026): admin.css — data-table headers unified to timetable slate (#0f172a/#334155), stat figures in Poppins display font, classroom stat indigo (#6c5ce7) moved to brand purple. account_log.css — summary figures in display font. Role badges (grayscale hierarchy) and all table/server logic untouched.
+
+Status: COMPLETE (10/10/2026). Redesign delivered in 4 phases, CSS/PHP-lint and diff checks clean throughout.
+
+78. Filter controls (From/To/status) look like default browser widgets, and Chinese date text (年月日) appears in date fields.
+
+Status: SOLVED (10/10/2026)
+- Chinese text: no CJK exists in any website PHP/JS (the .sql/.md hits are phpMyAdmin export comments and skill docs, not UI). The 年月日 came from native date/month inputs, which browsers render in the OS locale with no page override. Replaced all 6 locale-rendered inputs (2 lesson dates + 2 repeat-until months in schedule.php, From/To in transactions.php) with themed text fields following the codebase's existing time-input pattern (placeholder + pattern + inputmode + title). Zero type="date"/"month" remain. Time inputs stay native (24h numeric, no CJK).
+- Themed controls: new global layer in style.css gives every select/text-like field the theme border/radius/padding/focus-ring plus a purple chevron for drop-downs; checkbox/radio/range/file untouched, page-level rules still win ties. Decorative emoji hidden from assistive tech (transactions link).
+- Safety: schedule JS already guards non-conforming values (regex + NaN checks); transactions From/To and repeat_until were already strictly validated server-side. Hardened Lessons::checkSlot with regex + checkdate so impossible dates (Feb 30, previously rolled over by strtotime) are rejected in one place for all callers.
+- Verified: slot-check CLI (valid OK; Feb 30/garbage/US-format/unpadded rejected; Sunday rule intact); php -l clean on schedule.php, transactions.php, Lessons.php; style.css braces 162/162; git diff --check clean.
+
+80. Validation email never arrives in the mailbox.
+
+Status: DIAGNOSED — pipeline works (10/10/2026)
+- Ruled out layer by layer, all live-tested: Gmail credentials present (config.local.php, git-ignored); TCP to smtp.gmail.com:587 connects in ~50ms with proper greeting + STARTTLS; single AUTH LOGIN attempt returned 235 (no mail sent); email_verification table exists with correct shape; registration/resend flow and 60s cooldown logic read correct.
+- Decisive test: ran the real send_verification_code() end to end via CLI to the account's own Gmail → {"success":true} (code stored, Gmail accepted DATA). So sending works; the missing mail is downstream: (1) check Spam/Junk + All Mail — app-sent Gmail lands there often, (2) confirm the exact address typed at registration (code goes to precisely that string), (3) resends inside the 60s cooldown return "please wait" instead of sending, (4) accounts created while mail was unconfigured are intentionally activated immediately with the "skipped" message and never emailed.
+- Environment fix along the way: C:\xampp\php\logs did not exist, so PHP error_log() (including all [PSM mail] diagnostics) failed silently — created it so future mail failures are actually recorded. No code changes needed. Live data untouched except the single self-test send.
+
+79. Date fields need a calendar for easy selection, but not the browser-default one (Chinese locale text).
+
+Status: SOLVED (10/10/2026)
+- Built a shared English-only calendar popup: new assets/js/date-picker.js (vanilla, no deps, IIFE namespaced) auto-attaches to inputs with [data-date-picker]; hard-coded English month/weekday names so no browser-locale text can ever appear; Mon-first grid, today ring, selected fill, prev/next month, Escape/outside-click close, single-open, reduced-motion guard, real <button>s throughout with aria labels.
+- Schedule create/edit date fields disable Sundays in the picker (lessons closed — matches server rule); transactions From/To allow all days (valid filter values). Picking writes YYYY-MM-DD and fires input+change, so the existing weekday badge, week-jump, and clash-table wiring runs unchanged (all three already guard malformed values). Typing still works as fallback with placeholder + pattern + strict server check from item 78.
+- Wired via footer global script tag (same convention as psm-modal.js) + one data attribute per field; popup styles live with the themed controls in style.css.
+- Verified: node --check clean; php -l clean on schedule.php, transactions.php, footer.php; style.css braces 183/183; UTF-8 meta confirmed for popup glyphs; git diff --check clean. Live-tested in browser pending user pass.
+
+81. Add an eye button to see the entered password.
+
+Status: SOLVED (10/10/2026)
+- Built a shared toggle: new assets/js/password-toggle.js (vanilla, IIFE namespaced) auto-attaches to every input[type="password"] — all 11 fields across account.php (login/register), admin/users.php + teacher_classroom.php (create/reset/confirm trio), schedule.php (new teacher/student passwords), and the dev utility. Eye/eye-off SVG swap, aria-pressed + Show/Hide label, focus stays in the field; only the input type flips, values and validation untouched (verified no JS reads password types). Styled + loaded via the same footer-global convention as the date picker, with reduced-motion guard.
+- Verified: node --check clean; php -l clean on footer.php; style.css braces 190/190; git diff --check clean. Live click-test pending user pass.
+
+Refinement (10/10/2026): eye button moved inside the field (30px overlay, muted icon, purple on hover/active) per user feedback. Text clearance uses an inline padding-right so no page stylesheet can slide typed text underneath; the global button hover-lift is neutralized on the toggle so it stays vertically centered.
+- Verified: node --check clean; style.css braces 190/190; git diff --check clean.
+
+Fix (10/10/2026): the eye stretched over the whole input on account.php because .form-panel.compact button (width:100%) outranks the toggle class. Fixed geometry (30px box, padding, margin, absolute centering) now lives inline on the button so no page rule can stretch it; the stylesheet keeps theming only. Audited for !important width rules — none exist.
+- Verified: node --check clean; style.css braces 190/190; git diff --check clean.
+
+Follow-up (10/10/2026): force-hide on attach (input.type = 'password' up front, so fields start hidden whatever the page state) and transform-free centering (top:0/bottom:0 + auto margins — holds in wraps of any height and survives transform overrides).
+- Verified: node --check clean; git diff --check clean. If the old broken rendering persists, hard-refresh (Ctrl+F5) to drop the cached script.
+
+Icon semantics + in-flow overlay (10/10/2026): per user answers — open eye now means text is visible, crossed eye means hidden; and the overlay no longer uses absolute positioning at all (it escaped the box under stale/mismatched styles). The wrap is an inline flex row, the button rides in normal flow pulled over the input's reserved 36px padding by negative margin, so it cannot leave the box and flexbox always centers it on the input text. All geometry inline; stylesheet keeps theming only.
+- Verified: node --check clean; git diff --check clean. Please refresh the page before testing.
+
+86. Schedule page is confusing — no metadata: how many classes, which series, what series exist.
+
+Status: SOLVED (10/10/2026, structure drafted + agreed before coding)
+- Diagnosis confirmed with user: chips showed time/students/teacher/status but never class counts, series identity, or a series overview.
+- Built all three agreed parts: (1) week strip under the stage header (lesson count, hours, series count, done% — all from the role/filter-scoped week); (2) per-day counts on both timetable headers; (3) "Series this week" panel (name, #hash, typical slot, whole-series progress bar n/m via one GROUP BY query, Jump-to-week link).
+- Series name = most frequent non-empty title in the group, falling back to the existing #hash convention; one-off lessons get no tag. Text-only tags (never color) so lesson state colors keep their meaning. Whole-group visibility follows the existing detail-panel precedent.
+- Verified: logic simulated in CLI (hours format, name vote, slot mode, jump-Monday math, pct — all correct); php -l clean on schedule.php; schedule.css braces 165/165; git diff --check clean. No-JS changes; drag-select/validation untouched.
+
+87. Replace "Series this week" with "Classes this month", showing each series and its frequency.
+
+Status: SOLVED (10/10/2026)
+- Panel now anchored to the calendar month ($month): one row per series active that month — name, #hash, typical slot, frequency ("4 lessons · Weekly"; cadence from uniform day-gaps: Daily / Weekly / Every 2 weeks / Every N days, blank when irregular or single), whole-series progress bar, Jump-to link — plus a one-off lessons summary row so month totals reconcile. Series with no lessons in the month never appear (month-clipped, not week-derived).
+- Series names now derived for all loaded groups (not just the week), so chip tags stay covered. Week strip + chip tags unchanged.
+- Verified: frequency matrix simulated in CLI (weekly/biweekly/irregular/single/daily/month-label all correct); php -l clean; schedule.css braces 167/167; git diff --check clean.
+
+Move (10/10/2026): "Classes · Month" panel relocated from below the timetable to directly under the calendar/filter deck (single instance verified in order: deck → panel → stage → workspace); panel top margin dropped since the layout gap governs spacing.
+- Verified: php -l clean on schedule.php; schedule.css braces 167/167; git diff --check clean.
+
+88. Series rows need full metadata (students, teacher) + expandable details (commission, per-student fees) to eventually substitute lesson details; keep details for comparison.
+
+Status: SOLVED (10/10/2026)
+- Row headers now show student count (in frequency line) and assigned teacher ("by …", mode across the series, +N on split). New Details toggle expands teacher / commission rate / per-student fee table (name, lesson count, total, Paid vs N-unpaid pills) with aria-expanded and rotating arrow. One extra indexed query feeds it all; whole-group visibility follows the existing detail-panel precedent.
+- Lesson detail panel untouched for comparison as requested.
+- Caught by CLI simulation before shipping: percent trim turned 20% into 2% (rtrim ate the significant zero) — fixed to trim only past a decimal point; re-verified 20%/12.5%/100%/RM 50.00/Default.
+- Verified: php -l clean on schedule.php; schedule.css braces 183/183; git diff --check clean. Expand/collapse needs a browser click-test.
+
+82. Convert all drop-downs to system-theme drop-downs (native look is awful).
+
+Status: SOLVED (10/10/2026)
+- Built shared widget: new assets/js/dropdown.js (vanilla, IIFE) auto-attaches to all 25 single-choice selects (skips multiple/size/data-native). Native stays in the form hidden-but-rendered, so required-validation, submission and direct .value reads work unchanged; picking writes the native value and fires input+change, so inline onchange-submit (per-page, rankings game), songs filters, draft restore and dynamic lists (add-student) keep working; options re-read on every open. Full keyboard support (arrows/Enter/Escape/type-ahead), disabled options, empty state, form-reset resync, outside-click close, aria listbox semantics with label fallback to field name.
+- Popup + button styled to the theme (purple chevron/highlight, ring, 220px scroll, mobile width cap, reduced-motion guard); layout inline so page rules cannot break it (fills grid cells/labels, compacts in flex-row toolbars like pagination). Loaded via footer global tag.
+- Verified: node --check clean; php -l clean on footer.php; style.css braces 204/204; git diff --check clean. Live click/keyboard test across filter + dialog selects pending user pass.
+
+83. Schedule filters can't be used — picking an option never applies.
+
+Status: DIAGNOSING (10/10/2026)
+- Ruled out by audit: widget logic proven by a 14-assert Node harness (attach/open/pick/sync/events/repopulation/submit payload all pass); no submit blockers (all submit handlers belong to other forms; no document-level interceptors); no validation blocks (filter selects not required); label-activation neutralized by stopPropagation; ES5-safe syntax; server code untouched.
+- User observation: Apply click causes no reload at all.
+- Diagnostic step: the 4 schedule filter selects (status/teacher/student x2) temporarily set data-native (plain browser controls) while all other widgets stay themed. Retest decides the layer: native works → widget-submit interaction bug (dig with console output); native also fails → server-side bug (dig GET handling).
+- Verified: php -l clean on schedule.php; git diff --check clean. Refresh before retesting.
+
+84. Themed drop-downs/date-picker broken everywhere; native controls work (follows 83).
+
+Status: FIX PROBABLY IDENTIFIED (10/10/2026)
+- Prime suspect found by elimination: outside-dismissal in both popups relied solely on pointerdown. Browsers without PointerEvent (older Safari, some Chinese-market forks — consistent with the zh-locale environment) never fire it, so popups stay open over the page and cover buttons like Apply; the password toggle (click-only) always worked, which fits. Widget logic itself proven by 17-assert Node harness.
+- Fix: document-level click fallback added to dropdown.js and date-picker.js (click fires universally; existing stopPropagation keeps toggle/item clicks safe). Themed schedule filters re-enabled (data-native removed).
+- Verified: node --check clean on both files; harness 17/17 incl. outside-click dismissal; php -l clean on schedule.php; git diff --check clean. Needs user retest + browser name/version if still broken.
+
+85. Themed drop-down opens but options can't be chosen (Chrome 154).
+
+Status: SOLVED (10/10/2026)
+- Root cause: the focusout auto-dismiss fired on press-down (real browsers move focus before the tap release lands), hiding the popup mid-press so the tap never registered. My first harness had no focus model, which is why 17 checks passed while the bug lived.
+- Fix (dropdown.js only): focusout now dismisses solely for keyboard tabbing away — a press within the last 500ms always skips dismissal, letting the tap handler or outside-closer decide. Date-picker/password-toggle never had this trap (no focusout handler).
+- Proven: harness extended with a focus model — tap sequence (press, focus loss, release) now picks correctly and tab-away still dismisses. 22/22 pass.
+- Verified: node --check clean; git diff --check clean. Needs user retest with a normal refresh.

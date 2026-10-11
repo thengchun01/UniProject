@@ -27,6 +27,9 @@
 <script src="<?php echo e(url_path('assets/js/piano-core.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/piano-core.js')); ?>"></script>
 <script src="<?php echo e(url_path('assets/js/piano.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/piano.js')); ?>"></script>
 <script src="<?php echo e(url_path('assets/js/user-widget.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/user-widget.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/date-picker.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/date-picker.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/password-toggle.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/password-toggle.js')); ?>"></script>
+<script src="<?php echo e(url_path('assets/js/dropdown.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/dropdown.js')); ?>"></script>
 
 </body>
 </html>

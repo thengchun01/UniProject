@@ -23,7 +23,8 @@
 .game-page{
     background:var(--studio-bg);
     color:var(--studio-text);
-    border:2px solid #000;
+    border:1px solid var(--studio-border);
+    border-radius:16px;
     min-height:calc(100vh - 150px);
 }
 
@@ -102,16 +103,16 @@
 .btn.primary{
     background:var(--studio-accent);
     border-color:var(--studio-accent);
-    color:#06231f;
+    color:#ffffff;
 }
 
 .btn.primary:hover{
-    background:#50d4c8;
+    background:var(--studio-accent-2);
 }
 
 .btn.secondary.danger{
-    color:#ffd0d0;
-    border-color:rgba(239,107,107,.45);
+    color:var(--studio-danger);
+    border-color:rgba(220,38,38,.45);
 }
 
 .status-dot{
@@ -164,6 +165,16 @@
     color:var(--studio-text);
 }
 
+.tab.active,
+.gm-tab.active,
+.gi-mode-tab.active,
+.mode-toggle-btn.active,
+.diff-btn.active{
+    color:var(--studio-accent);
+    border-color:rgba(124,58,237,.45);
+    box-shadow:0 1px 4px rgba(124,58,237,.2);
+}
+
 .piano-workspace{
     display:flex;
     flex-direction:column;
@@ -204,7 +215,8 @@
 .gi-prompt{
     background:var(--studio-panel);
     border:1px solid var(--studio-border);
-    border-radius:8px;
+    border-radius:12px;
+    box-shadow:0 1px 3px rgba(15,23,42,.06);
 }
 
 .stat-card{

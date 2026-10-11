@@ -20,8 +20,8 @@
 }
 
 .modern-table thead tr {
-    background: #000;
-    border-bottom: 2px solid #333;
+    background: #0f172a;
+    border-bottom: 2px solid #334155;
 }
 
 .modern-table th {
@@ -515,6 +515,8 @@
 .stat-value {
     font-size: 28px;
     font-weight: 800;
+    font-family: var(--font-display, 'Poppins', sans-serif);
+    letter-spacing: -0.02em;
     color: #000;
     margin-bottom: 6px;
 }
@@ -682,7 +684,9 @@
 .classroom-stat-value {
     font-size: 28px;
     font-weight: 800;
-    color: #6c5ce7;
+    font-family: var(--font-display, 'Poppins', sans-serif);
+    letter-spacing: -0.02em;
+    color: var(--primary-color, #7c3aed);
     margin-bottom: 6px;
 }
 

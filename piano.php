@@ -32,10 +32,10 @@ $requestedPieceId = (int)($_GET['piece_id'] ?? 0);
     </header>
 
     <!-- Song loading banner (shown when piece_id is provided) -->
-    <div id="song-load-banner" style="display:none; background:linear-gradient(90deg,#6c63ff22,#7c73ff11); border-left:4px solid #6c63ff; padding:10px 18px; font-size:0.9rem; align-items:center; gap:10px; flex-wrap:wrap;">
+    <div id="song-load-banner" style="display:none; background:linear-gradient(90deg,#7c3aed22,#7c3aed11); border-left:4px solid var(--studio-accent); padding:10px 18px; font-size:0.9rem; align-items:center; gap:10px; flex-wrap:wrap;">
         <span id="song-load-banner-text">⏳ Loading song piece…</span>
         <span id="song-banner-stats" class="song-banner-stats"></span>
-        <a href="<?= BASE_URL ?>songs.php" style="margin-left:auto; font-size:0.82rem; color:#6c63ff; text-decoration:underline;">← Back to Songs</a>
+        <a href="<?= BASE_URL ?>songs.php" style="margin-left:auto; font-size:0.82rem; color:var(--studio-accent); text-decoration:underline;">← Back to Songs</a>
     </div>
 
     <div class="piano-workspace">
