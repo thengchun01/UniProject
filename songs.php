@@ -10,15 +10,28 @@ if (is_database_connected()) {
         $db = db();
         $stmt = $db->query("
             SELECT m.midi_id, m.file_name AS piece_name, m.difficulty, m.notes, m.file_path,
-                   s.song_id, s.song_name
+                   s.song_id, s.song_name, u.username AS uploader
             FROM midi_file m
             LEFT JOIN song s ON s.song_id = m.song_id
+            LEFT JOIN users u ON u.user_id = m.user_id
             WHERE s.song_id IS NOT NULL
             ORDER BY s.song_id ASC, m.midi_id ASC
         ");
         $songList = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
         $dbError = $e->getMessage();
+    }
+}
+
+$user = current_user();
+$role = normalize_role($user['role'] ?? 'GUEST');
+$canUpload = in_array($role, ['ADMIN', 'TEACHER'], true);
+$songOptions = [];
+if ($canUpload && is_database_connected()) {
+    try {
+        $songOptions = db()->query('SELECT song_id, song_name FROM song ORDER BY song_name ASC')->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    } catch (Throwable $e) {
+        $songOptions = [];
     }
 }
 
@@ -29,6 +42,7 @@ $songListJson = json_encode(array_map(function($row) {
         'song_name'  => $row['song_name'],
         'piece_name' => $row['piece_name'],
         'difficulty' => $row['difficulty'] ?? 'Beginner',
+        'uploader'   => $row['uploader'] ?? null,
         'has_data'   => !empty($row['notes']) || !empty($row['file_path']),
     ];
 }, $songList), JSON_UNESCAPED_UNICODE);
@@ -91,6 +105,40 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <!-- ── List ───────────────────────────────────── -->
+        <?php if ($canUpload): ?>
+        <!-- ── Teacher upload: pieces appear here for every student ── -->
+        <section class="songs-upload" aria-label="Upload a library piece">
+            <h2>Share a piece with all students</h2>
+            <p class="songs-upload-hint">Upload a MIDI file — it appears in this library for every student instantly.</p>
+            <form id="midi-upload-form" enctype="multipart/form-data">
+                <label>Title
+                    <input type="text" name="title" maxlength="200" required placeholder="e.g. Für Elise">
+                </label>
+                <label>Difficulty
+                    <select name="difficulty" required>
+                        <option value="">Choose…</option>
+                        <option>Beginner</option>
+                        <option>Intermediate</option>
+                        <option>Advanced</option>
+                    </select>
+                </label>
+                <label>Song
+                    <select name="song_id">
+                        <option value="">Choose…</option>
+                        <?php foreach ($songOptions as $s): ?>
+                            <option value="<?= (int) $s['song_id'] ?>"><?= e($s['song_name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
+                <label>Or new song
+                    <input type="text" name="new_song" maxlength="200" placeholder="New song name (optional)">
+                </label>
+                <label class="btn secondary-btn songs-file-btn">Choose MIDI file<input type="file" name="midi" accept=".mid,.midi" hidden required></label>
+                <span class="songs-file-name" id="midi-file-name">No file chosen</span>
+                <button type="submit" class="primary-btn">Upload piece</button>
+            </form>
+        </section>
+        <?php endif; ?>
         <div class="songs-list" id="songs-list">
             <div class="songs-list-header">
                 <span class="col-song">Song</span>
@@ -125,6 +173,31 @@ include __DIR__ . '/includes/header.php';
     const listBody    = document.getElementById('songs-list-body');
     const noResults   = document.getElementById('songs-no-results');
     const countEl     = document.getElementById('songs-count');
+
+    // ── Teacher upload ───────────────────────────────
+    const upForm = document.getElementById('midi-upload-form');
+    if (upForm) {
+        const fileInput = upForm.querySelector('input[type="file"]');
+        const fileName = document.getElementById('midi-file-name');
+        if (fileInput) fileInput.addEventListener('change', () => {
+            fileName.textContent = (fileInput.files && fileInput.files[0] && fileInput.files[0].name) || 'No file chosen';
+        });
+        upForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const btn = upForm.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            const oldText = btn.textContent;
+            btn.textContent = 'Uploading…';
+            fetch(BASE_URL + 'api/midi_upload.php', { method: 'POST', body: new FormData(upForm) })
+                .then((r) => r.json())
+                .then((out) => {
+                    if (!out.success) throw new Error(out.error || 'Upload failed.');
+                    PSMModal.alert('Piece shared — every student can now play it from the library.').then(() => window.location.reload());
+                })
+                .catch((err) => PSMModal.alert(err.message || 'Upload failed.'))
+                .finally(() => { btn.disabled = false; btn.textContent = oldText; });
+        });
+    }
 
     if (!listBody) return; // DB error / empty state
 
@@ -176,7 +249,7 @@ include __DIR__ . '/includes/header.php';
 
             tr.innerHTML = `
                 <span class="col-song">${songChanged ? escHtml(row.song_name) : '<span class="col-song-cont">↳</span>'}</span>
-                <span class="col-piece">${escHtml(row.piece_name)}</span>
+                <span class="col-piece">${escHtml(row.piece_name)}${row.uploader ? `<small class="songs-uploader">by ${escHtml(row.uploader)}</small>` : ''}</span>
                 <span class="col-diff">
                     <span class="diff-badge" style="color:${color};border-color:${color};">${escHtml(row.difficulty)}</span>
                 </span>

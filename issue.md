@@ -716,3 +716,10 @@ Status: SOLVED (10/10/2026)
 - Fix (dropdown.js only): focusout now dismisses solely for keyboard tabbing away — a press within the last 500ms always skips dismissal, letting the tap handler or outside-closer decide. Date-picker/password-toggle never had this trap (no focusout handler).
 - Proven: harness extended with a focus model — tap sequence (press, focus loss, release) now picks correctly and tab-away still dismisses. 22/22 pass.
 - Verified: node --check clean; git diff --check clean. Needs user retest with a normal refresh.
+
+89. Teacher-uploaded MIDI files must be accessible to all students.
+
+Status: SOLVED (11/10/2026)
+- Found: no upload flow existed at all (piano import is client-side only; all 7 library rows are seeds). The library only lists song-linked pieces with no per-user gating, so linking an upload to a song makes it visible to everyone automatically.
+- Built: new api/midi_upload.php (TEACHER/ADMIN enforced server-side; .mid/.midi extension, 2MB cap, MThd header check, is_uploaded_file; song must exist or a new name creates it; storage + DB in one transaction with file cleanup on failure; JSON shape matches api conventions). songs.php gained a teacher/admin upload panel (title, difficulty, existing-or-new song, themed file picker, fetch + PSMModal feedback + reload) and a "by {uploader}" credit on each piece. Student uploads unchanged (none exist); get_song_piece access unchanged (already public).
+- Verified: php -l clean on songs.php + api/midi_upload.php; songs.css braces 52/52; preconditions live-checked (file_path column present, 5 songs, uploads/midi created + writable); git diff --check clean. Live upload test needs a browser pass (teacher login → upload → student sees it).

@@ -259,6 +259,64 @@
     font-size: 0.95rem;
 }
 
+/* ── Teacher upload ─────────────────────────────────── */
+.songs-upload {
+    margin: 20px 0;
+    padding: 18px;
+    background: var(--surface-color, #fff);
+    border: 1px solid var(--border-color, #eaeaea);
+    border-radius: 16px;
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
+}
+
+.songs-upload h2 {
+    margin: 0 0 4px;
+    font-size: 1.15rem;
+}
+
+.songs-upload-hint {
+    margin: 0 0 14px;
+    font-size: 13px;
+    color: var(--text-muted, #777);
+}
+
+#midi-upload-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+#midi-upload-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.songs-file-btn {
+    cursor: pointer;
+    justify-content: center;
+    white-space: nowrap;
+}
+
+.songs-file-name {
+    font-size: 12px;
+    color: var(--text-muted, #777);
+    align-self: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.songs-uploader {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted, #777);
+}
+
 /* ── Responsive ───────────────────────────────────── */
 @media (max-width: 640px) {
     .songs-hero    { flex-direction: column; align-items: flex-start; }
