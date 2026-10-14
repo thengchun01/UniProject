@@ -381,6 +381,15 @@ if ($txAvailable && is_database_connected()) {
             }
             $combos[$key]['ctype'] = $ctype;
             $combos[$key]['cvalue'] = $cvalue;
+            $hasCustomCommission = false;
+            foreach (array_keys($c['comm']) as $commissionKey) {
+                $commissionParts = explode('|', (string) $commissionKey, 2);
+                if (trim((string) ($commissionParts[0] ?? '')) !== '' && trim((string) ($commissionParts[1] ?? '')) !== '') {
+                    $hasCustomCommission = true;
+                    break;
+                }
+            }
+            $combos[$key]['commission_source'] = $hasCustomCommission ? 'Custom' : 'Default';
             [$rct, $rcv] = $lessonsManager->resolveCommission($tid > 0 ? $tid : null, $ctype !== '' ? $ctype : null, $cvalue !== '' ? $cvalue : null);
             $combos[$key]['rate'] = [$rct, (float) $rcv];
             if ($c['fee_id'] !== null && !isset($seenFee[$c['fee_id']])) {
@@ -684,7 +693,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php else: ?>
                                     <span class="txn-commission-value">RM <?= e(number_format((float) $c['due'], 2)) ?></span>
                                 <?php endif; ?>
-                                <span class="txn-commission-note"><?= $c['series_paid'] ? 'Commission due' : 'Open commission' ?></span>
+                                <span class="txn-commission-note"><?= e($c['commission_source'] ?? 'Default') ?></span>
                             </td>
                             <td>
                                 <div class="txn-proof-cell">
