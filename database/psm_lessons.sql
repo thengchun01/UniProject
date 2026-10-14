@@ -100,3 +100,55 @@ ALTER TABLE `monthly_fees`
   ADD COLUMN IF NOT EXISTS `proof_path` VARCHAR(512) DEFAULT NULL AFTER `status`;
 ALTER TABLE `monthly_fees` ADD UNIQUE KEY `uniq_student_month_group` (`student_id`, `month`, `recurrence_group`);
 ALTER TABLE `monthly_fees` DROP INDEX IF EXISTS `uniq_student_month`;
+
+
+-- Course catalogue and class presets (stakeholder course list).
+CREATE TABLE IF NOT EXISTS `courses` (
+  `course_id` int(11) NOT NULL AUTO_INCREMENT,
+  `course_name` varchar(120) NOT NULL,
+  `class_mode` varchar(80) NOT NULL DEFAULT 'Individual',
+  `age_range` varchar(40) DEFAULT NULL,
+  `duration_options` varchar(80) DEFAULT NULL,
+  `minimum_fee` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `fee_period` varchar(20) NOT NULL DEFAULT 'month',
+  `description` text DEFAULT NULL,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`course_id`),
+  UNIQUE KEY `uniq_course_name` (`course_name`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `course_teachers` (
+  `course_id` int(11) NOT NULL,
+  `teacher_id` int(11) NOT NULL,
+  PRIMARY KEY (`course_id`,`teacher_id`),
+  CONSTRAINT `course_teachers_course_fk` FOREIGN KEY (`course_id`) REFERENCES `courses` (`course_id`) ON DELETE CASCADE,
+  CONSTRAINT `course_teachers_user_fk` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `course_students` (
+  `course_id` int(11) NOT NULL,
+  `student_id` int(11) NOT NULL,
+  PRIMARY KEY (`course_id`,`student_id`),
+  CONSTRAINT `course_students_course_fk` FOREIGN KEY (`course_id`) REFERENCES `courses` (`course_id`) ON DELETE CASCADE,
+  CONSTRAINT `course_students_user_fk` FOREIGN KEY (`student_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+ALTER TABLE `lessons` ADD COLUMN IF NOT EXISTS `course_id` int(11) DEFAULT NULL AFTER `teacher_id`;
+ALTER TABLE `lessons` ADD KEY IF NOT EXISTS `idx_lessons_course` (`course_id`);
+
+INSERT IGNORE INTO `courses` (`course_name`,`class_mode`,`age_range`,`duration_options`,`minimum_fee`,`fee_period`,`description`) VALUES
+('Piano','Individual','4+','30 / 45 min',120.00,'month','Exam or hobby; fundamentals, technique, theory and repertoire.'),
+('Violin','Individual','7+','30 min',110.00,'month','Exam or hobby; posture, bowing, intonation and repertoire.'),
+('Classical Guitar','Individual','9+','30 min',110.00,'month','Exam or hobby; notation, finger technique and classical repertoire.'),
+('Popular Guitar','Individual / small group','9+','30 min',110.00,'month','Exam or hobby; chords, strumming and popular songs.'),
+('Electric Guitar','Individual','9+','30 min',110.00,'month','Exam or hobby; technique, riffs and music styles.'),
+('Bass Guitar','Individual','10+','30 min',110.00,'month','Exam or hobby; rhythm, groove and bass technique.'),
+('Ukulele','Individual / small group','7+','30 / 45 / 60 min',100.00,'month','Hobby; chords, strumming and songs.'),
+('Keyboard','Individual','7+','30 / 45 min',0.00,'month','Exam or hobby; keyboard skills, notation and repertoire.'),
+('Flute','Individual','7+','30 min',0.00,'month','Exam or hobby; breath, tone and technique.'),
+('Saxophone','Individual','7+','30 min',0.00,'month','Exam-focused; tone, technique and repertoire.'),
+('Music Theory','Individual / small group','7+','30 / 45 / 60 min',0.00,'month','Exam or hobby; notation, rhythm, harmony and theory.'),
+('Music for Little Mozart','Small group','3–5','45 min',70.00,'month','Early music learning through age-appropriate activities.'),
+('Pop Vocal','Individual','10+','45 min',200.00,'month','Hobby; vocal technique, expression and popular songs.');
