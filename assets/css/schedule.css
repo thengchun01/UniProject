@@ -1226,6 +1226,37 @@ button.sched-cell-btn:hover {
     outline-offset: 2px;
 }
 
+.sched-cell-students {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 3px;
+    width: 100%;
+    min-width: 100px;
+    padding: 4px 6px;
+    margin: -4px -6px;
+}
+
+.sched-cell-time {
+    white-space: nowrap;
+    padding: 4px 6px;
+    margin: -4px -6px;
+}
+
+.sched-inline-hint {
+    display: inline-block;
+    margin-left: 4px;
+    font-size: 10px;
+    color: var(--text-muted, #64748b);
+    text-decoration: none;
+    opacity: .8;
+}
+
+.sched-cell-students:hover .sched-inline-hint,
+.sched-cell-time:hover .sched-inline-hint {
+    color: var(--primary-color, #7c3aed);
+}
+
 .sched-comm-editor {
     display: inline-flex;
     gap: 6px;
@@ -1350,6 +1381,34 @@ button.sched-link-btn:hover {
 
 .fee-input {
     width: 84px;
+    cursor: text;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 6px;
+    padding: 6px 7px;
+    background: var(--card-bg, #fff);
+}
+
+.sched-class-table .fee-input:focus {
+    outline: 2px solid var(--primary-color, #7c3aed);
+    outline-offset: 1px;
+    border-color: var(--primary-color, #7c3aed);
+}
+
+/* New-class form is launched from the Classes panel and scrolls within its dialog. */
+dialog.sched-create-dialog {
+    width: min(760px, calc(100vw - 28px));
+    max-width: 760px;
+    max-height: min(88vh, 900px);
+    overflow: auto;
+}
+
+dialog.sched-create-dialog #schedCreateForm {
+    max-height: none;
+    overflow: visible;
+}
+
+dialog.sched-create-dialog .sched-group {
+    margin-bottom: 12px;
 }
 
 /* Create-form field headers: label/count left, action button right. */
@@ -1539,6 +1598,13 @@ table.sched-class-table {
 }
 
 .sched-freq .sched-freq-day {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1;
     cursor: pointer;
     outline-offset: 2px;
     transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
@@ -1556,6 +1622,7 @@ table.sched-class-table {
 .sched-freq span.is-on,
 .sched-freq .sched-freq-day.is-on {
     background: #22c55e;
+    color: #fff;
 }
 
 .sched-freq span.is-clash,
