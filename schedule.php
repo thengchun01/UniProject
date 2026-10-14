@@ -840,7 +840,7 @@ include __DIR__ . '/includes/header.php';
                                 }
                                 ?>
                                 <?php if ($role === 'ADMIN' && $fdow < 7): ?>
-                                    <button type="button" class="sched-freq-day <?= $fcls ?>" data-series-weekday="<?= e($g) ?>" data-target-dow="<?= $fdow ?>" title="Move this class to <?= e($weekdayNames[$fdow]) ?><?= $fcell !== null ? ' · ' . e($fcell['start'] . '–' . $fcell['end']) : '' ?>" aria-label="Move class to <?= e($weekdayNames[$fdow]) ?>"></button>
+                                    <button type="button" class="sched-freq-day <?= $fcls ?>" data-series-weekday="<?= e($g) ?>" data-target-dow="<?= $fdow ?>" title="Move this class to <?= e($weekdayNames[$fdow]) ?><?= $fcell !== null ? ' · ' . e($fcell['start'] . '–' . $fcell['end']) : '' ?>" aria-label="Move class to <?= e($weekdayNames[$fdow]) ?>"><?= e(substr($weekdayNames[$fdow], 0, 1)) ?></button>
                                 <?php else: ?>
                                     <span class="<?= $fcls ?><?= $fdow === 7 ? ' is-closed' : '' ?>" title="<?= e($ftitle) ?>"></span>
                                 <?php endif; ?>
@@ -942,6 +942,21 @@ include __DIR__ . '/includes/header.php';
         </table>
         <div class="sched-dialog-actions">
             <button type="button" class="secondary-btn" data-series-close>Close</button>
+        </div>
+    </dialog>
+
+    <dialog class="sched-dialog" id="seriesTimeDialog" aria-labelledby="seriesTimeTitle">
+        <div class="sched-edit-head">
+            <h2 id="seriesTimeTitle">Edit class time</h2>
+            <button type="button" class="sched-x-btn" data-series-close aria-label="Close">×</button>
+        </div>
+        <p class="sched-dialog-sub" id="seriesTimeSub"></p>
+        <div class="form-field"><label>Start time<input type="time" id="seriesTimeStart" step="900" required></label></div>
+        <div class="form-field"><label>End time<input type="time" id="seriesTimeEnd" step="900" required></label></div>
+        <p class="sched-empty">This updates the time of every lesson in the class. Times must use 15-minute intervals.</p>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-series-close>Cancel</button>
+            <button type="button" class="primary-btn" id="seriesTimeSave">Save time</button>
         </div>
     </dialog>
 
@@ -1446,6 +1461,37 @@ include __DIR__ . '/includes/header.php';
 
     // Issue 90.4: class-table inline editors (admin only).
     var apiSeriesUrl = '<?= e(url_path('api/series_save.php')) ?>';
+    // Keep class creation beside the Classes table in a dialog, not at page bottom.
+    (function () {
+        var openBtn = document.getElementById('schedOpenCreateDialog');
+        if (!openBtn) return;
+        var form = document.getElementById('schedCreateForm');
+        if (!form) {
+            openBtn.addEventListener('click', function () {
+                var params = new URLSearchParams(window.location.search);
+                params.delete('lesson_id');
+                window.location.href = window.location.pathname + '?' + params.toString() + '#schedCreateForm';
+            });
+            return;
+        }
+        var side = form.closest('.sched-side');
+        var msg = document.getElementById('schedCreateMsg');
+        var dlg = document.createElement('dialog');
+        dlg.className = 'sched-dialog sched-dialog-wide sched-create-dialog';
+        dlg.id = 'schedCreateDialog';
+        var head = document.createElement('div');
+        head.className = 'sched-edit-head';
+        head.innerHTML = '<h2>New class</h2><button type="button" class="sched-x-btn" aria-label="Close">×</button>';
+        head.querySelector('button').addEventListener('click', function () { dlg.close(); });
+        dlg.appendChild(head);
+        if (msg) dlg.appendChild(msg);
+        dlg.appendChild(form);
+        document.body.appendChild(dlg);
+        if (side) side.hidden = true;
+        dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); });
+        openBtn.addEventListener('click', function () { if (!dlg.open) dlg.showModal(); });
+        if (window.location.hash === '#schedCreateForm') dlg.showModal();
+    })();
     var apiUserCreateUrl = '<?= e(url_path('admin/user_create.php')) ?>';
     var apiMfeeUrl = '<?= e(url_path('api/monthly_fees_save.php')) ?>';
     function seriesEsc(s) {
@@ -1490,6 +1536,31 @@ include __DIR__ . '/includes/header.php';
                 seriesPost('rename_series', { group: btn.getAttribute('data-series-title'), title: v });
             });
         });
+    });
+    // Quick-edit the time for every occurrence in a class series.
+    var timeGroup = '';
+    document.querySelectorAll('[data-series-time]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            timeGroup = btn.getAttribute('data-series-time') || '';
+            var dlg = document.getElementById('seriesTimeDialog');
+            var row = btn.closest('tr');
+            var titleBtn = row ? row.querySelector('[data-series-title]') : null;
+            var title = titleBtn ? (titleBtn.getAttribute('data-name') || titleBtn.textContent) : 'Class';
+            document.getElementById('seriesTimeSub').textContent = title + ' — update every lesson in this class';
+            document.getElementById('seriesTimeStart').value = btn.getAttribute('data-start') || '09:00';
+            document.getElementById('seriesTimeEnd').value = btn.getAttribute('data-end') || '09:45';
+            if (dlg && !dlg.open) dlg.showModal();
+        });
+    });
+    var timeSave = document.getElementById('seriesTimeSave');
+    if (timeSave) timeSave.addEventListener('click', function () {
+        var start = document.getElementById('seriesTimeStart').value;
+        var end = document.getElementById('seriesTimeEnd').value;
+        if (!start || !end || start >= end) {
+            PSMModal.toast('End time must be later than start time.', 'error');
+            return;
+        }
+        seriesPost('set_time', { group: timeGroup, start_time: start, end_time: end });
     });
     // Commission editor popup (cell shows the RM due).
     var commGroup = '';
@@ -1639,7 +1710,7 @@ include __DIR__ . '/includes/header.php';
         }
         sub.textContent = seriesName;
         if (filter) filter.value = '';
-        tbody.innerHTML = '<tr><td colspan="3" class="sched-empty">Loading…</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="sched-empty">Loading…</td></tr>';
         function row(s) {
             var tr = document.createElement('tr');
             tr.setAttribute('data-search', (s.username + ' ' + (s.email || '')).toLowerCase());
