@@ -345,17 +345,26 @@
 .txn-wrap .modern-table td:nth-child(9) {
     min-width: 115px;
 }
-.txn-commission-value {
+.txn-wrap .modern-table button.txn-commission-value {
     display: inline-block;
     padding: 2px 0;
     border: 0;
-    background: transparent;
+    border-radius: 0;
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
     color: var(--text-color, #0f172a);
     font: inherit;
     font-weight: 700;
     text-align: left;
     cursor: pointer;
     white-space: nowrap;
+}
+.txn-wrap .modern-table button.txn-commission-value:focus,
+.txn-wrap .modern-table button.txn-commission-value:active {
+    background: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
 }
 .txn-commission-value:hover {
     color: var(--primary-color, #7c3aed);
