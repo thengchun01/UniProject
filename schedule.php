@@ -1461,11 +1461,17 @@ include __DIR__ . '/includes/header.php';
 
     // Issue 90.4: class-table inline editors (admin only).
     var apiSeriesUrl = '<?= e(url_path('api/series_save.php')) ?>';
-    // Keep class creation beside the Classes table in a dialog, not at page bottom.
+    // Use one shared popup shell for creating and editing classes.
+    // The form's existing submit handler still decides whether to create or update.
     (function () {
         var openBtn = document.getElementById('schedOpenCreateDialog');
         if (!openBtn) return;
-        var form = document.getElementById('schedCreateForm');
+
+        var createForm = document.getElementById('schedCreateForm');
+        var editForm = document.getElementById('schedEditForm');
+        var isEditing = !!editForm;
+        var form = isEditing ? editForm : createForm;
+
         if (!form) {
             openBtn.addEventListener('click', function () {
                 var params = new URLSearchParams(window.location.search);
@@ -1474,25 +1480,59 @@ include __DIR__ . '/includes/header.php';
             });
             return;
         }
+
         var side = form.closest('.sched-side');
-        var msg = document.getElementById('schedCreateMsg');
+        var msg = document.getElementById(isEditing ? 'schedEditMsg' : 'schedCreateMsg');
         var dlg = document.createElement('dialog');
         dlg.className = 'sched-dialog sched-dialog-wide sched-create-dialog';
-        dlg.id = 'schedCreateDialog';
+        dlg.id = isEditing ? 'schedEditDialog' : 'schedCreateDialog';
+
         var head = document.createElement('div');
         head.className = 'sched-edit-head';
-        head.innerHTML = '<h2>New class</h2><button type="button" class="sched-x-btn" aria-label="Close">×</button>';
+        head.innerHTML = '<h2>' + (isEditing ? 'Edit Class' : 'New Class') + '</h2><button type="button" class="sched-x-btn" aria-label="Close">×</button>';
         head.querySelector('button').addEventListener('click', function () { dlg.close(); });
         dlg.appendChild(head);
+
         if (msg) dlg.appendChild(msg);
+
+        // Keep the existing delete action available while the edit form is in the popup.
+        if (isEditing && side) {
+            var deleteButton = side.querySelector('[data-del-lesson]');
+            if (deleteButton) {
+                var actions = document.createElement('div');
+                actions.className = 'sched-dialog-actions';
+                actions.appendChild(deleteButton);
+                dlg.appendChild(actions);
+            }
+        }
+
         dlg.appendChild(form);
         var timeList = document.getElementById('schedTimeList');
         if (timeList) dlg.appendChild(timeList);
         document.body.appendChild(dlg);
+
         if (side) side.hidden = true;
-        dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); });
-        openBtn.addEventListener('click', function () { if (!dlg.open) dlg.showModal(); });
-        if (window.location.hash === '#schedCreateForm') dlg.showModal();
+        dlg.addEventListener('click', function (ev) {
+            if (ev.target === dlg) dlg.close();
+        });
+
+        openBtn.addEventListener('click', function () {
+            if (isEditing) {
+                // The button above the Classes table always starts a fresh class.
+                var params = new URLSearchParams(window.location.search);
+                params.delete('lesson_id');
+                window.location.href = window.location.pathname + '?' + params.toString() + '#schedCreateForm';
+                return;
+            }
+            if (!dlg.open) dlg.showModal();
+        });
+
+        // Clicking Edit in the Classes table loads that class's form and opens this popup.
+        if (isEditing) {
+            dlg.showModal();
+        } else if (window.location.hash === '#schedCreateForm') {
+            dlg.showModal();
+        }
     })();
     var apiUserCreateUrl = '<?= e(url_path('admin/user_create.php')) ?>';
     var apiMfeeUrl = '<?= e(url_path('api/monthly_fees_save.php')) ?>';
