@@ -707,7 +707,7 @@ include __DIR__ . '/includes/header.php';
                     <?php foreach ($combos as $ckey => $c): ?>
                         <?php
                         $clsLabel = $c['g'] !== '' ? '#' . substr($c['g'], 0, 8) : $c['month'];
-                        $clsName = $c['g'] !== '' ? ($c['dname'] ?? ('Series #' . substr($c['g'], 0, 8))) : 'One-off lessons';
+                        $clsName = !empty($c['course_name']) ? $c['course_name'] : ($c['g'] !== '' ? ($c['dname'] ?? ('Series #' . substr($c['g'], 0, 8))) : 'One-off lessons');
                         ?>
                         <tr>
                             <td><?= $c['fee_id'] !== null ? (int) $c['fee_id'] : '—' ?></td>
