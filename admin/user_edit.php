@@ -29,15 +29,15 @@ try {
         exit;
     }
 
-    if (empty($username) || empty($email)) {
+    if (empty($username)) {
         echo json_encode([
             'success' => false,
-            'message' => 'Username and email are required'
+            'message' => 'Username is required'
         ]);
         exit;
     }
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
         echo json_encode([
             'success' => false,
             'message' => 'Invalid email format'
