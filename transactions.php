@@ -575,16 +575,19 @@ include __DIR__ . '/includes/header.php';
                                 RM <?= e(number_format((float) $c['due'], 2)) ?>
                                 <br><span style="color:#666;font-size:12px;"><?= e($c['rate'][0]) ?> <?= e(number_format((float) $c['rate'][1], 2)) ?><?= $c['series_paid'] ? '' : ' · open' ?></span>
                                 <?php if ($role === 'ADMIN' && $c['g'] !== ''): ?>
-                                    <br><span class="txn-mini-editor">Rate
-                                        <select data-comm-type data-group="<?= e($c['g']) ?>" aria-label="Commission type">
-                                            <option value="">Default</option>
-                                            <option value="PERCENT"<?= $c['ctype'] === 'PERCENT' ? ' selected' : '' ?>>%</option>
-                                            <option value="FIXED"<?= $c['ctype'] === 'FIXED' ? ' selected' : '' ?>>RM</option>
-                                        </select>
-                                        <input type="number" data-comm-value data-group="<?= e($c['g']) ?>" min="0" step="0.01" value="<?= e($c['cvalue']) ?>" aria-label="Commission value">
-                                        <button type="button" class="action-btn edit-btn" data-comm-save data-group="<?= e($c['g']) ?>">Save</button>
-                                    </span>
-                                    <br><span style="color:#999;font-size:11px;">Series-wide rate.</span>
+                                    <details class="txn-rate-editor">
+                                        <summary>Edit rate</summary>
+                                        <div class="txn-rate-controls">
+                                            <select data-comm-type data-group="<?= e($c['g']) ?>" aria-label="Commission type">
+                                                <option value="">Default</option>
+                                                <option value="PERCENT"<?= $c['ctype'] === 'PERCENT' ? ' selected' : '' ?>>%</option>
+                                                <option value="FIXED"<?= $c['ctype'] === 'FIXED' ? ' selected' : '' ?>>RM</option>
+                                            </select>
+                                            <input type="number" data-comm-value data-group="<?= e($c['g']) ?>" min="0" step="0.01" value="<?= e($c['cvalue']) ?>" aria-label="Commission value">
+                                            <button type="button" class="action-btn edit-btn" data-comm-save data-group="<?= e($c['g']) ?>">Save</button>
+                                        </div>
+                                        <small>Applies to the whole series.</small>
+                                    </details>
                                 <?php endif; ?>
                             </td>
                             <td><?= e($c['sname']) ?> <span style="color:#666;font-size:12px;">#<?= (int) $c['sid'] ?></span></td>
@@ -596,19 +599,21 @@ include __DIR__ . '/includes/header.php';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($c['fee_id'] === null): ?>
-                                    <span class="txn-badge">—</span>
-                                <?php else: ?>
-                                    <span class="txn-badge <?= $c['mstatus'] === 'PAID' ? 'is-paid' : ($c['mstatus'] === 'PENDING' ? 'is-pending' : '') ?>"><?= e($c['mstatus']) ?></span>
-                                <?php endif; ?>
-                                <?php if ($role === 'ADMIN'): ?>
-                                    <br><select data-mfee-status data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>" aria-label="Payment status" style="margin-top:4px;font-size:12px;">
-                                        <?php foreach (['UNPAID', 'PENDING', 'PAID'] as $st): ?>
-                                            <option value="<?= $st ?>" <?= ($c['mstatus'] ?? 'UNPAID') === $st ? 'selected' : '' ?>><?= $st ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                    <br><button type="button" class="action-btn edit-btn" style="margin-top:4px;" data-mfee-save data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>">Save fee</button>
-                                <?php endif; ?>
+                                <div class="txn-payment-cell">
+                                    <?php if ($c['fee_id'] === null): ?>
+                                        <span class="txn-badge">No record</span>
+                                    <?php else: ?>
+                                        <span class="txn-badge <?= $c['mstatus'] === 'PAID' ? 'is-paid' : ($c['mstatus'] === 'PENDING' ? 'is-pending' : '') ?>"><?= e($c['mstatus']) ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($role === 'ADMIN'): ?>
+                                        <select data-mfee-status data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>" aria-label="Payment status">
+                                            <?php foreach (['UNPAID', 'PENDING', 'PAID'] as $st): ?>
+                                                <option value="<?= $st ?>" <?= ($c['mstatus'] ?? 'UNPAID') === $st ? 'selected' : '' ?>><?= $st ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="button" class="action-btn edit-btn" data-mfee-save data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>">Save</button>
+                                    <?php endif; ?>
+                                </div>
                             </td>
                             <td>
                                 <?php if ($c['fee_id'] !== null && !empty($c['mproof'])): ?>
@@ -617,10 +622,12 @@ include __DIR__ . '/includes/header.php';
                                     <span style="color:#999;font-size:12px;"><?= $c['fee_id'] !== null ? 'No proof' : '—' ?></span>
                                 <?php endif; ?>
                                 <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
-                                    <br><label class="action-btn reset-btn" style="cursor:pointer;margin-top:4px;">Upload<input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf"></label>
-                                    <?php if (!empty($c['mproof'])): ?>
-                                        <button type="button" class="action-btn delete-btn" data-mproof-del data-feeid="<?= (int) $c['fee_id'] ?>">Del</button>
-                                    <?php endif; ?>
+                                    <div class="txn-proof-actions">
+                                        <label class="action-btn reset-btn">Upload<input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf"></label>
+                                        <?php if (!empty($c['mproof'])): ?>
+                                            <button type="button" class="action-btn delete-btn" data-mproof-del data-feeid="<?= (int) $c['fee_id'] ?>">Remove</button>
+                                        <?php endif; ?>
+                                    </div>
                                 <?php endif; ?>
                             </td>
                             <?php if ($role === 'ADMIN'): ?>
@@ -912,7 +919,7 @@ include __DIR__ . '/includes/header.php';
         b.addEventListener('click', function () {
             PSMModal.confirm({
                 title: 'Delete Monthly Record?',
-                message: 'Delete this monthly fee record? Lesson enrollments are kept; only the monthly billing row is removed.',
+                message: 'Delete this transaction and its linked class schedule? For a recurring class, the entire series and all related monthly records will be deleted. This cannot be undone.',
                 danger: true,
                 confirmText: 'Delete Record'
             }).then(function (yes) {
@@ -922,7 +929,7 @@ include __DIR__ . '/includes/header.php';
                 fd.append('fee_id', b.getAttribute('data-feeid'));
                 postForm(apiMfee, fd).then(function (d) {
                     if (d && d.success) {
-                        PSMModal.toast('Monthly record deleted.', 'success');
+                        PSMModal.toast('Transaction and linked class schedule deleted.', 'success');
                         setTimeout(function () { window.location.reload(); }, 400);
                     } else {
                         PSMModal.toast((d && d.error) || 'Failed to delete record.', 'error');
