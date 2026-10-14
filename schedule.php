@@ -736,14 +736,14 @@ include __DIR__ . '/includes/header.php';
     <div class="sched-panel sched-series-panel">
         <div class="sched-series-head">
             <h2>Classes · <?= e($monthLabel) ?></h2>
-            <a class="btn secondary-btn" href="#schedCreateForm">＋ New class</a>
+            <button type="button" class="btn secondary-btn" id="schedOpenCreateDialog">＋ New class</button>
         </div>
         <?php if ($monthGroupIds === []): ?>
             <p class="sched-empty" style="text-align:left;">No classes this month.</p>
         <?php else: ?>
             <div class="sched-table-scroll">
             <table class="sched-class-table">
-                <thead><tr><th>Class</th><th>Title</th><th>Teacher</th><th>Commission</th><th>Students</th><th>Fee (RM/month)</th><th>Frequency</th><th>Edit</th></tr></thead>
+                <thead><tr><th>Class</th><th>Title</th><th>Teacher</th><th>Commission</th><th>Students</th><th>Fee (RM/month)</th><th>Day</th><th>Time</th><th>Edit</th></tr></thead>
                 <tbody>
                 <?php foreach ($monthGroupIds as $g): ?>
                     <?php
@@ -798,19 +798,19 @@ include __DIR__ . '/includes/header.php';
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-teacher="<?= e($g) ?>" data-teacher="<?= (int) $teacherIdNow ?>" data-ranges="<?= e($rangesJson) ?>"><?= e($teacherLabel) ?></button><?php else: ?><?= e($teacherLabel) ?><?php endif; ?></td>
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-commshow="<?= e($g) ?>" data-commission-type="<?= e($commParts[0] ?? '') ?>" data-commission-value="<?= e($commParts[1] ?? '') ?>" title="<?= e($commLabel) ?>">RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?></button><?php else: ?>RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?><?php endif; ?></td>
                         <td>
-                            <?php if ($studentList === []): ?>
+                            <?php if ($role === 'ADMIN'): ?>
+                                <button type="button" class="sched-cell-btn sched-cell-students" data-series-students="<?= e($g) ?>" aria-label="Edit students for <?= e($seriesNames[$g] ?? 'class') ?>">
+                                    <?php if ($studentList === []): ?><span class="sched-empty">＋ Add students</span>
+                                    <?php else: ?>
+                                        <?php foreach ($studentList as $stRow): ?><span class="stud-fee"><?= e($stRow['name']) ?></span><?php endforeach; ?>
+                                        <span class="sched-inline-hint">Edit</span>
+                                    <?php endif; ?>
+                                </button>
+                            <?php elseif ($studentList === []): ?>
                                 <span class="sched-empty">—</span>
-                            <?php elseif ($role === 'ADMIN'): ?>
-                                <?php foreach ($studentList as $stSid => $stRow): ?>
-                                    <?php $mf = $monthFees[$g][(int) $stSid] ?? null; ?>
-                                    <span class="stud-fee"><?= e($stRow['name']) ?></span>
-                                <?php endforeach; ?>
                             <?php else: ?>
-                                <?php foreach ($studentList as $stRow): ?>
-                                    <span class="stud-fee"><?= e($stRow['name']) ?></span>
-                                <?php endforeach; ?>
+                                <?php foreach ($studentList as $stRow): ?><span class="stud-fee"><?= e($stRow['name']) ?></span><?php endforeach; ?>
                             <?php endif; ?>
-                            <?php if ($role === 'ADMIN'): ?><button type="button" class="sched-link-btn" data-series-students="<?= e($g) ?>" style="margin-top:6px;">Manage</button><?php endif; ?>
                         </td>
                         <td>
                             <?php if ($studentList === []): ?>
@@ -828,7 +828,7 @@ include __DIR__ . '/includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <span class="sched-freq" aria-label="Weekly meeting days">
+                            <span class="sched-freq" aria-label="Class weekdays">
                             <?php foreach ([1, 2, 3, 4, 5, 6, 7] as $fdow): ?>
                                 <?php
                                 $fcell = $freqMap[$g][$fdow] ?? null;
@@ -846,6 +846,19 @@ include __DIR__ . '/includes/header.php';
                                 <?php endif; ?>
                             <?php endforeach; ?>
                             </span>
+                        </td>
+                        <td>
+                            <?php
+                            $primarySlot = null;
+                            foreach (($freqMap[$g] ?? []) as $slotDow => $slotData) { $primarySlot = $slotData; break; }
+                            $classStart = $primarySlot['start'] ?? '09:00';
+                            $classEnd = $primarySlot['end'] ?? '09:45';
+                            ?>
+                            <?php if ($role === 'ADMIN'): ?>
+                                <button type="button" class="sched-cell-btn sched-cell-time" data-series-time="<?= e($g) ?>" data-start="<?= e($classStart) ?>" data-end="<?= e($classEnd) ?>" title="Edit class time"><?= e($classStart) ?>–<?= e($classEnd) ?> <span class="sched-inline-hint">Edit</span></button>
+                            <?php else: ?>
+                                <?= e($classStart) ?>–<?= e($classEnd) ?>
+                            <?php endif; ?>
                         </td>
                         <td>
                             <?php $firstId = $seriesFirst[$g] ?? 0; ?>
@@ -1486,7 +1499,8 @@ include __DIR__ . '/includes/header.php';
             if (!dlg) { PSMModal.toast('Commission editor is unavailable.', 'error'); return; }
             commGroup = btn.getAttribute('data-series-commshow');
             var row = btn.closest('tr');
-            var name = row ? row.querySelector('strong').textContent : '';
+            var titleButton = row ? row.querySelector('[data-series-title]') : null;
+            var name = titleButton ? (titleButton.getAttribute('data-name') || titleButton.textContent) : 'Class';
             document.getElementById('seriesCommSub').textContent = name + ' — ' + btn.title;
             document.getElementById('seriesCommType').value = btn.getAttribute('data-commission-type') || '';
             document.getElementById('seriesCommValue').value = btn.getAttribute('data-commission-value') || '';
@@ -1534,8 +1548,9 @@ include __DIR__ . '/includes/header.php';
             PSMModal.toast('Teacher picker is unavailable on this page.', 'error');
             return;
         }
-        sub.textContent = seriesName;
-        tbody.innerHTML = '<tr><td colspan="4" class="sched-empty">Loading…</td></tr>';
+        var sub = document.getElementById('seriesTeacherSub');
+        if (sub) sub.textContent = seriesName;
+        tbody.innerHTML = '<tr><td colspan="5" class="sched-empty">Loading…</td></tr>';
         var box = document.getElementById('seriesNewTeacherBox');
         if (box) box.hidden = true;
         function row(t) {
@@ -1581,7 +1596,8 @@ include __DIR__ . '/includes/header.php';
             var ranges = [];
             try { ranges = JSON.parse(btn.getAttribute('data-ranges') || '[]'); } catch (e) { ranges = []; }
             var cell = btn.closest('tr');
-            var name = cell ? cell.querySelector('strong').textContent : '';
+            var titleButton = cell ? cell.querySelector('[data-series-title]') : null;
+            var name = titleButton ? (titleButton.getAttribute('data-name') || titleButton.textContent) : 'Class';
             openTeacherPicker(btn.getAttribute('data-series-teacher'), name, ranges, parseInt(btn.getAttribute('data-teacher') || '0', 10));
         });
     });
