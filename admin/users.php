@@ -146,15 +146,15 @@ include __DIR__ . '/../includes/header.php';
 </div>
 <div class="users-grid">
     <details class="users-panel users-staff" open>
-        <summary class="users-panel-title">Staff <span class="users-count"><?= count($staffUsers) ?></span><span class="users-expand-hint">Click to collapse</span></summary>
+        <summary class="users-panel-title">Staff <span class="users-count"><?= count($staffUsers) ?></span><span class="users-expand-hint">Expand or collapse</span></summary>
         <?php $renderUsers($staffUsers, true, false); ?>
     </details>
     <details class="users-panel users-teachers" open>
-        <summary class="users-panel-title">Teachers <span class="users-count"><?= count($teachers) ?></span><span class="users-expand-hint">Click to collapse</span></summary>
+        <summary class="users-panel-title">Teachers <span class="users-count"><?= count($teachers) ?></span><span class="users-expand-hint">Expand or collapse</span></summary>
         <?php $renderUsers($teachers, true, false); ?>
     </details>
     <details class="users-panel users-students" open>
-        <summary class="users-panel-title">Students <span class="users-count"><?= count($students) ?></span><span class="users-expand-hint">Click to collapse</span></summary>
+        <summary class="users-panel-title">Students <span class="users-count"><?= count($students) ?></span><span class="users-expand-hint">Expand or collapse</span></summary>
         <?php $renderUsers($students, true, true); ?>
     </details>
 </div>
