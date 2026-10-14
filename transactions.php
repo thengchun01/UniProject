@@ -803,7 +803,7 @@ include __DIR__ . '/includes/header.php';
             <?php else: ?>
     <div class="table-wrapper">
                 <table class="data-table modern-table txn-log-table">
-                    <thead><tr><th>Date</th><th>Type</th><th>Action</th><th>File / Lesson</th><th>By</th></tr></thead>
+                    <thead><tr><th>Date</th><th>Type</th><th>Action</th><th>File / Lesson</th><th>By</th><th>Manage</th></tr></thead>
                     <tbody>
                         <?php foreach ($proofLogs as $pl): ?>
                             <tr>
@@ -812,6 +812,7 @@ include __DIR__ . '/includes/header.php';
                                 <td><?= e($pl['action']) ?></td>
                                 <td><span style="font-size:12px;"><?= e($pl['file_path']) ?></span><?= $pl['lesson_id'] !== null ? '<br><span style="font-size:12px;color:#666;">lesson #' . (int) $pl['lesson_id'] . '</span>' : '' ?></td>
                                 <td><?= e($pl['performer'] ?? '—') ?></td>
+                                <td><button type="button" class="action-btn delete-btn txn-log-delete" data-log-delete="<?= (int) $pl['log_id'] ?>">Delete</button></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -854,6 +855,7 @@ include __DIR__ . '/includes/header.php';
     var apiProofUp = '<?= e(url_path('api/proof_upload.php')) ?>';
     var apiMfee = '<?= e(url_path('api/monthly_fees_save.php')) ?>';
     var apiProofDel = '<?= e(url_path('api/proof_delete.php')) ?>';
+    var apiProofLogDel = '<?= e(url_path('api/proof_log_delete.php')) ?>';
     var apiSeries = '<?= e(url_path('api/series_save.php')) ?>';
     var apiComm = '<?= e(url_path('api/commission_save.php')) ?>';
 
@@ -1012,6 +1014,34 @@ include __DIR__ . '/includes/header.php';
             }).catch(function (err) {
                 PSMModal.toast('Upload error: ' + err.message, 'error');
                 input.disabled = false;
+            });
+        });
+    });
+
+    document.querySelectorAll('[data-log-delete]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            PSMModal.confirm({
+                title: 'Delete Transaction Log Entry?',
+                message: 'This removes only the selected log entry. It will not delete the proof file or change the transaction. This action cannot be undone.',
+                danger: true,
+                confirmText: 'Delete Log Entry'
+            }).then(function (yes) {
+                if (!yes) return;
+                var fd = new FormData();
+                fd.append('log_id', b.getAttribute('data-log-delete'));
+                b.disabled = true;
+                postForm(apiProofLogDel, fd).then(function (d) {
+                    if (d && d.success) {
+                        PSMModal.toast('Transaction Log entry deleted.', 'success');
+                        setTimeout(function () { window.location.reload(); }, 350);
+                    } else {
+                        PSMModal.toast((d && d.error) || 'Failed to delete log entry.', 'error');
+                        b.disabled = false;
+                    }
+                }).catch(function (err) {
+                    PSMModal.toast('Network error: ' + err.message, 'error');
+                    b.disabled = false;
+                });
             });
         });
     });
