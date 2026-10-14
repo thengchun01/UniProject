@@ -654,8 +654,8 @@ include __DIR__ . '/includes/header.php';
                                     <a class="action-btn view-btn" style="text-decoration:none;" href="<?= e(url_path('transaction_detail.php?group=' . urlencode($c['g']) . '&month=' . urlencode($c['month']))) ?>">Details</a>
                                     <?php if ($c['fee_id'] !== null): ?>
                                         <button type="button" class="action-btn delete-btn" data-mfee-del data-feeid="<?= (int) $c['fee_id'] ?>">Delete</button>
-                                    <?php elseif (!empty($c['enrollment_id'])): ?>
-                                        <button type="button" class="action-btn delete-btn" data-txn-del="<?= (int) $c['enrollment_id'] ?>">Delete</button>
+                                    <?php elseif (!empty($c['enrollment_id']) && !empty($c['proof_lesson_id'])): ?>
+                                        <button type="button" class="action-btn delete-btn" data-txn-del="<?= (int) $c['enrollment_id'] ?>" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" data-group="<?= e($c['g']) ?>">Delete</button>
                                     <?php endif; ?>
                                 </div>
                             </td>
@@ -1019,11 +1019,13 @@ include __DIR__ . '/includes/header.php';
             }).then(function (yes) {
                 if (!yes) return;
                 var fd = new FormData();
-                fd.append('action', 'remove');
-                fd.append('enrollment_id', b.getAttribute('data-txn-del'));
-                postForm(apiEnroll, fd).then(function (d) {
+                var lessonId = b.getAttribute('data-lesson');
+                var groupId = b.getAttribute('data-group') || '';
+                fd.append('action', groupId ? 'delete_group' : 'delete');
+                fd.append('lesson_id', lessonId);
+                postForm(apiLessons, fd).then(function (d) {
                     if (d && d.success) {
-                        PSMModal.toast('Transaction deleted successfully.', 'success');
+                        PSMModal.toast('Transaction and linked class schedule deleted.', 'success');
                         setTimeout(function () { window.location.reload(); }, 400);
                     } else {
                         PSMModal.toast((d && d.error) || 'Failed to delete transaction.', 'error');
