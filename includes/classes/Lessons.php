@@ -76,33 +76,13 @@ class Lessons
         return ['PERCENT', 0.0];
     }
 
-    public function getTeacherCommission(int $teacherId): ?array
-    {
-        try {
-            $stmt = $this->db->prepare("SELECT commission_type, commission_value FROM teacher_commission WHERE teacher_id = :id LIMIT 1");
-            $stmt->execute(['id' => $teacherId]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($row) {
-                return [$row['commission_type'], (float) $row['commission_value']];
-            }
-        } catch (Throwable $e) {
-        }
-        return null;
-    }
-
-    // Lesson override wins, else teacher override, else global default.
+    // An explicit lesson/series commission wins; otherwise use the universal default.
     public function resolveCommission(?int $teacherId, ?string $lessonType, $lessonValue): array
     {
         if ($lessonType !== null && $lessonValue !== null && $lessonType !== '' && is_numeric($lessonValue)) {
             $t = strtoupper(trim((string) $lessonType));
             if (in_array($t, ['PERCENT', 'FIXED'], true)) {
                 return [$t, (float) $lessonValue];
-            }
-        }
-        if ($teacherId !== null && $teacherId > 0) {
-            $tc = $this->getTeacherCommission($teacherId);
-            if ($tc !== null) {
-                return $tc;
             }
         }
         return $this->getDefaultCommission();
