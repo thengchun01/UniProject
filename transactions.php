@@ -919,7 +919,7 @@ include __DIR__ . '/includes/header.php';
         b.addEventListener('click', function () {
             PSMModal.confirm({
                 title: 'Delete Monthly Record?',
-                message: 'Delete this transaction and its linked class schedule? For a recurring class, the entire series and all related monthly records will be deleted. This cannot be undone.',
+                message: 'Delete this transaction and its linked class schedule? For a recurring class, the entire series and all related monthly records will be deleted. For standalone classes, the student’s ungrouped lessons in this month will be deleted. This cannot be undone.',
                 danger: true,
                 confirmText: 'Delete Record'
             }).then(function (yes) {
