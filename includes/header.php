@@ -62,6 +62,9 @@ window.PSM_CONFIG = {
             <a href="<?php echo BASE_URL . 'schedule.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'schedule.php' ? 'class="active"' : ''; ?>>Schedule</a>
             <a href="<?php echo BASE_URL . 'transactions.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'transactions.php' ? 'class="active"' : ''; ?>>Transactions</a>
             <?php if ($currentUser && normalize_role($currentUser['role'] ?? '') === 'ADMIN'): ?>
+            <a href="<?php echo BASE_URL . 'courses.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'courses.php' ? 'class="active"' : ''; ?>>Courses</a>
+            <?php endif; ?>
+            <?php if ($currentUser && normalize_role($currentUser['role'] ?? '') === 'ADMIN'): ?>
             <a href="<?php echo BASE_URL . 'admin/users.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'users.php' ? 'class="active"' : ''; ?>>Users</a>
             <?php endif; ?>
         <?php endif; ?>
