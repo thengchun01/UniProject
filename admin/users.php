@@ -109,7 +109,7 @@ $renderUsers = function (array $rows, bool $showRole, bool $showClassroom) use (
                         <a class="action-btn view-btn" href="<?= e(url_path('account.php?profile_id=' . (int) $u['user_id'])) ?>">Profile</a>
                         <?php if ($showClassroom): ?>
                         <?php if (!empty($u['classroom'])): ?>
-                        <button class="action-btn classroom-btn" onclick="viewClassroom('<?= e($u['classroom']) ?>', '<?= e($u['username']) ?>')">View Classroom</button>
+                        <button class="action-btn classroom-btn" onclick="viewClassroom('<?= e($u['classroom']) ?>', '<?= e($u['username']) ?>')">Classroom</button>
                         <?php else: ?>
                         <button class="action-btn classroom-btn disabled" disabled title="This user does not belong to any classroom">View Classroom</button>
                         <?php endif; ?>
