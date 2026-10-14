@@ -1178,12 +1178,10 @@ include __DIR__ . '/includes/header.php';
                 <?php if ($selectedLesson !== null): ?>
                 <div class="sched-edit-head">
                     <h2><?= e($selectedLesson['title'] !== null && $selectedLesson['title'] !== '' ? $selectedLesson['title'] : 'Edit Lesson') ?></h2>
+                    <button type="button" class="btn-outline-danger sched-delete-top" data-del-lesson>Delete</button>
                     <a class="sched-x-btn" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => ''])) . '#schedGrid') ?>" title="Close edit mode and create a new lesson">×</a>
                 </div>
                 <p style="margin:-6px 0 12px;color:var(--text-muted,#666);font-size:13px;">Lesson #<?= (int) $selectedLesson['lesson_id'] ?> · <?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?> <?= e(substr((string) $selectedLesson['start_time'], 0, 5)) ?>–<?= e(substr((string) $selectedLesson['end_time'], 0, 5)) ?></p>
-                <div style="display:flex;gap:8px;margin-bottom:12px;">
-                    <button type="button" class="btn-outline-danger" data-del-lesson>Delete</button>
-                </div>
                 <div id="schedEditMsg" class="alert" style="display:none;"></div>
                 <form id="schedEditForm">
                     <input type="hidden" name="lesson_id" value="<?= (int) $selectedLesson['lesson_id'] ?>">
@@ -1490,23 +1488,18 @@ include __DIR__ . '/includes/header.php';
         var head = document.createElement('div');
         head.className = 'sched-edit-head';
         head.innerHTML = '<h2>' + (isEditing ? 'Edit Class' : 'New Class') + '</h2><button type="button" class="sched-x-btn" aria-label="Close">×</button>';
-        head.querySelector('button').addEventListener('click', function () { dlg.close(); });
+        var closeButton = head.querySelector('button');
+        closeButton.addEventListener('click', function () { dlg.close(); });
+        // Keep Delete in the top-right header beside Close.
+        if (isEditing && side) {
+            var deleteButton = side.querySelector('[data-del-lesson]');
+            if (deleteButton) head.insertBefore(deleteButton, closeButton);
+        }
         dlg.appendChild(head);
 
         if (msg) dlg.appendChild(msg);
 
         dlg.appendChild(form);
-
-        // Keep the delete action below the edit form and its message in the popup.
-        if (isEditing && side) {
-            var deleteButton = side.querySelector('[data-del-lesson]');
-            if (deleteButton) {
-                var actions = document.createElement('div');
-                actions.className = 'sched-dialog-actions';
-                actions.appendChild(deleteButton);
-                dlg.appendChild(actions);
-            }
-        }
         var timeList = document.getElementById('schedTimeList');
         if (timeList) dlg.appendChild(timeList);
         document.body.appendChild(dlg);
