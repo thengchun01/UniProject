@@ -693,7 +693,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php else: ?>
                                     <span class="txn-commission-value">RM <?= e(number_format((float) $c['due'], 2)) ?></span>
                                 <?php endif; ?>
-                                <span class="txn-commission-note"><?= e($c['commission_source'] ?? 'Default') ?></span>
+                                <span class="txn-commission-note <?= ($c['commission_source'] ?? 'Default') === 'Custom' ? 'is-custom' : 'is-default' ?>"><?= e($c['commission_source'] ?? 'Default') ?></span>
                             </td>
                             <td>
                                 <div class="txn-proof-cell">
