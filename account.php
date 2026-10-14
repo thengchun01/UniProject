@@ -384,6 +384,7 @@ include __DIR__ . '/includes/header.php';
                             <button type="button" class="secondary-btn">My Transactions</button>
                         </a>
                     </div>
+                <?php endif; ?>
                 <?php endif; // hide self-service actions when an admin views another profile ?>
             </div>
         <?php endif; ?>
