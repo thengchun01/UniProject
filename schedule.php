@@ -1527,11 +1527,14 @@ include __DIR__ . '/includes/header.php';
             if (!dlg.open) dlg.showModal();
         });
 
-        // Clicking Edit in the Classes table loads that class's form and opens this popup.
-        if (isEditing) {
+        // Open only when the user arrived through an Edit/Create link.
+        // Clear the hash after opening so a manual refresh does not reopen the dialog.
+        if (isEditing && window.location.hash === '#schedEditForm') {
             dlg.showModal();
-        } else if (window.location.hash === '#schedCreateForm') {
+            history.replaceState(null, '', window.location.pathname + window.location.search);
+        } else if (!isEditing && window.location.hash === '#schedCreateForm') {
             dlg.showModal();
+            history.replaceState(null, '', window.location.pathname + window.location.search);
         }
     })();
     var apiUserCreateUrl = '<?= e(url_path('admin/user_create.php')) ?>';
