@@ -1777,5 +1777,5 @@ table.sched-class-table {
     line-height: 1.3;
     font-weight: 600;
 }
-.sched-commission-source.is-custom { color: var(--primary-color, #7c3aed); }
-.sched-commission-source.is-default { color: var(--text-muted, #64748b); }
+.sched-commission-source.is-fixed { color: var(--primary-color, #7c3aed); font-weight: 700; }
+.sched-commission-source.is-percentage { color: var(--text-muted, #64748b); font-weight: 700; }
