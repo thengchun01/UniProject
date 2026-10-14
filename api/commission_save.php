@@ -1,8 +1,6 @@
 <?php
-// Admin-only commission defaults: global default + per-teacher override.
-// POST: action=default|teacher
-//   default -> commission_type (PERCENT|FIXED), commission_value
-//   teacher -> teacher_id, commission_type, commission_value
+// Admin-only universal commission default.
+// POST: action=default, commission_type (PERCENT|FIXED), commission_value
 // JSON shape: {success, data|error}.
 
 require_once __DIR__ . '/../includes/config.php';
@@ -41,25 +39,8 @@ if ($value < 0) {
 
 $db = db();
 try {
-    if ($action === 'teacher') {
-        $teacherId = (int) ($_POST['teacher_id'] ?? 0);
-        if ($teacherId <= 0) {
-            commission_error('Invalid teacher.');
-        }
-        $stmt = $db->prepare('SELECT role FROM users WHERE user_id = :id LIMIT 1');
-        $stmt->execute(['id' => $teacherId]);
-        $role = $stmt->fetchColumn();
-        if ($role === false || normalize_role((string) $role) !== 'TEACHER') {
-            commission_error('Choose a valid teacher.');
-        }
-        $stmt = $db->prepare(
-            'INSERT INTO teacher_commission (teacher_id, commission_type, commission_value)
-             VALUES (:id, :type, :value)
-             ON DUPLICATE KEY UPDATE commission_type = VALUES(commission_type), commission_value = VALUES(commission_value)'
-        );
-        $stmt->execute(['id' => $teacherId, 'type' => $type, 'value' => $value]);
-        echo json_encode(['success' => true, 'data' => ['teacher_id' => $teacherId]]);
-        exit;
+    if ($action !== 'default') {
+        commission_error('Unknown commission setting action.');
     }
 
     $stmt = $db->prepare(
