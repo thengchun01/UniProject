@@ -656,10 +656,10 @@ include __DIR__ . '/includes/header.php';
                     <th>Class</th>
                     <th>Teacher</th>
                     <th>Commission (RM)</th>
+                    <th>Commission</th>
                     <th>Student</th>
                     <th>Fee (RM)</th>
                     <th>Payment</th>
-                    <th>Commission</th>
                     <?php if ($role === 'ADMIN'): ?><th>Actions</th><?php endif; ?>
                 </tr>
             </thead>
@@ -695,14 +695,14 @@ include __DIR__ . '/includes/header.php';
                                 <?php if ($role === 'ADMIN' && !empty($c['proof_lesson_id'])): ?>
                                     <?php if (!empty($c['cproof'])): ?>
                                         <div class="txn-file-pill">
-                                            <a href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener" title="Open commission proof">Commission proof</a>
+                                            <a href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener" title="Open commission proof">Commission</a>
                                             <button type="button" data-txn-delproof="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" aria-label="Remove commission proof" title="Remove proof">×</button>
                                         </div>
                                     <?php else: ?>
                                         <label class="txn-upload-button">Upload file<input type="file" hidden data-txn-upload="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
                                     <?php endif; ?>
                                 <?php elseif (!empty($c['cproof'])): ?>
-                                    <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener">Commission proof</a>
+                                    <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener">Commission</a>
                                 <?php else: ?>
                                     <span style="color:#999;font-size:12px;">—</span>
                                 <?php endif; ?>
@@ -724,14 +724,14 @@ include __DIR__ . '/includes/header.php';
                                     <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
                                         <?php if (!empty($c['mproof'])): ?>
                                             <div class="txn-file-pill">
-                                                <a href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener" title="Open payment proof">Payment proof</a>
+                                                <a href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener" title="Open payment proof">Payment</a>
                                                 <button type="button" data-mproof-del data-feeid="<?= (int) $c['fee_id'] ?>" aria-label="Remove payment proof" title="Remove proof">×</button>
                                             </div>
                                         <?php else: ?>
                                             <label class="txn-upload-button">Upload file<input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
                                         <?php endif; ?>
                                     <?php elseif (!empty($c['mproof'])): ?>
-                                        <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener">Payment proof</a>
+                                        <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener">Payment</a>
                                     <?php endif; ?>
                                 </div>
                             </td>
