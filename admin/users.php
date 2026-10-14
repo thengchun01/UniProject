@@ -88,7 +88,7 @@ $renderUsers = function (array $rows, bool $showRole, bool $showClassroom) use (
                 <tr><td colspan="<?= $cols ?>" class="users-empty">No accounts in this group.</td></tr>
                 <?php else: ?>
                 <?php foreach ($rows as $u): ?>
-                <tr data-id="<?= (int) $u['user_id'] ?>">
+                <tr data-id="<?= (int) $u['user_id'] ?>" data-username="<?= e($u['username']) ?>" data-email="<?= e((string) $u['email']) ?>" data-role="<?= e($u['role']) ?>">
                     <td><?= e($u['user_id']) ?></td>
                     <td class="col-username user-editable-cell" data-inline-user-field="username" tabindex="0" title="Click to edit"><?= e($u['username']) ?></td>
                     <td class="col-email user-editable-cell" data-inline-user-field="email" tabindex="0" title="Click to edit"><?= e((string) $u['email']) ?></td>
