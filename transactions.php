@@ -115,7 +115,7 @@ if ($txAvailable && is_database_connected()) {
         $sql = "SELECT l.recurrence_group AS g, l.lesson_id, l.lesson_date, l.title, l.start_time, l.end_time,
                        l.teacher_id, l.commission_type, l.commission_value, l.commission_status, l.status AS lesson_status,
                        l.commission_proof_path, tu.username AS teacher_name,
-                       e.student_id, su.username AS student_name,
+                       e.enrollment_id, e.student_id, su.username AS student_name,
                        e.fee_amount, e.payment_status, e.proof_path,
                        mf.fee_id, mf.amount AS mamount, mf.status AS mstatus, mf.proof_path AS mproof
                 FROM lesson_enrollments e
@@ -142,6 +142,7 @@ if ($txAvailable && is_database_connected()) {
                     'month' => $m, 'g' => $g, 'sid' => $sid, 'sname' => (string) $r['student_name'],
                     'lessons' => [], 'titles' => [], 'teachers' => [], 'tids' => [], 'comm' => [],
                     'fee_id' => null, 'amount' => null, 'mstatus' => null, 'mproof' => null,
+                    'enrollment_id' => null, 'cproof' => null, 'proof_lesson_id' => null,
                 ];
             }
             $c = &$combos[$key];
@@ -155,6 +156,9 @@ if ($txAvailable && is_database_connected()) {
                 'start' => substr((string) $r['start_time'], 0, 5),
                 'end' => substr((string) $r['end_time'], 0, 5),
             ];
+            if ($c['enrollment_id'] === null) $c['enrollment_id'] = (int) $r['enrollment_id'];
+            if ($c['proof_lesson_id'] === null) $c['proof_lesson_id'] = $lid;
+            if (empty($c['cproof']) && !empty($r['commission_proof_path'])) $c['cproof'] = (string) $r['commission_proof_path'];
             $t = trim((string) ($r['title'] ?? ''));
             if ($t !== '') {
                 $c['titles'][$t] = ($c['titles'][$t] ?? 0) + 1;
@@ -605,7 +609,7 @@ include __DIR__ . '/includes/header.php';
                                     <?php else: ?>
                                         <span class="txn-badge <?= $c['mstatus'] === 'PAID' ? 'is-paid' : ($c['mstatus'] === 'PENDING' ? 'is-pending' : '') ?>"><?= e($c['mstatus']) ?></span>
                                     <?php endif; ?>
-                                    <?php if ($role === 'ADMIN'): ?>
+                                    <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
                                         <select data-mfee-status data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>" aria-label="Payment status">
                                             <?php foreach (['UNPAID', 'PENDING', 'PAID'] as $st): ?>
                                                 <option value="<?= $st ?>" <?= ($c['mstatus'] ?? 'UNPAID') === $st ? 'selected' : '' ?>><?= $st ?></option>
@@ -613,21 +617,34 @@ include __DIR__ . '/includes/header.php';
                                         </select>
                                         <button type="button" class="action-btn edit-btn" data-mfee-save data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>">Save</button>
                                     <?php endif; ?>
+                                    <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
+                                        <?php if (!empty($c['mproof'])): ?>
+                                            <div class="txn-file-pill">
+                                                <a href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener" title="Open payment proof">Payment proof</a>
+                                                <button type="button" data-mproof-del data-feeid="<?= (int) $c['fee_id'] ?>" aria-label="Remove payment proof" title="Remove proof">×</button>
+                                            </div>
+                                        <?php else: ?>
+                                            <label class="txn-upload-button">Upload file<input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
+                                        <?php endif; ?>
+                                    <?php elseif (!empty($c['mproof'])): ?>
+                                        <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener">Payment proof</a>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                             <td>
-                                <?php if ($c['fee_id'] !== null && !empty($c['mproof'])): ?>
-                                    <a class="txn-proof-link" href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener">Receipt</a>
+                                <?php if ($role === 'ADMIN' && !empty($c['proof_lesson_id'])): ?>
+                                    <?php if (!empty($c['cproof'])): ?>
+                                        <div class="txn-file-pill">
+                                            <a href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener" title="Open commission proof">Commission proof</a>
+                                            <button type="button" data-txn-delproof="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" aria-label="Remove commission proof" title="Remove proof">×</button>
+                                        </div>
+                                    <?php else: ?>
+                                        <label class="txn-upload-button">Upload file<input type="file" hidden data-txn-upload="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
+                                    <?php endif; ?>
+                                <?php elseif (!empty($c['cproof'])): ?>
+                                    <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener">Commission proof</a>
                                 <?php else: ?>
-                                    <span style="color:#999;font-size:12px;"><?= $c['fee_id'] !== null ? 'No proof' : '—' ?></span>
-                                <?php endif; ?>
-                                <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
-                                    <div class="txn-proof-actions">
-                                        <label class="action-btn reset-btn">Upload<input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf"></label>
-                                        <?php if (!empty($c['mproof'])): ?>
-                                            <button type="button" class="action-btn delete-btn" data-mproof-del data-feeid="<?= (int) $c['fee_id'] ?>">Remove</button>
-                                        <?php endif; ?>
-                                    </div>
+                                    <span style="color:#999;font-size:12px;">—</span>
                                 <?php endif; ?>
                             </td>
                             <?php if ($role === 'ADMIN'): ?>
@@ -636,6 +653,8 @@ include __DIR__ . '/includes/header.php';
                                     <a class="action-btn view-btn" style="text-decoration:none;" href="<?= e(url_path('transaction_detail.php?group=' . urlencode($c['g']) . '&month=' . urlencode($c['month']))) ?>">Details</a>
                                     <?php if ($c['fee_id'] !== null): ?>
                                         <button type="button" class="action-btn delete-btn" data-mfee-del data-feeid="<?= (int) $c['fee_id'] ?>">Delete</button>
+                                    <?php elseif (!empty($c['enrollment_id'])): ?>
+                                        <button type="button" class="action-btn delete-btn" data-txn-del="<?= (int) $c['enrollment_id'] ?>">Delete</button>
                                     <?php endif; ?>
                                 </div>
                             </td>
