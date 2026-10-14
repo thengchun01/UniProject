@@ -1764,3 +1764,7 @@ table.sched-class-table {
 .sched-edit-head .sched-delete-top + .sched-x-btn {
     flex: 0 0 auto;
 }
+
+.sched-edit-head { display: flex; align-items: center; gap: 10px; }
+.sched-edit-head h2 { min-width: 0; }
+.sched-edit-head .sched-delete-top { margin-left: auto; }
