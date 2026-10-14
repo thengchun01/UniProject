@@ -566,28 +566,58 @@ if ($allGroupIds !== [] && $lessonsAvailable && $lessonsManager !== null && is_d
         $stmt = db()->prepare(
             "SELECT l.lesson_id, l.lesson_date, l.recurrence_group AS g, l.teacher_id,
                     l.commission_type, l.commission_value,
-                    COALESCE(SUM(CASE WHEN mf.status = 'PAID' THEN e.fee_amount ELSE 0 END), 0) AS total
+                    e.student_id, e.fee_amount,
+                    mf.amount AS monthly_amount
              FROM lessons l
-             LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
-             LEFT JOIN monthly_fees mf ON mf.student_id = e.student_id
+             INNER JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+             INNER JOIN monthly_fees mf ON mf.student_id = e.student_id
                  AND mf.month = SUBSTR(l.lesson_date, 1, 7)
                  AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
-             WHERE l.recurrence_group IN ($placeholders)
-             GROUP BY l.lesson_id"
+                 AND mf.status = 'PAID'
+             WHERE l.recurrence_group IN ($placeholders)"
         );
         $stmt->execute($allGroupIds);
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $g = (string) $row['g'];
-            $collectedTotal = (float) $row['total'];
-            if ($collectedTotal <= 0) {
-                continue;
-            }
+        $commissionRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Allocate each paid monthly transaction amount over its lessons in
+        // proportion to the lesson fees, then apply each lesson's own rate.
+        $studentFeeTotals = [];
+        $lessonCounts = [];
+        $commissionLessons = [];
+        foreach ($commissionRows as $commissionRow) {
+            $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
+            $g = (string) ($commissionRow['g'] ?? '');
+            $groupKey = $commissionMonth . '|' . $g;
+            $studentKey = $groupKey . '|' . (int) $commissionRow['student_id'];
+            $lessonKey = $groupKey . '|' . (int) $commissionRow['lesson_id'];
+            $studentFeeTotals[$studentKey] = ($studentFeeTotals[$studentKey] ?? 0.0) + max(0.0, (float) $commissionRow['fee_amount']);
+            $commissionLessons[$lessonKey] = $commissionRow;
+            $lessonCounts[$groupKey][$lessonKey] = true;
+        }
+        $lessonPaidBases = [];
+        foreach ($commissionRows as $commissionRow) {
+            $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
+            $g = (string) ($commissionRow['g'] ?? '');
+            $groupKey = $commissionMonth . '|' . $g;
+            $studentKey = $groupKey . '|' . (int) $commissionRow['student_id'];
+            $lessonKey = $groupKey . '|' . (int) $commissionRow['lesson_id'];
+            $studentBase = (float) ($studentFeeTotals[$studentKey] ?? 0.0);
+            $monthlyAmount = max(0.0, (float) $commissionRow['monthly_amount']);
+            $basis = $studentBase > 0
+                ? $monthlyAmount * max(0.0, (float) $commissionRow['fee_amount']) / $studentBase
+                : $monthlyAmount / max(1, count($lessonCounts[$groupKey] ?? []));
+            $lessonPaidBases[$lessonKey] = ($lessonPaidBases[$lessonKey] ?? 0.0) + $basis;
+        }
+        foreach ($commissionLessons as $lessonKey => $commissionRow) {
+            $paidBasis = (float) ($lessonPaidBases[$lessonKey] ?? 0.0);
+            if ($paidBasis <= 0) continue;
+            $g = (string) ($commissionRow['g'] ?? '');
             [$ct, $cv] = $lessonsManager->resolveCommission(
-                $row['teacher_id'] !== null ? (int) $row['teacher_id'] : null,
-                $row['commission_type'],
-                $row['commission_value']
+                $commissionRow['teacher_id'] !== null ? (int) $commissionRow['teacher_id'] : null,
+                $commissionRow['commission_type'],
+                $commissionRow['commission_value']
             );
-            $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout($ct, (float) $cv, $collectedTotal);
+            $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout($ct, (float) $cv, $paidBasis);
         }
     } catch (Throwable $e) {
         $commDue = [];
