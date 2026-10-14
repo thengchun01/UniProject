@@ -175,6 +175,47 @@ try {
         if (!$ok) {
             lessons_error($err);
         }
+
+        // When an edited occurrence belongs to a class series, changing its
+        // weekday moves every occurrence by the same day offset. Other fields
+        // in this form continue to update the selected occurrence only.
+        $seriesGroup = trim((string) ($existing['recurrence_group'] ?? ''));
+        $existingDate = substr((string) $existing['lesson_date'], 0, 10);
+        $dateShift = (int) round((strtotime($date) - strtotime($existingDate)) / 86400);
+        if ($seriesGroup !== '' && $dateShift !== 0) {
+            $groupStmt = $db->prepare(
+                'SELECT lesson_id, lesson_date, start_time, end_time FROM lessons WHERE recurrence_group = :g'
+            );
+            $groupStmt->execute(['g' => $seriesGroup]);
+            $groupRows = $groupStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $dateUpdates = [];
+            foreach ($groupRows as $groupRow) {
+                $groupId = (int) $groupRow['lesson_id'];
+                $oldGroupDate = substr((string) $groupRow['lesson_date'], 0, 10);
+                $newGroupDate = date('Y-m-d', strtotime($oldGroupDate . ' ' . ($dateShift > 0 ? '+' : '') . $dateShift . ' days'));
+                $groupStart = $groupId === $lessonId ? $start : substr((string) $groupRow['start_time'], 0, 5);
+                $groupEnd = $groupId === $lessonId ? $end : substr((string) $groupRow['end_time'], 0, 5);
+                [$groupSlotOk, $groupSlotError] = $lessonsManager->checkSlot($newGroupDate, $groupStart, $groupEnd);
+                if (!$groupSlotOk) {
+                    lessons_error('Cannot move the whole class: ' . $groupSlotError);
+                }
+                $dateUpdates[] = [$groupId, $newGroupDate];
+            }
+            $db->beginTransaction();
+            try {
+                $dateStmt = $db->prepare('UPDATE lessons SET lesson_date = :d WHERE lesson_id = :id');
+                foreach ($dateUpdates as [$groupId, $newGroupDate]) {
+                    $dateStmt->execute(['d' => $newGroupDate, 'id' => $groupId]);
+                }
+                $db->commit();
+            } catch (Throwable $e) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                throw $e;
+            }
+        }
+
         $status = strtoupper(trim($_POST['status'] ?? $existing['status']));
         if (!in_array($status, ['SCHEDULED', 'COMPLETED', 'CANCELLED'], true)) {
             lessons_error('Invalid status.');
