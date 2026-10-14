@@ -320,7 +320,7 @@ include __DIR__ . '/../includes/header.php';
             if (field === 'role') next = next.toUpperCase();
             if (next === current) return;
             if (field === 'username' && !next) { window.alert('Username cannot be empty.'); return; }
-            if (field === 'email' && next && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(next)) { window.alert('Enter a valid email address, or leave it blank.'); return; }
+            if (field === 'email' && next && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { window.alert('Enter a valid email address, or leave it blank.'); return; }
             if (field === 'role' && !['ADMIN', 'TEACHER', 'STUDENT'].includes(next)) { window.alert('Role must be ADMIN, TEACHER, or STUDENT.'); return; }
             if (!window.confirm('Save the new ' + labels[field] + ' "' + (next || '(blank)') + '" for user #' + row.dataset.id + '?')) return;
 
