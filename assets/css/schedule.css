@@ -1394,7 +1394,7 @@ button.sched-link-btn:hover {
     border-color: var(--primary-color, #7c3aed);
 }
 
-/* New-class form is launched from the Classes panel and scrolls within its dialog. */
+/* Shared Create/Edit Class form launched from the Classes panel. */
 dialog.sched-create-dialog {
     width: min(760px, calc(100vw - 28px));
     max-width: 760px;
@@ -1402,7 +1402,8 @@ dialog.sched-create-dialog {
     overflow: auto;
 }
 
-dialog.sched-create-dialog #schedCreateForm {
+dialog.sched-create-dialog #schedCreateForm,
+dialog.sched-create-dialog #schedEditForm {
     max-height: none;
     overflow: visible;
 }
