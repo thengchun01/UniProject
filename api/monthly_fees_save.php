@@ -53,6 +53,11 @@ if (trim($_POST['action'] ?? '') === 'delete') {
     $db->beginTransaction();
     try {
         if ($group !== '') {
+            $monthlyProofs = $db->prepare('SELECT proof_path FROM monthly_fees WHERE recurrence_group = :g');
+            $monthlyProofs->execute(['g' => $group]);
+            foreach ($monthlyProofs->fetchAll(PDO::FETCH_COLUMN) as $path) {
+                if (is_string($path) && $path !== '') $proofPaths[] = $path;
+            }
             $lessonStmt = $db->prepare('SELECT lesson_id, commission_proof_path FROM lessons WHERE recurrence_group = :g');
             $lessonStmt->execute(['g' => $group]);
             $lessonRows = $lessonStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
