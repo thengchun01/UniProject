@@ -300,6 +300,7 @@ if ($txAvailable && is_database_connected()) {
                 $lessonCounts[$groupKey][$lessonKey] = true;
             }
             $lessonPaidBases = [];
+            $commissionRateSets = [];
             foreach ($commissionRows as $commissionRow) {
                 $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
                 $commissionGroup = (string) ($commissionRow['g'] ?? '');
@@ -324,8 +325,19 @@ if ($txAvailable && is_database_connected()) {
                 $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
                 $commissionGroup = (string) ($commissionRow['g'] ?? '');
                 $groupKey = $commissionMonth . '|' . $commissionGroup;
+                $rateKey = $commissionType . '|' . number_format((float) $commissionValue, 2, '.', '');
+                $commissionRateSets[$groupKey][$rateKey] = [$commissionType, (float) $commissionValue];
                 $commissionByMonthGroup[$groupKey] = ($commissionByMonthGroup[$groupKey] ?? 0.0)
                     + $lessonsManager->commissionPayout($commissionType, (float) $commissionValue, $paidBasis);
+            }
+            foreach ($combos as $comboKey => $combo) {
+                $comboGroupKey = $combo['month'] . '|' . $combo['g'];
+                $rates = array_values($commissionRateSets[$comboGroupKey] ?? []);
+                if (count($rates) === 1) {
+                    $combos[$comboKey]['rate'] = $rates[0];
+                } elseif (count($rates) > 1) {
+                    $combos[$comboKey]['rate_label'] = 'Mixed rates';
+                }
             }
         }
 
@@ -652,7 +664,7 @@ include __DIR__ . '/includes/header.php';
                             <td><?= e($c['tname']) ?><?= $c['tid'] > 0 ? ' <span style="color:#666;font-size:12px;">#' . (int) $c['tid'] . '</span>' : '' ?></td>
                             <td>
                                 RM <?= e(number_format((float) $c['due'], 2)) ?>
-                                <br><span style="color:#666;font-size:12px;"><?= e($c['rate'][0]) ?> <?= e(number_format((float) $c['rate'][1], 2)) ?><?= $c['series_paid'] ? '' : ' · open' ?></span>
+                                <br><span style="color:#666;font-size:12px;"><?= e($c['rate_label'] ?? ($c['rate'][0] . ' ' . number_format((float) $c['rate'][1], 2))) ?><?= $c['series_paid'] ? '' : ' · open' ?></span>
                                 <?php if ($role === 'ADMIN' && $c['g'] !== ''): ?>
                                     <details class="txn-rate-editor">
                                         <summary>Edit rate</summary>
