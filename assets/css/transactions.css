@@ -144,3 +144,102 @@
 #monthly-fees {
     margin-top: 16px;
 }
+
+/* Compact transaction table controls: prevent crowded cells and tall rows. */
+.txn-wrap .table-wrapper {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+.txn-wrap .modern-table {
+    width: 100%;
+    min-width: 1080px;
+    table-layout: auto;
+}
+.txn-wrap .modern-table th,
+.txn-wrap .modern-table td {
+    padding: 10px 9px;
+    vertical-align: top;
+}
+.txn-wrap .modern-table td {
+    line-height: 1.4;
+}
+.txn-wrap .modern-table td:nth-child(1),
+.txn-wrap .modern-table td:nth-child(5),
+.txn-wrap .modern-table td:nth-child(6) {
+    white-space: nowrap;
+}
+.txn-wrap .modern-table td:nth-child(2) {
+    min-width: 160px;
+}
+.txn-wrap .modern-table td:nth-child(4) {
+    min-width: 155px;
+}
+.txn-rate-editor {
+    margin-top: 7px;
+    font-size: 12px;
+}
+.txn-rate-editor summary {
+    cursor: pointer;
+    color: var(--primary-color, #6d28d9);
+    font-weight: 700;
+    white-space: nowrap;
+}
+.txn-rate-controls,
+.txn-payment-cell,
+.txn-proof-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 6px;
+}
+.txn-rate-controls select,
+.txn-rate-controls input,
+.txn-payment-cell select {
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 130px;
+    min-width: 90px;
+    padding: 6px 8px;
+    font-size: 12px;
+}
+.txn-rate-controls .action-btn,
+.txn-payment-cell .action-btn,
+.txn-proof-actions .action-btn,
+.txn-row-actions .action-btn {
+    padding: 5px 8px;
+    font-size: 12px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.txn-proof-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+.txn-proof-actions label {
+    display: inline-flex;
+    align-items: center;
+    margin: 0;
+    cursor: pointer;
+}
+.txn-row-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+}
+.txn-wrap .modern-table td .sched-fee-input {
+    box-sizing: border-box;
+    width: 88px !important;
+    padding: 6px 7px;
+    font-size: 12px;
+}
+.txn-rate-editor small {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-muted, #64748b);
+}
+@media (max-width: 900px) {
+    .txn-wrap .modern-table { min-width: 1000px; }
+}
