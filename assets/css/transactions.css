@@ -429,3 +429,58 @@
     margin-top: 0;
     vertical-align: middle;
 }
+
+
+/* Keep the commission defaults and Transaction Log tables inside their panels. */
+.txn-commission .table-wrapper {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+.txn-commission .table-wrapper .modern-table {
+    width: 100%;
+    min-width: 0 !important;
+    table-layout: fixed;
+}
+.txn-commission .table-wrapper .modern-table th,
+.txn-commission .table-wrapper .modern-table td {
+    padding: 7px 5px;
+    font-size: 12px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+.txn-log-table th:nth-child(1) { width: 20%; }
+.txn-log-table th:nth-child(2) { width: 10%; }
+.txn-log-table th:nth-child(3) { width: 12%; }
+.txn-log-table th:nth-child(4) { width: 27%; }
+.txn-log-table th:nth-child(5) { width: 15%; }
+.txn-log-table th:nth-child(6) { width: 16%; }
+.txn-log-table .txn-log-delete {
+    padding: 5px 7px;
+    font-size: 11px;
+    white-space: normal;
+}
+.txn-log-table td {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+.txn-comm-dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    box-sizing: border-box;
+}
+.txn-comm-dialog[open] {
+    display: block;
+}
+@media (max-width: 900px) {
+    .txn-commission {
+        grid-template-columns: minmax(0, 1fr);
+    }
+    .txn-commission .table-wrapper .modern-table {
+        min-width: 0 !important;
+    }
+}
