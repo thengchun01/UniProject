@@ -63,11 +63,13 @@ if ($courses) {
     $ids = array_map(static fn($c)=>(int)$c['course_id'], $courses);
     $ph = implode(',', array_fill(0, count($ids), '?'));
     $stmt = $db->prepare(
-        "SELECT l.course_id, u.user_id, u.username, MAX(l.lesson_date) AS last_taught
-         FROM lessons l INNER JOIN users u ON u.user_id=l.teacher_id
-         WHERE l.course_id IN ($ph) AND l.status <> 'CANCELLED'
-         GROUP BY l.course_id, u.user_id, u.username
-         ORDER BY l.course_id ASC, last_taught DESC, u.username ASC"
+        "SELECT c.course_id, u.user_id, u.username, MAX(l.lesson_date) AS last_taught
+         FROM courses c
+         INNER JOIN lessons l ON (l.course_id=c.course_id OR (l.course_id IS NULL AND l.title=c.course_name))
+         INNER JOIN users u ON u.user_id=l.teacher_id
+         WHERE c.course_id IN ($ph) AND l.status <> 'CANCELLED'
+         GROUP BY c.course_id, u.user_id, u.username
+         ORDER BY c.course_id ASC, last_taught DESC, u.username ASC"
     );
     $stmt->execute($ids);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $teacher) {
