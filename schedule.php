@@ -334,7 +334,8 @@ foreach ($lessons as $l) {
     if (!isset($seriesFirst[$g])) {
         $seriesFirst[$g] = (int) ($l['lesson_id'] ?? 0);
     }
-    $t = trim((string) ($l['title'] ?? ''));
+    $t = trim((string) ($l['course_name'] ?? ''));
+    if ($t === '') $t = trim((string) ($l['title'] ?? ''));
     if ($t !== '') {
         $titleVotes[$g][$t] = ($titleVotes[$g][$t] ?? 0) + 1;
     }
@@ -1140,7 +1141,11 @@ include __DIR__ . '/includes/header.php';
                                                 $chipShown = array_slice($chipNames, 0, 3);
                                                 $chipMore = count($chipNames) - count($chipShown);
                                                 $chipDur = sched_min((string) $l['end_time']) - sched_min((string) $l['start_time']);
-                                                $chipTitle = $l['title'] !== null && $l['title'] !== '' ? $l['title'] : 'Lesson';
+                                                $courseLabel = trim((string) ($l['course_name'] ?? ''));
+                                                $lessonTitle = trim((string) ($l['title'] ?? ''));
+                                                $chipTitle = $courseLabel !== ''
+                                                    ? ($lessonTitle !== '' && $lessonTitle !== $courseLabel ? $courseLabel . ' · ' . $lessonTitle : $courseLabel)
+                                                    : ($lessonTitle !== '' ? $lessonTitle : 'Lesson');
                                                 $chipStCls = $l['status'] === 'COMPLETED' ? 'is-ok' : ($l['status'] === 'CANCELLED' ? 'is-bad' : 'is-muted');
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
@@ -1215,7 +1220,11 @@ include __DIR__ . '/includes/header.php';
                                                 $chipShown = array_slice($chipNames, 0, 3);
                                                 $chipMore = count($chipNames) - count($chipShown);
                                                 $chipDur = sched_min((string) $l['end_time']) - sched_min((string) $l['start_time']);
-                                                $chipTitle = $l['title'] !== null && $l['title'] !== '' ? $l['title'] : 'Lesson';
+                                                $courseLabel = trim((string) ($l['course_name'] ?? ''));
+                                                $lessonTitle = trim((string) ($l['title'] ?? ''));
+                                                $chipTitle = $courseLabel !== ''
+                                                    ? ($lessonTitle !== '' && $lessonTitle !== $courseLabel ? $courseLabel . ' · ' . $lessonTitle : $courseLabel)
+                                                    : ($lessonTitle !== '' ? $lessonTitle : 'Lesson');
                                                 $chipStCls = $l['status'] === 'COMPLETED' ? 'is-ok' : ($l['status'] === 'CANCELLED' ? 'is-bad' : 'is-muted');
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
