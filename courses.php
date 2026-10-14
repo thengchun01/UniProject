@@ -43,9 +43,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $courses = $db->query(
     "SELECT c.*,
-        (SELECT COUNT(DISTINCT cs.student_id)
-         FROM course_students cs INNER JOIN users su ON su.user_id=cs.student_id
-         WHERE cs.course_id=c.course_id AND su.role='STUDENT') AS enrolled_count
+        (SELECT COUNT(DISTINCT su.user_id)
+         FROM users su
+         WHERE su.role='STUDENT'
+           AND (
+             EXISTS (SELECT 1 FROM course_students cs WHERE cs.course_id=c.course_id AND cs.student_id=su.user_id)
+             OR EXISTS (
+               SELECT 1 FROM lesson_enrollments e
+               INNER JOIN lessons l ON l.lesson_id=e.lesson_id
+               WHERE e.student_id=su.user_id
+                 AND (l.course_id=c.course_id OR (l.course_id IS NULL AND l.title=c.course_name))
+             )
+           )) AS enrolled_count
      FROM courses c ORDER BY c.is_active DESC, c.course_name"
 )->fetchAll(PDO::FETCH_ASSOC);
 
