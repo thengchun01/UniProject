@@ -312,3 +312,8 @@
 .txn-payment-cell { gap: 7px; }
 .txn-payment-cell .txn-upload-button,
 .txn-payment-cell .txn-file-pill { margin-top: 2px; }
+
+
+.txn-payment-cell { display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
+.txn-payment-editor summary { cursor:pointer; font-size:12px; font-weight:700; }
+.txn-payment-edit-controls { display:flex; flex-direction:column; align-items:flex-start; gap:5px; padding-top:6px; }
