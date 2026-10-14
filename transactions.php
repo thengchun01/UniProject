@@ -658,7 +658,7 @@ include __DIR__ . '/includes/header.php';
                     <th>Commission (RM)</th>
                     <th>Student</th>
                     <th>Fee (RM)</th>
-                    <th>Payment</th>
+                    <th>Payment Proof</th>
                     <th>Proof</th>
                     <?php if ($role === 'ADMIN'): ?><th>Actions</th><?php endif; ?>
                 </tr>
@@ -708,11 +708,6 @@ include __DIR__ . '/includes/header.php';
                             </td>
                             <td>
                                 <div class="txn-payment-cell">
-                                    <?php if ($c['fee_id'] === null): ?>
-                                        <span class="txn-badge">No record</span>
-                                    <?php else: ?>
-                                        <span class="txn-badge <?= $c['mstatus'] === 'PAID' ? 'is-paid' : ($c['mstatus'] === 'PENDING' ? 'is-pending' : '') ?>"><?= e($c['mstatus']) ?></span>
-                                    <?php endif; ?>
                                     <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
                                         <?php if (!empty($c['mproof'])): ?>
                                             <div class="txn-file-pill">
@@ -746,7 +741,7 @@ include __DIR__ . '/includes/header.php';
                             <?php if ($role === 'ADMIN'): ?>
                             <td>
                                 <div class="txn-row-actions">
-                                    <a class="action-btn view-btn" style="text-decoration:none;" href="<?= e(url_path('transaction_detail.php?group=' . urlencode($c['g']) . '&month=' . urlencode($c['month']))) ?>">Details</a>
+                                    <a class="action-btn view-btn" style="text-decoration:none;" href="<?= e(url_path('schedule.php')) ?>">Schedule</a>
                                     <?php if ($c['fee_id'] !== null): ?>
                                         <button type="button" class="action-btn delete-btn" data-mfee-del data-feeid="<?= (int) $c['fee_id'] ?>">Delete</button>
                                     <?php elseif (!empty($c['enrollment_id']) && !empty($c['proof_lesson_id'])): ?>
