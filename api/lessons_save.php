@@ -472,6 +472,11 @@ try {
         }
         foreach ($cleanStudents as $sid => $fee) {
             $lessonsManager->addEnrollment($lessonId, $sid, $fee);
+            // Keep the course roster in sync with students scheduled into this course.
+            if ($courseId !== null) {
+                $rosterStmt = $db->prepare('INSERT IGNORE INTO course_students (course_id, student_id) VALUES (:course_id, :student_id)');
+                $rosterStmt->execute(['course_id' => $courseId, 'student_id' => $sid]);
+            }
         }
         // Monthly billing record per student per class (keep existing records untouched).
         if ($hasMonthlyFees) {
