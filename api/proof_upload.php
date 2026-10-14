@@ -28,12 +28,19 @@ if ($lessonsManager === null) {
 $kind = strtoupper(trim($_POST['kind'] ?? ''));
 $lessonId = (int) ($_POST['lesson_id'] ?? 0);
 $enrollmentId = (int) ($_POST['enrollment_id'] ?? 0);
+$feeId = (int) ($_POST['fee_id'] ?? 0);
 
-if (!in_array($kind, ['FEE', 'COMMISSION'], true) || $lessonId <= 0) {
-    proof_error('Invalid proof target.');
-}
-if ($kind === 'FEE' && $enrollmentId <= 0) {
-    proof_error('Enrollment is required for fee proofs.');
+if ($kind === 'MONTHLY_FEE') {
+    if ($feeId <= 0) {
+        proof_error('Invalid monthly record.');
+    }
+} else {
+    if (!in_array($kind, ['FEE', 'COMMISSION'], true) || $lessonId <= 0) {
+        proof_error('Invalid proof target.');
+    }
+    if ($kind === 'FEE' && $enrollmentId <= 0) {
+        proof_error('Enrollment is required for fee proofs.');
+    }
 }
 if (empty($_FILES['proof']) || ($_FILES['proof']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
     proof_error('Choose a proof image to upload.');
@@ -58,7 +65,14 @@ if (!is_dir($proofDir) && !@mkdir($proofDir, 0755, true)) {
 
 $db = db();
 try {
-    if ($kind === 'FEE') {
+    if ($kind === 'MONTHLY_FEE') {
+        $stmt = $db->prepare('SELECT fee_id FROM monthly_fees WHERE fee_id = :id');
+        $stmt->execute(['id' => $feeId]);
+        if ($stmt->fetchColumn() === false) {
+            proof_error('Monthly record not found.');
+        }
+        $target = 'monthly_' . $feeId . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
+    } elseif ($kind === 'FEE') {
         $stmt = $db->prepare('SELECT enrollment_id FROM lesson_enrollments WHERE enrollment_id = :eid AND lesson_id = :lid');
         $stmt->execute(['eid' => $enrollmentId, 'lid' => $lessonId]);
         if ($stmt->fetchColumn() === false) {
@@ -78,7 +92,10 @@ try {
     }
     $relPath = 'uploads/proofs/' . $target;
 
-    if ($kind === 'FEE') {
+    if ($kind === 'MONTHLY_FEE') {
+        $stmt = $db->prepare('UPDATE monthly_fees SET proof_path = :path WHERE fee_id = :id');
+        $stmt->execute(['path' => $relPath, 'id' => $feeId]);
+    } elseif ($kind === 'FEE') {
         $stmt = $db->prepare(
             "UPDATE lesson_enrollments SET proof_path = :path, proof_uploaded_at = CURRENT_TIMESTAMP,
               payment_status = CASE WHEN payment_status = 'UNPAID' THEN 'PENDING' ELSE payment_status END
@@ -95,8 +112,8 @@ try {
     }
 
     $lessonsManager->logProof(
-        $kind,
-        $lessonId,
+        $kind === 'MONTHLY_FEE' ? 'FEE' : $kind,
+        $kind === 'MONTHLY_FEE' ? null : $lessonId,
         $kind === 'FEE' ? $enrollmentId : null,
         $relPath,
         'UPLOAD',

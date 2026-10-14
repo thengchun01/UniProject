@@ -14,6 +14,7 @@
     - so it is better to let the admin to decide the fee, rather a system auto-calculation
 4. Working hour weekday 9am-10pm, Saturday 9am.6:30pm, closed on Sunday
 5. A lesson can have multiple students, but typically a teacher only
+6. Following to latest requirement from stakeholder, the schedule time should be at least once per week. And each lesson last from 30-45 minutes
 
 ## Function
 1. Account management for Transaction
@@ -74,3 +75,17 @@
         - currently, let admin decide which slot, instead of teacher choosing
     - Student pov:
         - should be same as the teacher pov
+
+3. Teacher commission settings
+- Lying inside account management
+
+# Please ignored this file
+function.md
+4. Transaction page (should include but not limited to)
+    0. Current on Top, List Months 1-12 from left to right, Defaulted to current month, red color for month that have imcomplete payments or proof, green for complete and default grey for current and future. User can select multiple months to filter into the transaction table ( the time filter on top of the transaction table may be removed)
+    1. meta data per month (Total Receive Fee/Total Fee), (Paid Commision/Total Commision need to pay), total class, total imcomplete status-class
+    1.5. the fee entered should be for each month instead of each lesson per week
+    2. Table for each class(transaction)
+        1. Instead of many button at the actions make each cell direct editable (but not the student and teacher).
+        2. Make the table header become
+            1. transacton Id, Lesson (class(id&name))， teacher+id, commission (show the how much RM even it is in percentage, can edit for individual commision), proof (upload button button by default, if uploaded then because the file link (accept img or pdf?) and include a delete button at the right of the link, prompt before delete), student name+id, fee, payment(similar to proof), action (button: Details (goes to a page that dedicate for the details of that class, left side teacher's info with proof, right side student's info with proof), delete)

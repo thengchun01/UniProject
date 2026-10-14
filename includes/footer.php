@@ -4,7 +4,7 @@
 <footer class="site-footer">
     <div class="site-footer-inner">
         <div class="site-footer-brand">
-            <a href="<?= e(url_path('index.php')); ?>" class="site-footer-logo">Piano Course</a>
+            <a href="<?= e(url_path('index.php')); ?>" class="site-footer-logo">Tasto</a>
             <p>Interactive lessons, songs, and practice tools for every stage of learning.</p>
         </div>
         <nav class="site-footer-links" aria-label="Footer navigation">
@@ -15,7 +15,7 @@
             <a href="<?= e(url_path('transactions.php')); ?>">Transactions</a>
             <a href="<?= e(url_path('account.php')); ?>">Account</a>
         </nav>
-        <p class="site-footer-copyright">&copy; <?= date('Y'); ?> Piano Course</p>
+        <p class="site-footer-copyright">&copy; <?= date('Y'); ?> Tasto</p>
     </div>
 </footer>
 

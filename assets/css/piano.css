@@ -254,6 +254,17 @@
     margin:0;
 }
 
+.btn-icon:hover,
+.round-btn:hover,
+.mini-btn:hover,
+.game-stepper-btn:hover,
+.scroll-zone:hover,
+.sheet-zoom-btn:hover{
+    background:var(--studio-panel-2);
+    border-color:var(--studio-accent);
+    color:var(--studio-accent);
+}
+
 .btn-icon{
     display:inline-flex;
     align-items:center;

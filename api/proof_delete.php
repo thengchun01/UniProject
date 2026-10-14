@@ -28,14 +28,28 @@ if ($lessonsManager === null) {
 $kind = strtoupper(trim($_POST['kind'] ?? ''));
 $lessonId = (int) ($_POST['lesson_id'] ?? 0);
 $enrollmentId = (int) ($_POST['enrollment_id'] ?? 0);
+$feeId = (int) ($_POST['fee_id'] ?? 0);
 
-if (!in_array($kind, ['FEE', 'COMMISSION'], true) || $lessonId <= 0) {
+if ($kind === 'MONTHLY_FEE') {
+    if ($feeId <= 0) {
+        proof_del_error('Invalid monthly record.');
+    }
+} elseif (!in_array($kind, ['FEE', 'COMMISSION'], true) || $lessonId <= 0) {
     proof_del_error('Invalid proof target.');
 }
 
 $db = db();
 try {
-    if ($kind === 'FEE') {
+    if ($kind === 'MONTHLY_FEE') {
+        $stmt = $db->prepare('SELECT proof_path FROM monthly_fees WHERE fee_id = :id');
+        $stmt->execute(['id' => $feeId]);
+        $path = $stmt->fetchColumn();
+        if (!is_string($path) || $path === '') {
+            proof_del_error('No proof to delete.');
+        }
+        $stmt = $db->prepare('UPDATE monthly_fees SET proof_path = NULL WHERE fee_id = :id');
+        $stmt->execute(['id' => $feeId]);
+    } elseif ($kind === 'FEE') {
         if ($enrollmentId <= 0) {
             proof_del_error('Enrollment is required.');
         }
@@ -64,8 +78,8 @@ try {
     }
 
     $lessonsManager->logProof(
-        $kind,
-        $lessonId,
+        $kind === 'MONTHLY_FEE' ? 'FEE' : $kind,
+        $kind === 'MONTHLY_FEE' ? null : $lessonId,
         $kind === 'FEE' ? $enrollmentId : null,
         $path,
         'DELETE',

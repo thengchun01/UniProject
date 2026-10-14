@@ -142,7 +142,6 @@ include __DIR__ . '/includes/header.php';
         <div class="songs-list" id="songs-list">
             <div class="songs-list-header">
                 <span class="col-song">Song</span>
-                <span class="col-piece">Piece</span>
                 <span class="col-diff">Difficulty</span>
                 <span class="col-action"></span>
             </div>
@@ -157,6 +156,21 @@ include __DIR__ . '/includes/header.php';
     <?php endif; ?>
 </section>
 
+<!-- ── Variance picker: choose a version, then play ── -->
+<div class="songs-picker-overlay" id="songs-picker" hidden>
+    <div class="songs-picker" role="dialog" aria-modal="true" aria-labelledby="songs-picker-title">
+        <div class="songs-picker-head">
+            <div>
+                <p class="eyebrow">Choose version</p>
+                <h2 id="songs-picker-title">Song</h2>
+            </div>
+            <button type="button" class="songs-picker-close" id="songs-picker-close" aria-label="Close">×</button>
+        </div>
+        <p class="songs-picker-sub" id="songs-picker-sub"></p>
+        <div class="songs-piece-cards" id="songs-piece-cards"></div>
+    </div>
+</div>
+
 <script>
 (function () {
     const BASE_URL = <?= json_encode(BASE_URL) ?>;
@@ -165,6 +179,7 @@ include __DIR__ . '/includes/header.php';
     const ALL_SONGS  = <?= $songListJson ?>;
 
     let filtered = [...ALL_SONGS];
+    let sortVal = 'default';
 
     const searchEl    = document.getElementById('songs-search');
     const clearBtn    = document.getElementById('songs-search-clear');
@@ -202,70 +217,66 @@ include __DIR__ . '/includes/header.php';
     if (!listBody) return; // DB error / empty state
 
     function applyFilters() {
-        const query   = (searchEl?.value || '').toLowerCase().trim();
-        const sortVal = sortEl?.value || 'default';
-        const diff    = filterDiff?.value || '';
+        const query = (searchEl?.value || '').toLowerCase().trim();
+        sortVal = sortEl?.value || 'default';
+        const diff = filterDiff?.value || '';
 
         filtered = ALL_SONGS.filter(row => {
             const matchText = !query ||
-                row.song_name.toLowerCase().includes(query) ||
+                (row.song_name || '').toLowerCase().includes(query) ||
                 row.piece_name.toLowerCase().includes(query) ||
                 (row.difficulty || '').toLowerCase().includes(query);
             const matchDiff = !diff || row.difficulty === diff;
             return matchText && matchDiff;
         });
 
-        if (sortVal === 'name-asc')   filtered.sort((a, b) => a.song_name.localeCompare(b.song_name) || a.piece_name.localeCompare(b.piece_name));
-        if (sortVal === 'name-desc')  filtered.sort((a, b) => b.song_name.localeCompare(a.song_name) || b.piece_name.localeCompare(a.piece_name));
-        if (sortVal === 'diff-asc')   filtered.sort((a, b) => (DIFF_ORDER[a.difficulty] || 9) - (DIFF_ORDER[b.difficulty] || 9));
-        if (sortVal === 'diff-desc')  filtered.sort((a, b) => (DIFF_ORDER[b.difficulty] || 9) - (DIFF_ORDER[a.difficulty] || 9));
-
         renderList();
     }
 
     function renderList() {
         listBody.innerHTML = '';
-        if (filtered.length === 0) {
+        // Collapse variances: one row per song, difficulties combined.
+        const bySong = [];
+        const seen = {};
+        filtered.forEach(row => {
+            const name = row.song_name || 'Untitled Song';
+            if (!seen[name]) { seen[name] = { name: name, pieces: [], diffs: [] }; bySong.push(seen[name]); }
+            seen[name].pieces.push(row);
+            if (row.difficulty && seen[name].diffs.indexOf(row.difficulty) === -1) seen[name].diffs.push(row.difficulty);
+        });
+        const rank = d => DIFF_ORDER[d] || 9;
+        if (sortVal === 'name-asc')  bySong.sort((a, b) => a.name.localeCompare(b.name));
+        if (sortVal === 'name-desc') bySong.sort((a, b) => b.name.localeCompare(a.name));
+        if (sortVal === 'diff-asc')  bySong.sort((a, b) => Math.min(...a.diffs.map(rank)) - Math.min(...b.diffs.map(rank)));
+        if (sortVal === 'diff-desc') bySong.sort((a, b) => Math.max(...b.diffs.map(rank)) - Math.max(...a.diffs.map(rank)));
+        if (bySong.length === 0) {
             noResults.hidden = false;
-            countEl.textContent = '0 pieces';
+            countEl.textContent = '0 songs';
             return;
         }
         noResults.hidden = true;
-        countEl.textContent = filtered.length + ' piece' + (filtered.length !== 1 ? 's' : '');
+        countEl.textContent = bySong.length + ' song' + (bySong.length !== 1 ? 's' : '');
 
-        let lastSong = null;
-
-        filtered.forEach((row, index) => {
-            // Group separator when song changes
-            const songChanged = row.song_name !== lastSong;
-            lastSong = row.song_name;
-
+        bySong.forEach(song => {
+            const playable = song.pieces.some(p => p.has_data);
             const tr = document.createElement('div');
-            tr.className = 'songs-row' + (songChanged ? ' songs-row--first-piece' : '');
-            tr.dataset.index = index;
-
-            const color = DIFF_COLOR[row.difficulty] || '#888';
-            const url   = BASE_URL + 'piano.php?piece_id=' + row.midi_id;
-
+            tr.className = 'songs-row';
             tr.innerHTML = `
-                <span class="col-song">${songChanged ? escHtml(row.song_name) : '<span class="col-song-cont">↳</span>'}</span>
-                <span class="col-piece">${escHtml(row.piece_name)}${row.uploader ? `<small class="songs-uploader">by ${escHtml(row.uploader)}</small>` : ''}</span>
-                <span class="col-diff">
-                    <span class="diff-badge" style="color:${color};border-color:${color};">${escHtml(row.difficulty)}</span>
-                </span>
+                <span class="col-song">${escHtml(song.name)}${song.pieces.length > 1 ? `<span class="songs-var-marker" title="${song.pieces.length} versions — select to choose">*</span>` : ''}</span>
+                <span class="col-diff">${song.diffs.map(d => {
+                    const c = DIFF_COLOR[d] || '#888';
+                    return `<span class="diff-badge" style="color:${c};border-color:${c};">${escHtml(d)}</span>`;
+                }).join('')}</span>
                 <span class="col-action">
-                    ${row.has_data
-                        ? `<a href="${url}" class="btn-play-row" title="Open in Piano Studio">▶ Play</a>`
+                    ${playable
+                        ? `<button type="button" class="btn-play-row" title="Select a version to play">Select</button>`
                         : `<span class="btn-play-row disabled">No Data</span>`}
                 </span>
             `;
 
-            // Row click also navigates (except the button click which handles itself)
-            if (row.has_data) {
-                tr.addEventListener('click', e => {
-                    if (e.target.closest('.btn-play-row')) return;
-                    window.location.href = url;
-                });
+            // Row click opens the version picker (except dead rows).
+            if (playable) {
+                tr.addEventListener('click', () => openPicker(song.name, tr.querySelector('.btn-play-row')));
                 tr.style.cursor = 'pointer';
             }
 
@@ -278,6 +289,57 @@ include __DIR__ . '/includes/header.php';
             .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
             .replace(/"/g,'&quot;');
     }
+
+    // ── Version picker popup ─────────────────────────
+    const picker     = document.getElementById('songs-picker');
+    const pickerTitle = document.getElementById('songs-picker-title');
+    const pickerSub  = document.getElementById('songs-picker-sub');
+    const pickerCards = document.getElementById('songs-piece-cards');
+    const pickerClose = document.getElementById('songs-picker-close');
+    let pickerOpener = null;
+
+    function openPicker(songName, opener) {
+        if (!picker) return;
+        const pieces = ALL_SONGS.filter(r => r.song_name === songName && r.has_data);
+        if (!pieces.length) return;
+        pickerOpener = opener || null;
+        pickerTitle.textContent = songName;
+        pickerSub.textContent = pieces.length + ' version' + (pieces.length === 1 ? '' : 's') + ' — pick one to play';
+        pickerCards.innerHTML = '';
+        pieces.forEach(p => {
+            const color = DIFF_COLOR[p.difficulty] || '#888';
+            const card = document.createElement('div');
+            card.className = 'songs-piece-card';
+            card.innerHTML =
+                '<h3>' + escHtml(p.piece_name) + '</h3>' +
+                '<span class="diff-badge" style="color:' + color + ';border-color:' + color + ';">' + escHtml(p.difficulty || 'Beginner') + '</span>' +
+                (p.uploader
+                    ? '<p class="songs-piece-meta">Shared by ' + escHtml(p.uploader) + '</p>'
+                    : '<p class="songs-piece-meta">Built-in piece</p>');
+            const a = document.createElement('a');
+            a.className = 'btn-play-row';
+            a.href = BASE_URL + 'piano.php?piece_id=' + p.midi_id;
+            a.textContent = '▶ Play';
+            card.appendChild(a);
+            pickerCards.appendChild(card);
+        });
+        picker.hidden = false;
+        document.body.style.overflow = 'hidden';
+        if (pickerClose) pickerClose.focus();
+    }
+
+    function closePicker() {
+        if (!picker || picker.hidden) return;
+        picker.hidden = true;
+        document.body.style.overflow = '';
+        if (pickerOpener && pickerOpener.focus) pickerOpener.focus();
+    }
+
+    if (pickerClose) pickerClose.addEventListener('click', closePicker);
+    if (picker) picker.addEventListener('click', e => { if (e.target === picker) closePicker(); });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && picker && !picker.hidden) closePicker();
+    });
 
     // ── Event listeners ───────────────────────────────
     searchEl?.addEventListener('input', () => {

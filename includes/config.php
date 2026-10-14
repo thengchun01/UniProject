@@ -5,7 +5,7 @@ if (session_status() === PHP_SESSION_NONE && PHP_SAPI === 'cli') {
     session_start();
 }
 
-define('SITE_NAME', 'Piano Course');
+define('SITE_NAME', 'Tasto');
 define('DB_HOST', getenv('PSM_DB_HOST') ?: 'localhost');
 define('DB_NAME', getenv('PSM_DB_NAME') ?: 'psm_2');
 define('DB_USER', getenv('PSM_DB_USER') ?: 'root');

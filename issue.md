@@ -717,9 +717,151 @@ Status: SOLVED (10/10/2026)
 - Proven: harness extended with a focus model — tap sequence (press, focus loss, release) now picks correctly and tab-away still dismisses. 22/22 pass.
 - Verified: node --check clean; git diff --check clean. Needs user retest with a normal refresh.
 
+99. Class table editable cells per item 90.4 (admin): title, teacher picker, commission, students picker, create-teacher.
+
+Status: SOLVED (11/10/2026)
+- New api/series_save.php (8 ADMIN-enforced actions, JSON conventions): rename_series, assign_teacher (nullable, keeps existing commissions by design), set_commission (validated), add/remove/set-fee per student across the series, get_teachers (info + resolved commission + availability), get_students (all + enrolled/fee state).
+- Table: title renames via prompt; teacher cell opens picker dialog (info, commission, Available/Partial/No-info coverage vs the series slot, current/unassign, inline create-teacher reusing admin/user_create.php); commission edits inline (type + value); students Manage opens picker (search filter, fee field, Add/Update/Remove with confirm). Mutations reuse postForm (auto-reload with scroll restore).
+- Non-admins see plain text (server enforces ADMIN regardless). Detail panel untouched.
+- Verified: php -l clean on both files; endpoint SQL shapes run live (teachers/students/groups/enrollments resolve); helpers unique; schedule.css braces 219/219; git diff --check clean. Browser click-through needed (pickers, editors, create-teacher).
+- Still open from 90.4: dedicated combined payments page (Payment cells link to transactions.php for now).
+
+98. Class table per item 90.4 (read-only): ID/title/teacher/commission/full student fees/frequency squares/payment.
+
+Status: SOLVED (11/10/2026)
+- Month panel replaced with a real table: Class (#hash), Title, Teacher (mode, +N on split), Commission (mode via sched_comm_label), Students & fees (FULL list, name · mode fee, never truncated), Frequency (7 weekday squares: green meets / grey none / red overlap-clash with tooltip times, pairwise over displayed series), Payment (teacher + student pills linking to transactions.php for now). ＋ New class button anchors the create form.
+- Dead whole-series progress query removed; clash/fee/pay logic simulated in CLI (overlap both-red, single-day green, fee mode, pay mapping all correct).
+- Out of scope as agreed: editable cells, teacher/student picker dialogs, create-teacher/student inline, dedicated combined payments page.
+- Verified: php -l clean on schedule.php; schedule.css braces 198/198; git diff --check clean. Browser pass needed (table scroll on small screens, clash tooltips).
+
+102. Batch feedback: outside-dismiss, purple hover floods, weird box, numeric commission/fee, monthly fees doctrine, remove lesson details.
+
+Status: SOLVED (11/10/2026)
+- Outside-dismiss stands as built (document pointerdown + click + Tab-away closers verified in 22/22 harness tests); picker dialogs gained the same close paths as other popups. If a specific popup still sticks, the F12 red text will name it.
+- Purple floods fixed at the root: every component hover rule that omitted a background (cell buttons, action buttons incl. disabled, comm-editor buttons, series toggle, date-picker nav, view switcher) now preserves its own surface instead of inheriting the global purple. Manage demoted to a link-style action.
+- Weird box: number-input spinners removed from fee/commission/monthly fields.
+- Commission + fee are now always-visible number inputs (admin): commission number + type + save per row; monthly fee per student autosaves on change (status preserved, blank = unchanged). Non-admins see static text.
+- Monthly-fee doctrine applied to schedule UI: lesson detail panel DELETED in full (class table substitutes it); per-lesson fee displays/edits go with it. Edit form, create form, repeat dialog, add-student dialog, delete-series-less delete buttons all live outside the panel and survive; workspace grid collapsed to one column; class-table Edit now anchors the edit form. Transactions finance flows untouched (flagged: they still track per-enrollment amounts).
+- Cost noted: series-delete button went down with the panel (only single-lesson delete remains in the edit form) — say the word to restore it on the class table.
+- Verified: php -l clean on schedule.php; zero dangling refs to panel/editor ids; schedule.css braces 225/225; style.css 204/204; git diff --check clean. Browser pass needed throughout.
+
+101. Batch feedback: month yellow+year, drop week nav, table fixes (fee/students split, drop payment, edit col, squares scope), grid text, picker/dismiss failures.
+
+Status: SOLVED (11/10/2026)
+- Month strip: current month is shallow yellow; year prev/next selector added (validated 2000–2100, defaults follow year, sorts/filters preserved via txn_qs).
+- Week Prev/Next buttons removed; week title stays as a label pointing at the calendar, which was already the week picker.
+- Class table: Students and Fee are separate columns (Fee = monthly-fee amount+status per student for the displayed month, — when none); Payment column dropped; new Edit column links the series' first lesson into the detail editor. Frequency squares now build from unfiltered role-scoped month lessons (filters no longer fake empty weekdays; group membership likewise).
+- Timetable text: 120px columns (6370 floor) + chip text wraps instead of spilling out of frame.
+- Pickers: endpoint proven live (teachers/students/validation all correct); added failure toasts so a missing dialog can no longer fail silently. If teacher/student selection still fails, the F12 red console text will name it — please paste it.
+- Verified: php -l clean on schedule.php + transactions.php; schedule.css braces 220/220; transactions.css 42/42; git diff --check clean.
+
+95. function.md business rule 6 + items 90/91: 15-min timetable, weekly-only repeat, presets, Users nav.
+
+Status: PARTIAL (11/10/2026, Phase A+B core done)
+- 15-min grid: 52 columns (09:00–22:00), 100px cells, hourly header labels with stronger hour-boundary borders, 15-min datalist/defaults/drag-end/availability steps, Sunday/Sat rules untouched.
+- Validation (Lessons::checkSlot): quarter-hour boundaries, any 15-min-multiple duration (free choice per user — no max cap; 30-min minimum fell away with it), working hours unchanged.
+- Repeat rework: create form drops repeat_mode/until/count → every class auto-repeats weekly to end of its start month; extension dialog weekly-only with until-month; monthly/biweekly/count/recurrence_dates paths removed (no senders left, verified by grep).
+- Class presets (13 stakeholder categories with single/multi hints) fill the title; Users link added to top bar for admins (schedule pickers already read live users).
+- Verified: generation + validation matrix simulated in CLI (month-capped weeks, single-lesson tail, 12 dialog extras, boundary/duration/Sunday/Sat cases all correct); php -l clean on schedule/lessons_save/Lessons/header; schedule.css braces 184/184; git diff --check clean.
+- Still open: month-copy forward (button + dialog + endpoint + empty-month prompt), class-table rework (ID/title/teacher/commission/students/frequency squares/payment), editable cells + pickers, combined payments page.
+
+94. Record stakeholder business requirements (no code changes).
+
+Status: NOTED (11/10/2026)
+- New docs/stakeholder_requirements_notes.md: 13-course catalog, exam vs interest tracks, personal/small-group modes, 30/45/60-min durations, monthly fixed fees (mismatch vs per-lesson model — flagged), absence = full fee + makeup lessons (missing — flagged), no monthly-frequency lessons (repeat-mode revisit flagged), teacher assignment by instrument/expertise/availability, monthly commission settlement with MOCK data per stakeholder permission, parent/student-uploaded proofs verified by admin (already matches), plus full verbatim Chinese original. System implications listed for future work; nothing built.
+
+96. Generate a site icon + outline the website color codes.
+
+Status: SOLVED (11/10/2026)
+- Palette inventoried from stylesheets (source of truth): purple #7C3AED/#6D28D9 + tints, black #111111 / slate #0F172A, white surfaces, slate text scale, piano-key states, status greens/reds/ambers, Inter + Poppins. Full table shared in chat.
+- Icon: design skill read, but its AI path needs GEMINI_API_KEY + google-genai (both absent), so hand-built SVG instead — slate tile, white keys, one purple tutorial-key, black separators (all brand hex). Set: piano-icon.svg (master), favicon-32.png, apple-touch-icon.png (180, full-bleed). PNGs rasterized with a pure-stdlib script and pixel-verified (purple/white/black keys + corners).
+- Wired: SVG + PNG + Apple favicon links in header, and the "PIANO LOGO" placeholder replaced with the mark + Piano Course wordmark (Poppins). Untouched: .agents/skills install leftovers (not committed).
+- Verified: php -l clean on header.php; style.css braces 204/204; git diff --check clean. Favicon needs a browser pass (hard refresh to drop the missing-icon cache).
+
+100. Transaction page rework per function.md §4: month strip, metadata, monthly fees, multi-month filter.
+
+Status: PARTIAL (11/10/2026, backend + strip + entry done)
+- Schema: new monthly_fees table (student+month unique, UNPAID/PENDING/PAID) appended to database/psm_lessons.sql and applied live. New api/monthly_fees_save.php (ADMIN-only, upsert grid, strict month/role/amount validation, blank = unchanged).
+- Page: From/To removed; Jan–Dec multi-select strip with Current label (past red/green by completeness incl. paid-without-proof + open commission; current+future always grey; min one selected; role-scoped aggregates); totals replaced with received/total fees, paid/due commission, class + incomplete counts; ADMIN monthly-fee entry grid (month loader + prefill + save).
+- Verified: filter/toggle/color/metadata matrix simulated in CLI (all correct); php -l clean on transactions.php + endpoint; transactions.css braces 38/38; git diff --check clean.
+- Still open: per-class table rework (inline editing, proof link/delete prompt, Details page, Delete), users-table split (item 91), month-copy forward.
+
+92. Remove left-hand-only song pieces; songs must open a variance picker popup (cards left-to-right) instead of loading the piano directly.
+
+Status: SOLVED (11/10/2026)
+- Left-hand removal (kept Right + Both per user): deleted the only left-hand piece (Ode to Joy "Left Hand", live midi_id 4, zero dependents) from SongData.php source AND the live row, so reseeding can't resurrect it; the // Left hand comment inside Both Hands stays (it labels that piece's own notes). Seed verified: 5 songs, 6 pieces.
+- Variance picker: song rows + ▶ Versions button now open a popup (backdrop/×/Escape close, focus managed, scroll locked) listing that song's playable pieces as horizontal cards (name, difficulty badge, Built-in/Shared-by, full-width Play → piano.php?piece_id=). No-data pieces show No Data and never open it. piano.php entry itself untouched.
+- Verified: php -l clean on songs.php + SongData.php; songs.css braces 70/70; git diff --check clean. Popup + post-delete list need a browser pass.
+
+93. Song list: "Select" button, one row per song with * on variances, combined difficulty tags, animated popup.
+
+Status: SOLVED (11/10/2026)
+- List collapsed to one row per song: multi-version songs carry a purple * (tooltip counts versions); variances appear only in the popup. Row button renamed ▶ Versions → Select; grid reflowed to 3 columns (Piece column removed from markup; mobile hides Difficulty).
+- Difficulty combines per song (Ode to Joy shows Beginner + Intermediate badges); search still matches piece names/difficulties and sorts run song-level (name, min/max difficulty rank); count reads in songs.
+- Popup entrance animation (fade + rise/pop) with prefers-reduced-motion guard.
+- Verified: grouping/sort/search simulation in Node (5 rows, Ode 2-piece starred with both badges, dead-row + search + sorts correct); php -l clean; songs.css braces 79/79; git diff --check clean. Browser pass needed.
+
+97. Site needs a memorable name — something from another language.
+
+Status: SOLVED (11/10/2026)
+- Chose Tasto (Italian: key, touch) over Clavis/Irama/Tecla/Klang/Cantabile — short, spelled as pronounced, pairs with the key-mark icon.
+- Renamed in 4 spots: SITE_NAME constant (flows automatically into page titles, header wordmark, verification email subjects), footer logo, footer copyright, guest widget title. Zero "Piano Course" strings remain in PHP.
+- Verified: php -l clean on config/footer/header; grep count 0; git diff --check clean.
+
 89. Teacher-uploaded MIDI files must be accessible to all students.
 
 Status: SOLVED (11/10/2026)
 - Found: no upload flow existed at all (piano import is client-side only; all 7 library rows are seeds). The library only lists song-linked pieces with no per-user gating, so linking an upload to a song makes it visible to everyone automatically.
 - Built: new api/midi_upload.php (TEACHER/ADMIN enforced server-side; .mid/.midi extension, 2MB cap, MThd header check, is_uploaded_file; song must exist or a new name creates it; storage + DB in one transaction with file cleanup on failure; JSON shape matches api conventions). songs.php gained a teacher/admin upload panel (title, difficulty, existing-or-new song, themed file picker, fetch + PSMModal feedback + reload) and a "by {uploader}" credit on each piece. Student uploads unchanged (none exist); get_song_piece access unchanged (already public).
 - Verified: php -l clean on songs.php + api/midi_upload.php; songs.css braces 52/52; preconditions live-checked (file_path column present, 5 songs, uploads/midi created + writable); git diff --check clean. Live upload test needs a browser pass (teacher login → upload → student sees it).
+
+90. Following business rule 6., 
+    1. each slot of timetable should divide into 4 piece which is 15 minutes but no need give each piece a name, just per hour is enough.
+    2. Instead of series that have to pick repeat how many time per month, now just make all class become a class that repeat each week, but have to just on which day and time to begin lesson.
+    3. According to the stakeholder.md first raw response, make a preset as name/title for each category of learning such as piano, guita, which only a single student per class, and also add music theory class, little mozart which may have multiple students (UI should be same for multi/sole student class, just left the add student button there).
+    4. Modify the existing `sched-panel sched-series-panel` to fit the new class schedule system, header from left to right should include class id, title(the class name ex: piano), teacher, teacher commission, student(s) & fee (may need to have two rows for class that have two column (always list full)), frequency(have 7 small square whereas green mean have class, and grey mean don't have class, and a pottential red if clash with other class?(not need to put time in this table as it may be too cluster)), Payment (Located at rightmost, to view the payment status of both teacher and student. Should Have a dedicated page that include both teacher and students instead of separate page (maybe left side teacher and right side students.))
+        1. This table should have a create class button and its data within column should be editable and  like teacher(when click show a table of teacher, that have list down basic info, commision, and available or not, include a create teacher button as well) and student (also show table of student, basic info).
+
+91. Put the account management into top bar as well (should be read by schedule function when selecting teacher or students).
+    1. separate the teacher and students into separate table. other roles like admin, and staff (future use) into a single table
+    2. Maybe something like
+        1. grid-template: staff / teacher student
+
+107. Transaction table: one monthly row per class (no more 4x).
+
+Status: SOLVED (11/10/2026)
+- Table grain rebuilt around monthly_fees: one row per student x class x month (series, one-off groups, plus orphan records with no enrollment coverage). Fee + status edit inline, monthly receipt upload/link/delete with confirm + audit trail, series commission rate editable (whole-series scope, labeled), record delete with confirm.
+- New transaction_detail.php: metadata top (pattern, teacher, fee/commission totals), teacher block left (info, rate, due, status, proofs), students block right (monthly + lesson proofs). Role-scoped; display-only with backlinks.
+- Wired the four previously dead button families (fee/status/proof/commission/delete); removed the superseded bulk entry grid, dead per-enrollment handlers, and sort headers.
+- Verified: live roster collapses 3 lesson rows into 1 combo; details page renders all sections as admin (10KB HTML); endpoint SQL shapes run live; php -l clean on all touched files; git diff --check clean. Browser pass needed.
+
+106. Batch: commission RM popup, picker loud-failures, create-format edit form, detail panel removed.
+
+Status: SOLVED (11/10/2026)
+- Commission column now shows the computed RM due (per-lesson payouts on collected fees, summed per series; tooltip carries the rate). Clicking opens an edit popup (type + value + save); old inline editor removed. Non-admins see static text.
+- Picker dialogs now toast loudly if their markup is missing or the popup is blocked, instead of failing silently.
+- Edit form follows create format: Status field removed (auto-complete still flips past lessons; manual CANCELLED currently has no UI path — flagged), weekday squares added bound to the edit date.
+- Lesson detail panel deleted in full (class table substitutes it); per-lesson fee displays/edits go with it per the monthly doctrine. Edit/create/repeat/add-student forms, delete buttons and dialogs all live outside it and survive; workspace grid collapsed to one column; Edit column anchors the edit form. Series-delete button went down with the panel (restore on request). Transactions finance untouched.
+- Verified: commission math simulated (86.00 / 0 cases); php -l clean; zero dangling refs; braces 238/204; git diff --check clean. Browser pass needed.
+
+105. Create-form picker buttons top-right; proper ID/Name/Fee tables; monthly write-through on create.
+
+Status: SOLVED (11/10/2026)
+- Students fieldset and Teacher fieldset now open with a header row (count/label left, Add/Pick button right); staged picks render as a real table (ID | Name | Fee RM/month | remove) with live count + empty note; teacher display shows ID + name; all four picker dialogs gained ID columns.
+- Create flow now writes monthly billing records too (one row per student per month from staged fees, existing records preserved via INSERT IGNORE) alongside enrollments; guarded when the table is missing.
+- Verified: php -l clean on schedule.php + lessons_save.php; schedule.css braces 238/238; git diff --check clean. Browser pass needed.
+
+104. Day picker as toggle squares; revert week dropdown.
+
+Status: SOLVED (11/10/2026)
+- Week select removed; Date text field restored (themed calendar popup, Sunday blocked) plus 7 weekday square toggles with day letters (M T W T F S S, Sunday dimmed/disabled). Single-pick: clicking a square moves the date within the same week; typing/dragging highlights the matching square; Sunday never selectable.
+- Note: the old week-sync script had duplicated itself in the file; both copies replaced with the single squares block (verified zero references remain).
+- Verified: php -l clean on schedule.php; schedule.css braces 236/236; git diff --check clean. Browser pass needed.
+
+103. Create-class week picker + staged popup pickers; purple-hover sweep.
+
+Status: SOLVED (11/10/2026)
+- Create form Date field replaced with Week (calendar weeks of displayed month) + Weekday selects driving a hidden lesson_date; two-way sync with drag-select, weekday badge, week-jump, clash refresh, draft restore. Sundays unpickable; date-picker detached from the hidden field.
+- Student/teacher pick tables replaced with popup dialogs staging picks as hidden inputs (saved only on Save Timetable); teacher picker shows availability coverage vs picked slot + Unassign row; student picker has search + per-student fees; draft restore rebuilds rows; submit counting updated; old table JS is guard-safe.
+- Purple-hover sweep: all hover rules missing a background now keep their own surface (dropdowns, toasts, search clear, race buttons, piano mini controls); fixed a `buttonbutton` selector typo that dead-coded a rule. Dark→purple buttons intentionally unchanged (theme language).
+- Verified: php -l clean on schedule.php; schedule.css braces 231/231; zero dangling refs; git diff --check clean. Browser pass needed (week sync, pickers, drag interplay).

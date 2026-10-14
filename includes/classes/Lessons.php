@@ -13,7 +13,7 @@ class Lessons
 
     // ---------- working hours ----------
     // Weekday Mon–Fri 09:00–22:00, Sat 09:00–18:30, Sun closed.
-    // Times must align to 30-min boundaries and end after start.
+    // Times must align to 15-min boundaries; duration is any 15-min multiple.
     // Returns [bool $ok, string $error].
     public function checkSlot(string $date, string $start, string $end): array
     {
@@ -37,16 +37,16 @@ class Lessons
         $e = substr($end, 0, 5);
         [$sh, $sm] = array_map('intval', explode(':', $s));
         [$eh, $em] = array_map('intval', explode(':', $e));
-        if (!in_array($sm, [0, 30], true) || !in_array($em, [0, 30], true)) {
-            return [false, 'Slots must start/end on the hour or half hour.'];
+        if (!in_array($sm, [0, 15, 30, 45], true) || !in_array($em, [0, 15, 30, 45], true)) {
+            return [false, 'Slots must start/end on quarter hours (:00, :15, :30, :45).'];
         }
         $startMin = $sh * 60 + $sm;
         $endMin = $eh * 60 + $em;
         if ($endMin <= $startMin) {
             return [false, 'End time must be after start time.'];
         }
-        if ((($endMin - $startMin) % 30) !== 0) {
-            return [false, 'Duration must be a multiple of 30 minutes.'];
+        if ((($endMin - $startMin) % 15) !== 0) {
+            return [false, 'Duration must be a multiple of 15 minutes.'];
         }
         if ($dow >= 1 && $dow <= 5) {
             if ($startMin < 9 * 60 || $endMin > 22 * 60) {

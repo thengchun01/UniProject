@@ -233,42 +233,14 @@ try {
         $_POST['commission_value'] ?? null
     );
 
-    // Extra recurrence dates (Y-m-d list). Each must also pass slot rules.
+    // Issue 90: every class repeats weekly — no one-offs, no biweekly/monthly.
+    // Without an explicit until-month (repeat dialog), new classes run to the
+    // end of the start month; the admin copies the month forward from there.
     $extraDates = [];
-    if (isset($_POST['recurrence_dates'])) {
-        $raw = $_POST['recurrence_dates'];
-        if (is_string($raw)) {
-            $raw = explode(',', $raw);
-        }
-        if (is_array($raw)) {
-            foreach ($raw as $d) {
-                $d = trim((string) $d);
-                if ($d === '' || $d === $date) {
-                    continue;
-                }
-                if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) {
-                    lessons_error('Invalid recurrence date: ' . $d);
-                }
-                [$rok, $rerr] = $lessonsManager->checkSlot($d, $start, $end);
-                if (!$rok) {
-                    lessons_error($d . ': ' . $rerr);
-                }
-                $extraDates[] = $d;
-            }
-            $extraDates = array_values(array_unique($extraDates));
-        }
-    }
-
-    // Issues 35/51: repeat modes (once | weekly | every 2 weeks | monthly same-date).
-    // UI supplies repeat_until (YYYY-MM); legacy repeat_count still supported.
-    // Unusable generated dates are skipped (reported) instead of failing the save.
-    $repeatMode = strtolower(trim($_POST['repeat_mode'] ?? 'once'));
-    if (!in_array($repeatMode, ['once', 'weekly', 'biweekly', 'monthly'], true)) {
-        $repeatMode = 'once';
-    }
-    $repeatCount = max(0, min(12, (int) ($_POST['repeat_count'] ?? 0)));
     $repeatUntil = trim($_POST['repeat_until'] ?? '');
-    $useUntil = preg_match('/^\d{4}-\d{2}$/', $repeatUntil) === 1;
+    if (preg_match('/^\d{4}-\d{2}$/', $repeatUntil) !== 1) {
+        $repeatUntil = substr($date, 0, 7);
+    }
     $skipped = [];
     $addExtraDate = function (string $d) use (&$extraDates, &$skipped, $date, $start, $end, $lessonsManager): void {
         if ($d === $date || in_array($d, $extraDates, true)) {
@@ -281,61 +253,17 @@ try {
         }
         $extraDates[] = $d;
     };
-    if ($repeatMode !== 'once') {
-        if ($useUntil) {
-            if ($repeatUntil < substr($date, 0, 7)) {
-                lessons_error('Repeat-until month must not be before the lesson month.');
-            }
-            $untilEnd = date('Y-m-t', strtotime($repeatUntil . '-01'));
-            if ($repeatMode === 'monthly') {
-                $baseDay = (int) substr($date, 8, 2);
-                $cursor = DateTime::createFromFormat('Y-m-d', $date);
-                while (count($extraDates) < 24 && $cursor instanceof DateTime) {
-                    $cursor = (clone $cursor)->modify('+1 month');
-                    if ($cursor->format('Y-m-d') > $untilEnd) {
-                        break;
-                    }
-                    if ((int) $cursor->format('j') !== $baseDay) {
-                        $skipped[] = $cursor->format('Y-m') . ' (no such date)';
-                        continue;
-                    }
-                    $addExtraDate($cursor->format('Y-m-d'));
-                }
-            } else {
-                $step = $repeatMode === 'biweekly' ? 14 : 7;
-                $cursor = $date;
-                while (count($extraDates) < 24) {
-                    $cursor = date('Y-m-d', strtotime($cursor . ' +' . $step . ' days'));
-                    if ($cursor > $untilEnd) {
-                        break;
-                    }
-                    $addExtraDate($cursor);
-                }
-            }
-        } elseif ($repeatCount > 0) {
-            $baseDay = (int) substr($date, 8, 2);
-            for ($i = 1; $i <= $repeatCount; $i++) {
-                if ($repeatMode === 'weekly') {
-                    $d = date('Y-m-d', strtotime($date . ' +' . (7 * $i) . ' days'));
-                } elseif ($repeatMode === 'biweekly') {
-                    $d = date('Y-m-d', strtotime($date . ' +' . (14 * $i) . ' days'));
-                } else {
-                    $dt = DateTime::createFromFormat('Y-m-d', $date);
-                    if ($dt === false) {
-                        break;
-                    }
-                    $dt->modify('+' . $i . ' month');
-                    if ((int) $dt->format('j') !== $baseDay) {
-                        $skipped[] = $dt->format('Y-m') . ' (no such date)';
-                        continue;
-                    }
-                    $d = $dt->format('Y-m-d');
-                }
-                $addExtraDate($d);
-            }
-        } else {
-            lessons_error('Choose a repeat-until month, or set repeat back to Just once.');
+    if ($repeatUntil < substr($date, 0, 7)) {
+        lessons_error('Repeat-until month must not be before the lesson month.');
+    }
+    $untilEnd = date('Y-m-t', strtotime($repeatUntil . '-01'));
+    $cursor = $date;
+    while (count($extraDates) < 24) {
+        $cursor = date('Y-m-d', strtotime($cursor . ' +7 days'));
+        if ($cursor > $untilEnd) {
+            break;
         }
+        $addExtraDate($cursor);
     }
 
     // Students + per-student fees.
@@ -393,6 +321,12 @@ try {
     }
 
     $db->beginTransaction();
+    $hasMonthlyFees = false;
+    try {
+        $hasMonthlyFees = $db->query("SHOW TABLES LIKE 'monthly_fees'")->fetchColumn() !== false;
+    } catch (Throwable $e) {
+        $hasMonthlyFees = false;
+    }
     $created = [];
     foreach ($allDates as $d) {
         $lessonId = $lessonsManager->createLesson([
@@ -409,6 +343,16 @@ try {
         ]);
         foreach ($cleanStudents as $sid => $fee) {
             $lessonsManager->addEnrollment($lessonId, $sid, $fee);
+        }
+        // Monthly billing record per student per class (keep existing records untouched).
+        if ($hasMonthlyFees) {
+            $mstmt = $db->prepare(
+                'INSERT IGNORE INTO monthly_fees (student_id, month, recurrence_group, amount, status)
+                 VALUES (:sid, :month, :grp, :amount, \'UNPAID\')'
+            );
+            foreach ($cleanStudents as $sid => $fee) {
+                $mstmt->execute(['sid' => $sid, 'month' => substr($d, 0, 7), 'grp' => (string) ($group ?? ''), 'amount' => $fee]);
+            }
         }
         $created[] = $lessonId;
     }

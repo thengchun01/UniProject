@@ -37,10 +37,10 @@ $teacherFilter = (int) ($_GET['teacher_id'] ?? 0);
 $studentFilter = (int) ($_GET['student_id'] ?? 0);
 $selectedLessonId = (int) ($_GET['lesson_id'] ?? 0);
 
-// ---- issue 29: create-form defaults (next open day, next :00/:30 slot, +1 hour) ----
+// ---- issue 29: create-form defaults (next open day, next :00/:15/:30/:45 slot, +45 min) ----
 $todayYmd = date('Y-m-d');
 $nowMin = (int) date('G') * 60 + (int) date('i');
-$nextSlotToday = (int) (floor($nowMin / 30) + 1) * 30; // strictly next boundary
+$nextSlotToday = (int) (floor($nowMin / 15) + 1) * 15; // strictly next boundary
 $defaultDate = $todayYmd;
 $defaultStartMin = 9 * 60;
 for ($probe = 0; $probe < 8; $probe++) {
@@ -51,18 +51,18 @@ for ($probe = 0; $probe < 8; $probe++) {
     }
     $closeMin = ($probeDow === 6) ? (18 * 60 + 30) : (22 * 60);
     $openStart = ($probe === 0) ? max($nextSlotToday, 9 * 60) : (9 * 60);
-    if ($openStart + 60 <= $closeMin) {
+    if ($openStart + 45 <= $closeMin) {
         $defaultDate = $probeDate;
         $defaultStartMin = $openStart;
         break;
     }
 }
 $defaultStart = sprintf('%02d:%02d', (int) ($defaultStartMin / 60), $defaultStartMin % 60);
-$defaultEndMin = $defaultStartMin + 60;
+$defaultEndMin = $defaultStartMin + 45;
 $defaultEnd = sprintf('%02d:%02d', (int) ($defaultEndMin / 60), $defaultEndMin % 60);
-// half-hour options for the typable time datalist (issue 29)
+// quarter-hour options for the typable time datalist (issue 29)
 $timeOptions = [];
-for ($m = 9 * 60; $m <= 22 * 60; $m += 30) {
+for ($m = 9 * 60; $m <= 22 * 60; $m += 15) {
     $timeOptions[] = sprintf('%02d:%02d', (int) ($m / 60), $m % 60);
 }
 // "Today" shortcut target (issue 29): Monday of the current week (issue 34)
@@ -244,9 +244,9 @@ if ($lessonsAvailable && is_database_connected()) {
     }
 }
 
-// ---- timetable slot rows (30-min, 09:00–22:00) ----
+// ---- timetable slot rows (15-min, 09:00–22:00) ----
 $slotRows = [];
-for ($m = 9 * 60; $m < 22 * 60; $m += 30) {
+for ($m = 9 * 60; $m < 22 * 60; $m += 15) {
     $slotRows[] = $m;
 }
 function sched_min(string $t): int
@@ -316,6 +316,7 @@ $weekGroupIds = array_keys($weekStats['groups']);
 $seriesNames = [];
 $allGroupIds = [];
 $titleVotes = [];
+$seriesFirst = [];
 foreach ($lessons as $l) {
     $g = (string) ($l['recurrence_group'] ?? '');
     if ($g === '') {
@@ -323,6 +324,9 @@ foreach ($lessons as $l) {
     }
     if (!in_array($g, $allGroupIds, true)) {
         $allGroupIds[] = $g;
+    }
+    if (!isset($seriesFirst[$g])) {
+        $seriesFirst[$g] = (int) ($l['lesson_id'] ?? 0);
     }
     $t = trim((string) ($l['title'] ?? ''));
     if ($t !== '') {
@@ -337,35 +341,16 @@ foreach ($allGroupIds as $g) {
         $seriesNames[$g] = 'Series #' . substr($g, 0, 8);
     }
 }
-// Whole-series progress in one query (groups already limited to loaded lessons).
-$groupTotals = [];
-if ($allGroupIds !== [] && $lessonsAvailable && is_database_connected()) {
-    try {
-        $placeholders = implode(',', array_fill(0, count($allGroupIds), '?'));
-        $stmt = db()->prepare(
-            "SELECT recurrence_group, COUNT(*) AS total,
-                    SUM(CASE WHEN status = 'COMPLETED' THEN 1 ELSE 0 END) AS done
-             FROM lessons WHERE recurrence_group IN ($placeholders) GROUP BY recurrence_group"
-        );
-        $stmt->execute($allGroupIds);
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $groupTotals[(string) $row['recurrence_group']] = [
-                'total' => (int) $row['total'],
-                'done' => (int) $row['done'],
-            ];
-        }
-    } catch (Throwable $e) {
-        $groupTotals = [];
-    }
-}
+// Whole-series progress lives in the lesson detail panel; the class table
+// below uses month-scoped commission/payment data instead (see seriesDetails).
 // Series detail roll-up (teacher, commission, per-student fees) in one query.
 $seriesDetails = [];
 if ($allGroupIds !== [] && $lessonsAvailable && is_database_connected()) {
     try {
         $placeholders = implode(',', array_fill(0, count($allGroupIds), '?'));
         $stmt = db()->prepare(
-            "SELECT l.recurrence_group AS g, tu.username AS teacher_name,
-                    l.commission_type, l.commission_value,
+            "SELECT l.recurrence_group AS g, l.teacher_id, tu.username AS teacher_name,
+                    l.commission_type, l.commission_value, l.commission_status,
                     e.student_id, su.username AS student_name,
                     e.fee_amount, e.payment_status
              FROM lessons l
@@ -378,24 +363,31 @@ if ($allGroupIds !== [] && $lessonsAvailable && is_database_connected()) {
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $g = (string) $row['g'];
             if (!isset($seriesDetails[$g])) {
-                $seriesDetails[$g] = ['teachers' => [], 'comm' => [], 'students' => []];
+                $seriesDetails[$g] = ['teachers' => [], 'tids' => [], 'comm' => [], 'pay' => [], 'students' => []];
             }
             $tn = trim((string) ($row['teacher_name'] ?? ''));
             if ($tn !== '') {
                 $seriesDetails[$g]['teachers'][$tn] = ($seriesDetails[$g]['teachers'][$tn] ?? 0) + 1;
+                $seriesDetails[$g]['tids'][$tn] = (int) ($row['teacher_id'] ?? 0);
             }
             $ck = strtoupper(trim((string) ($row['commission_type'] ?? ''))) . '|' . trim((string) ($row['commission_value'] ?? ''));
             $seriesDetails[$g]['comm'][$ck] = ($seriesDetails[$g]['comm'][$ck] ?? 0) + 1;
+            $pcs = strtoupper(trim((string) ($row['commission_status'] ?? '')));
+            if ($pcs !== '') {
+                $seriesDetails[$g]['pay'][$pcs] = ($seriesDetails[$g]['pay'][$pcs] ?? 0) + 1;
+            }
             if ($row['student_id'] !== null) {
                 $sid = (int) $row['student_id'];
                 if (!isset($seriesDetails[$g]['students'][$sid])) {
                     $seriesDetails[$g]['students'][$sid] = [
                         'name' => (string) ($row['student_name'] ?? ('#' . $sid)),
-                        'lessons' => 0, 'total' => 0.0, 'unpaid' => 0,
+                        'lessons' => 0, 'total' => 0.0, 'unpaid' => 0, 'fees' => [],
                     ];
                 }
                 $seriesDetails[$g]['students'][$sid]['lessons']++;
                 $seriesDetails[$g]['students'][$sid]['total'] += (float) ($row['fee_amount'] ?? 0);
+                $feeStr = number_format((float) ($row['fee_amount'] ?? 0), 2, '.', '');
+                $seriesDetails[$g]['students'][$sid]['fees'][$feeStr] = ($seriesDetails[$g]['students'][$sid]['fees'][$feeStr] ?? 0) + 1;
                 if (strtoupper((string) ($row['payment_status'] ?? '')) !== 'PAID') {
                     $seriesDetails[$g]['students'][$sid]['unpaid']++;
                 }
@@ -403,6 +395,22 @@ if ($allGroupIds !== [] && $lessonsAvailable && is_database_connected()) {
         }
     } catch (Throwable $e) {
         $seriesDetails = [];
+    }
+}
+// Frequency source: month lessons independent of grid filters (still
+// role-scoped). Defined before the series loops that consume it.
+$freqLessons = [];
+if ($lessonsAvailable && is_database_connected()) {
+    try {
+        $ff = ['from' => $month . '-01', 'to' => date('Y-m-t', strtotime($month . '-01T12:00:00'))];
+        if ($role === 'TEACHER') {
+            $ff['teacher_id'] = (int) $user['user_id'];
+        } elseif ($role === 'STUDENT') {
+            $ff['student_id'] = (int) $user['user_id'];
+        }
+        $freqLessons = $lessonsManager->listLessons($ff, 'lesson_date', 'ASC', 2000, 0);
+    } catch (Throwable $e) {
+        $freqLessons = [];
     }
 }
 // Per-series month stats: class count + frequency in the calendar month,
@@ -477,12 +485,104 @@ foreach ($allGroupIds as $g) {
         'monthCount' => $monthCount, 'cadence' => $cadence,
     ];
 }
+// Groups active in the month regardless of grid filters (frequency + table
+// stay truthful when a status/teacher filter hides rows).
+foreach ($freqLessons as $l) {
+    $g = (string) ($l['recurrence_group'] ?? '');
+    if ($g !== '' && substr((string) ($l['lesson_date'] ?? ''), 0, 7) === $month && !in_array($g, $monthGroupIds, true)) {
+        $monthGroupIds[] = $g;
+    }
+}
 foreach ($lessons as $l) {
     if ((string) ($l['recurrence_group'] ?? '') === '' && substr((string) ($l['lesson_date'] ?? ''), 0, 7) === $month) {
         $monthOneOffs++;
     }
 }
 $monthLabel = date('F Y', strtotime($month . '-01T12:00:00'));
+
+// Frequency squares use month lessons independent of grid filters (still
+// role-scoped), so filtering never fakes empty weekdays.
+
+// Frequency map: per-series weekday meeting ranges + clash flags.
+// A weekday square is green when the series meets that day with no overlap,
+// red when another displayed series overlaps it, grey otherwise.
+$freqMap = [];
+$freqClash = [];
+foreach ($monthGroupIds as $g) {
+    foreach ($freqLessons as $l) {
+        if ((string) ($l['recurrence_group'] ?? '') !== $g) {
+            continue;
+        }
+        $d = substr((string) ($l['lesson_date'] ?? ''), 0, 10);
+        $dow = (int) date('N', strtotime($d . 'T12:00:00'));
+        $s = substr((string) $l['start_time'], 0, 5);
+        $e = substr((string) $l['end_time'], 0, 5);
+        if (!isset($freqMap[$g][$dow])) {
+            $freqMap[$g][$dow] = ['start' => $s, 'end' => $e];
+        } else {
+            if ($s < $freqMap[$g][$dow]['start']) {
+                $freqMap[$g][$dow]['start'] = $s;
+            }
+            if ($e > $freqMap[$g][$dow]['end']) {
+                $freqMap[$g][$dow]['end'] = $e;
+            }
+        }
+    }
+}
+foreach ($monthGroupIds as $g) {
+    foreach ($monthGroupIds as $h) {
+        if ($h === $g) {
+            continue;
+        }
+        foreach ([1, 2, 3, 4, 5, 6, 7] as $dow) {
+            $a = $freqMap[$g][$dow] ?? null;
+            $b = $freqMap[$h][$dow] ?? null;
+            if ($a !== null && $b !== null && $a['start'] < $b['end'] && $b['start'] < $a['end']) {
+                $freqClash[$g][$dow] = true;
+            }
+        }
+    }
+}
+
+// Monthly fee records for the displayed month (class-table Fee column).
+$monthFees = [];
+if ($lessonsAvailable && is_database_connected()) {
+    try {
+        $stmt = db()->prepare('SELECT student_id, amount, status FROM monthly_fees WHERE month = :m');
+        $stmt->execute(['m' => $month]);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $fr) {
+            $monthFees[(int) $fr['student_id']] = $fr;
+        }
+    } catch (Throwable $e) {
+        $monthFees = [];
+    }
+}
+
+// Series commission due: per-lesson payout on collected fees, summed.
+$commDue = [];
+if ($allGroupIds !== [] && $lessonsAvailable && $lessonsManager !== null && is_database_connected()) {
+    try {
+        $placeholders = implode(',', array_fill(0, count($allGroupIds), '?'));
+        $stmt = db()->prepare(
+            "SELECT l.recurrence_group AS g, l.teacher_id, l.commission_type, l.commission_value,
+                    COALESCE(SUM(e.fee_amount), 0) AS total
+             FROM lessons l LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+             WHERE l.recurrence_group IN ($placeholders) GROUP BY l.lesson_id"
+        );
+        $stmt->execute($allGroupIds);
+        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+            $g = (string) $row['g'];
+            [$ct, $cv] = $lessonsManager->resolveCommission(
+                $row['teacher_id'] !== null ? (int) $row['teacher_id'] : null,
+                $row['commission_type'],
+                $row['commission_value']
+            );
+            $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout($ct, (float) $cv, (float) $row['total']);
+        }
+    } catch (Throwable $e) {
+        $commDue = [];
+    }
+}
 
 // teacher availability map for the create form (admin)
 $availMap = [];
@@ -524,7 +624,7 @@ include __DIR__ . '/includes/header.php';
                 <span class="role-badge role-<?= strtolower($role) ?>"><?= e($role) ?></span>
             </div>
             <p class="sched-subtitle">
-                <?php if ($role === 'ADMIN'): ?>30-min slots · weekday 9am–10pm · Sat 9am–6:30pm · closed Sun. Drag across empty cells to schedule lessons; click any lesson chip for details and fees.<?php endif; ?>
+                <?php if ($role === 'ADMIN'): ?>15-min slots · weekday 9am–10pm · Sat 9am–6:30pm · closed Sun. Drag across empty cells to schedule lessons; click any lesson chip for details and fees.<?php endif; ?>
                 <?php if ($role === 'TEACHER'): ?>Viewing your assigned lessons. Configure your weekly availability below so administrators can avoid clashes.<?php endif; ?>
                 <?php if ($role === 'STUDENT'): ?>Viewing your enrolled lessons and schedule. Request new bookings directly with the administrator.<?php endif; ?>
             </p>
@@ -632,109 +732,229 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div><!-- /.sched-controls-deck -->
 
-    <!-- Classes this month: every series with its frequency, plus one-offs -->
+    <!-- Classes this month: ID, title, teacher, commission, students, frequency, payment -->
     <div class="sched-panel sched-series-panel">
-        <h2>Classes · <?= e($monthLabel) ?></h2>
-        <?php if ($monthGroupIds === [] && $monthOneOffs === 0): ?>
+        <div class="sched-series-head">
+            <h2>Classes · <?= e($monthLabel) ?></h2>
+            <a class="btn secondary-btn" href="#schedCreateForm">＋ New class</a>
+        </div>
+        <?php if ($monthGroupIds === []): ?>
             <p class="sched-empty" style="text-align:left;">No classes this month.</p>
         <?php else: ?>
-            <ul class="sched-series-list">
-                <?php foreach ($monthGroupIds as $si => $g): ?>
+            <div class="sched-table-scroll">
+            <table class="sched-class-table">
+                <thead><tr><th>Class</th><th>Title</th><th>Teacher</th><th>Commission</th><th>Students</th><th>Fee (RM/month)</th><th>Frequency</th><th>Edit</th></tr></thead>
+                <tbody>
+                <?php foreach ($monthGroupIds as $g): ?>
                     <?php
-                    $gt = $groupTotals[$g] ?? ['total' => 0, 'done' => 0];
-                    $gpct = $gt['total'] > 0 ? (int) round($gt['done'] / $gt['total'] * 100) : 0;
-                    $gm = $seriesMeta[$g] ?? ['slot' => '', 'jumpMonday' => null, 'jumpMonth' => null, 'monthCount' => 0, 'cadence' => ''];
-                    $jumpQs = $gm['jumpMonday'] !== null ? sched_qs(['month' => $gm['jumpMonth'], 'week' => $gm['jumpMonday'], 'lesson_id' => '']) : '';
-                    $gd = $seriesDetails[$g] ?? ['teachers' => [], 'comm' => [], 'students' => []];
+                    $gd = $seriesDetails[$g] ?? ['teachers' => [], 'tids' => [], 'comm' => [], 'pay' => [], 'students' => []];
                     $teacherLabel = 'Unassigned';
+                    $teacherIdNow = 0;
                     if ($gd['teachers'] !== []) {
                         arsort($gd['teachers']);
-                        $teacherLabel = (string) array_key_first($gd['teachers']);
+                        $topTeacher = (string) array_key_first($gd['teachers']);
+                        $teacherIdNow = (int) (($gd['tids'] ?? [])[$topTeacher] ?? 0);
+                        $teacherLabel = $topTeacher;
                         $teacherExtra = count($gd['teachers']) - 1;
                         if ($teacherExtra > 0) {
                             $teacherLabel .= ' +' . $teacherExtra;
                         }
                     }
+                    $rangeList = [];
+                    foreach ($freqMap[$g] ?? [] as $rdow => $rr) {
+                        $rangeList[] = ['dow' => $rdow, 'start' => $rr['start'], 'end' => $rr['end']];
+                    }
+                    $rangesJson = json_encode($rangeList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                     $commLabel = 'Default';
+                    $commParts = ['', ''];
                     if ($gd['comm'] !== []) {
                         arsort($gd['comm']);
                         $commParts = explode('|', (string) array_key_first($gd['comm']), 2);
                         $commLabel = sched_comm_label($commParts[0] ?? '', $commParts[1] ?? '');
                     }
+                    $payLabel = 'Unpaid';
+                    $payCls = 'is-bad';
+                    if ($gd['pay'] !== []) {
+                        arsort($gd['pay']);
+                        $payTop = (string) array_key_first($gd['pay']);
+                        if ($payTop === 'PAID') {
+                            $payLabel = 'Paid';
+                            $payCls = 'is-ok';
+                        } elseif ($payTop === 'PENDING') {
+                            $payLabel = 'Pending';
+                            $payCls = 'is-warn';
+                        }
+                    }
                     $studentList = $gd['students'];
                     uasort($studentList, function ($a, $b) { return strcmp((string) $a['name'], (string) $b['name']); });
-                    $studentCount = count($studentList);
-                    $freqLabel = ((int) $gm['monthCount']) . ' lesson' . ((int) $gm['monthCount'] === 1 ? '' : 's');
-                    if ($gm['cadence'] !== '') {
-                        $freqLabel .= ' · ' . $gm['cadence'];
+                    $studUnpaid = 0;
+                    foreach ($studentList as $stRow) {
+                        $studUnpaid += (int) $stRow['unpaid'];
                     }
-                    $freqLabel .= ' · ' . $studentCount . ' student' . ($studentCount === 1 ? '' : 's');
                     ?>
-                    <li class="sched-series-row">
-                        <div class="sched-series-main">
-                            <strong><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></strong>
-                            <span class="sched-series-hash">#<?= e(substr($g, 0, 8)) ?></span>
-                            <?php if ($gm['slot'] !== ''): ?><span class="sched-series-slot"><?= e($gm['slot']) ?></span><?php endif; ?>
-                        </div>
-                        <span class="sched-series-freq"><?= e($freqLabel) ?></span>
-                        <span class="sched-series-teacher">by <?= e($teacherLabel) ?></span>
-                        <div class="sched-series-prog">
-                            <div class="sched-series-track"><div class="sched-series-fill" style="width:<?= $gpct ?>%;"></div></div>
-                            <span><?= (int) $gt['done'] ?>/<?= (int) $gt['total'] ?></span>
-                        </div>
-                        <?php if ($jumpQs !== ''): ?>
-                            <a class="btn secondary-btn sched-series-jump" href="<?= e(url_path('schedule.php?' . $jumpQs) . '#schedGrid') ?>">Jump to</a>
-                        <?php endif; ?>
-                        <button type="button" class="sched-series-toggle" aria-expanded="false" aria-controls="sched-series-body-<?= (int) $si ?>">Details <span class="sched-series-arrow" aria-hidden="true">▾</span></button>
-                        <div class="sched-series-body" id="sched-series-body-<?= (int) $si ?>" hidden>
-                            <dl class="sched-series-facts">
-                                <div><dt>Teacher</dt><dd><?= e($teacherLabel) ?></dd></div>
-                                <div><dt>Commission</dt><dd><?= e($commLabel) ?></dd></div>
-                                <div><dt>Students</dt><dd><?= $studentCount ?></dd></div>
-                            </dl>
+                    <tr>
+                        <td><span class="sched-series-hash">#<?= e(substr($g, 0, 8)) ?></span></td>
+                        <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-title="<?= e($g) ?>" data-name="<?= e($seriesNames[$g] ?? '') ?>"><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></button><?php else: ?><strong><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></strong><?php endif; ?></td>
+                        <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-teacher="<?= e($g) ?>" data-teacher="<?= (int) $teacherIdNow ?>" data-ranges="<?= e($rangesJson) ?>"><?= e($teacherLabel) ?></button><?php else: ?><?= e($teacherLabel) ?><?php endif; ?></td>
+                        <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-commshow="<?= e($g) ?>" title="<?= e($commLabel) ?>">RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?></button><?php else: ?>RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?><?php endif; ?></td>
+                        <td>
                             <?php if ($studentList === []): ?>
-                                <p class="sched-empty" style="text-align:left;">No students enrolled.</p>
+                                <span class="sched-empty">—</span>
+                            <?php elseif ($role === 'ADMIN'): ?>
+                                <?php foreach ($studentList as $stSid => $stRow): ?>
+                                    <?php $mf = $monthFees[(int) $stSid] ?? null; ?>
+                                    <span class="stud-fee"><?= e($stRow['name']) ?></span>
+                                <?php endforeach; ?>
                             <?php else: ?>
-                                <table class="sched-series-students">
-                                    <thead><tr><th>Student</th><th>Lessons</th><th>Total fee</th><th>Status</th></tr></thead>
-                                    <tbody>
-                                        <?php foreach ($studentList as $st): ?>
-                                            <tr>
-                                                <td><?= e($st['name']) ?></td>
-                                                <td><?= (int) $st['lessons'] ?></td>
-                                                <td>RM <?= e(number_format((float) $st['total'], 2)) ?></td>
-                                                <td><?= ((int) $st['unpaid'] > 0 ? '<span class="sched-pill is-warn">' . (int) $st['unpaid'] . ' unpaid</span>' : '<span class="sched-pill is-ok">Paid</span>') ?></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                                <?php foreach ($studentList as $stRow): ?>
+                                    <span class="stud-fee"><?= e($stRow['name']) ?></span>
+                                <?php endforeach; ?>
                             <?php endif; ?>
-                        </div>
-                    </li>
+                            <?php if ($role === 'ADMIN'): ?><button type="button" class="sched-link-btn" data-series-students="<?= e($g) ?>" style="margin-top:6px;">Manage</button><?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($studentList === []): ?>
+                                <span class="sched-empty">—</span>
+                            <?php elseif ($role === 'ADMIN'): ?>
+                                <?php foreach ($studentList as $stSid => $stRow): ?>
+                                    <?php $mf = $monthFees[(int) $stSid] ?? null; ?>
+                                    <input type="number" class="fee-input" min="0" step="0.01" value="<?= e($mf !== null ? number_format((float) $mf['amount'], 2, '.', '') : '') ?>" placeholder="0.00" aria-label="Monthly fee in RM for <?= e($stRow['name']) ?>" data-mfee data-month="<?= e($month) ?>" data-sid="<?= (int) $stSid ?>" data-status="<?= e($mf['status'] ?? 'UNPAID') ?>">
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <?php foreach ($studentList as $stSid => $stRow): ?>
+                                    <?php $mf = $monthFees[(int) $stSid] ?? null; ?>
+                                    <span class="stud-fee"><?= $mf !== null ? 'RM ' . e(number_format((float) $mf['amount'], 2)) . ' · ' . e($mf['status']) : '—' ?></span>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="sched-freq" role="img" aria-label="Weekly meeting days">
+                            <?php foreach ([1, 2, 3, 4, 5, 6, 7] as $fdow): ?>
+                                <?php
+                                $fcell = $freqMap[$g][$fdow] ?? null;
+                                $fcls = '';
+                                $ftitle = $weekdayNames[$fdow] . ' — no class';
+                                if ($fcell !== null) {
+                                    $fcls = isset($freqClash[$g][$fdow]) ? 'is-clash' : 'is-on';
+                                    $ftitle = $weekdayNames[$fdow] . ' ' . $fcell['start'] . '–' . $fcell['end'] . (isset($freqClash[$g][$fdow]) ? ' (clash!)' : '');
+                                }
+                                ?>
+                                <span class="<?= $fcls ?>" title="<?= e($ftitle) ?>"></span>
+                            <?php endforeach; ?>
+                            </span>
+                        </td>
+                        <td>
+                            <?php $firstId = $seriesFirst[$g] ?? 0; ?>
+                            <?php if ($firstId > 0): ?>
+                                <a class="series-btn" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => $firstId])) . '#schedEditForm') ?>">Edit</a>
+                            <?php else: ?>
+                                <span class="sched-empty">—</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
                 <?php endforeach; ?>
-                <?php if ($monthOneOffs > 0): ?>
-                    <li class="sched-series-row is-oneoff">
-                        <div class="sched-series-main">
-                            <strong>One-off lessons</strong>
-                        </div>
-                        <span class="sched-series-freq"><?= (int) $monthOneOffs ?> lesson<?= $monthOneOffs === 1 ? '' : 's' ?></span>
-                    </li>
-                <?php endif; ?>
-            </ul>
+                </tbody>
+            </table>
+            </div>
         <?php endif; ?>
     </div>
+
+    <dialog class="sched-dialog sched-dialog-wide" id="seriesTeacherDialog" aria-labelledby="seriesTeacherTitle">
+        <div class="sched-edit-head">
+            <h2 id="seriesTeacherTitle">Assign teacher</h2>
+            <button type="button" class="sched-x-btn" data-series-close aria-label="Close">×</button>
+        </div>
+        <p class="sched-dialog-sub" id="seriesTeacherSub"></p>
+        <table class="sched-pick-table">
+            <thead><tr><th>ID</th><th>Teacher</th><th>Commission</th><th>Availability</th><th></th></tr></thead>
+            <tbody id="seriesTeacherRows"></tbody>
+        </table>
+        <p style="margin:12px 0 4px;"><button type="button" class="secondary-btn" id="seriesNewTeacherToggle" style="font-size:13px;">＋ New teacher account</button></p>
+        <div id="seriesNewTeacherBox" hidden>
+            <div id="seriesNewTeacherMsg" class="alert" style="display:none;"></div>
+            <div class="form-field"><label>Username<input type="text" id="seriesNewTeacherUsername" maxlength="100" autocomplete="off"></label></div>
+            <div class="form-field"><label>Email (optional)<input type="email" id="seriesNewTeacherEmail" maxlength="100" autocomplete="off"></label></div>
+            <div class="form-field"><label>Password (min 6 characters)<input type="password" id="seriesNewTeacherPassword" autocomplete="new-password"></label></div>
+            <button type="button" class="secondary-btn" id="seriesNewTeacherCreate" style="width:100%;">Create teacher</button>
+        </div>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-series-close>Close</button>
+        </div>
+    </dialog>
+
+    <dialog class="sched-dialog sched-dialog-wide" id="seriesStudentDialog" aria-labelledby="seriesStudentTitle">
+        <div class="sched-edit-head">
+            <h2 id="seriesStudentTitle">Manage students</h2>
+            <button type="button" class="sched-x-btn" data-series-close aria-label="Close">×</button>
+        </div>
+        <p class="sched-dialog-sub" id="seriesStudentSub"></p>
+        <div class="form-field"><label>Filter students<input type="search" id="seriesStudentFilter" placeholder="Type a name…" autocomplete="off"></label></div>
+        <table class="sched-pick-table">
+            <thead><tr><th>ID</th><th>Student</th><th>Fee (RM)</th><th></th></tr></thead>
+            <tbody id="seriesStudentRows"></tbody>
+        </table>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-series-close>Close</button>
+        </div>
+    </dialog>
+
+    <dialog class="sched-dialog sched-dialog-wide" id="createTeacherDialog" aria-labelledby="createTeacherTitle">
+        <div class="sched-edit-head">
+            <h2 id="createTeacherTitle">Pick teacher</h2>
+            <button type="button" class="sched-x-btn" data-series-close aria-label="Close">×</button>
+        </div>
+        <p class="sched-dialog-sub">Coverage is checked against the picked date and time.</p>
+        <table class="sched-pick-table">
+            <thead><tr><th>ID</th><th>Teacher</th><th>Commission</th><th>Availability</th><th></th></tr></thead>
+            <tbody id="createTeacherRows"></tbody>
+        </table>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-series-close>Close</button>
+        </div>
+    </dialog>
+
+    <dialog class="sched-dialog sched-dialog-wide" id="createStudentDialog" aria-labelledby="createStudentTitle">
+        <div class="sched-edit-head">
+            <h2 id="createStudentTitle">Add students</h2>
+            <button type="button" class="sched-x-btn" data-series-close aria-label="Close">×</button>
+        </div>
+        <div class="form-field"><label>Filter students<input type="search" id="createStudentFilter" placeholder="Type a name…" autocomplete="off"></label></div>
+        <table class="sched-pick-table">
+            <thead><tr><th>ID</th><th>Student</th><th>Fee (RM/month)</th><th></th></tr></thead>
+            <tbody id="createStudentRows"></tbody>
+        </table>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-series-close>Close</button>
+        </div>
+    </dialog>
+
+    <dialog class="sched-dialog" id="seriesCommDialog" aria-labelledby="seriesCommTitle">
+        <div class="sched-edit-head">
+            <h2 id="seriesCommTitle">Edit commission</h2>
+            <button type="button" class="sched-x-btn" data-series-close aria-label="Close">×</button>
+        </div>
+        <p class="sched-dialog-sub" id="seriesCommSub"></p>
+        <div class="form-field"><label>Type<select id="seriesCommType">
+            <option value="">Default</option>
+            <option value="PERCENT">Percent %</option>
+            <option value="FIXED">Fixed RM</option>
+        </select></label></div>
+        <div class="form-field"><label>Value<input type="number" id="seriesCommValue" min="0" step="0.01" placeholder="blank = default"></label></div>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-series-close>Cancel</button>
+            <button type="button" class="primary-btn" id="seriesCommSave">Save</button>
+        </div>
+    </dialog>
 
     <!-- Main Stage: Weekly Timetable -->
     <div class="sched-panel sched-main-stage" id="schedGrid" role="region" aria-label="Weekly timetable">
         <div class="sched-stage-header">
             <div class="sched-week-nav">
-                <a class="btn secondary-btn" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => substr($prevWeekMonday, 0, 7), 'week' => $prevWeekMonday, 'lesson_id' => ''])) . '#schedGrid') ?>" title="Previous week">‹ Prev Week</a>
-                <div class="sched-week-title">
+                <div class="sched-week-title" title="Pick a week from the month calendar above">
                     <span class="sched-week-icon" aria-hidden="true">📅</span>
                     <strong>Week of <?= e($weekLabel) ?></strong>
                     <span class="sched-week-chip">Week <?= $weekOfMonth ?> of <?= e($weekOfMonthName) ?></span>
                 </div>
-                <a class="btn secondary-btn" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => substr($nextWeekMonday, 0, 7), 'week' => $nextWeekMonday, 'lesson_id' => ''])) . '#schedGrid') ?>" title="Next week">Next Week ›</a>
             </div>
             <div class="sched-view-switcher" role="group" aria-label="Timetable view layout">
                 <button type="button" class="sched-view-btn active" id="schedViewBtnH" data-view="horizontal">
@@ -766,7 +986,8 @@ include __DIR__ . '/includes/header.php';
                             <th class="sched-h-corner">Day / Time</th>
                             <?php foreach ($slotRows as $slotMin): ?>
                                 <?php $slotLabel = sprintf('%02d:%02d', (int) ($slotMin / 60), $slotMin % 60); ?>
-                                <th class="sched-h-time-head"><?= e($slotLabel) ?></th>
+                                <?php $isHour = ($slotMin % 60 === 0); ?>
+                                <th class="sched-h-time-head<?= $isHour ? ' is-hour' : '' ?>"><?= $isHour ? e($slotLabel) : '' ?></th>
                             <?php endforeach; ?>
                         </tr>
                     </thead>
@@ -787,7 +1008,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php foreach ($slotRows as $slotMin): ?>
                                     <?php
                                     $slotLabel = sprintf('%02d:%02d', (int) ($slotMin / 60), $slotMin % 60);
-                                    $slotEnd = $slotMin + 30;
+                                    $slotEnd = $slotMin + 15;
                                     $isSatLate = ($day['dow'] === 6 && $slotMin >= 18 * 60 + 30);
                                     $isSunday = ($day['dow'] === 7);
                                     $cellLessons = [];
@@ -918,123 +1139,7 @@ include __DIR__ . '/includes/header.php';
     <!-- Lower Workspace: Details & Editor -->
     <div class="sched-workspace-grid">
         <!-- Left: Lesson Details Panel -->
-        <div class="sched-panel sched-detail-panel" id="schedDetailPanel">
-            <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
-                <h2 style="margin:0;">Lesson Details</h2>
-                <?php if ($selectedLesson !== null): ?>
-                    <a href="<?= e(url_path('transactions.php?lesson_id=' . (int) $selectedLesson['lesson_id'])) ?>" class="sched-txn-btn" style="padding:5px 12px;font-size:12.5px;">
-                        <span aria-hidden="true">💳</span> View Lesson in Transactions
-                    </a>
-                <?php endif; ?>
-            </div>
-
-            <?php if ($selectedLesson === null): ?>
-                <p style="color:var(--text-muted,#666);font-size:13.5px;">Select any lesson chip in the timetable above to view student enrollments, fees, payment statuses, and teacher commission.</p>
-            <?php else: ?>
-                <?php
-                $sl = $selectedLesson;
-                $payout = $lessonsManager !== null
-                    ? $lessonsManager->commissionPayout($resolvedCommission[0], (float) $resolvedCommission[1], (float) ($selectedTotals['total_fee'] ?? 0))
-                    : 0.0;
-                $glFirst = $groupSummary[0] ?? null;
-                $glNext = null;
-                foreach ($groupSummary as $gs) {
-                    if ($gs['status'] === 'SCHEDULED' && strtotime($gs['lesson_date'] . ' ' . $gs['end_time']) >= time()) {
-                        $glNext = $gs;
-                        break;
-                    }
-                }
-                ?>
-                <table class="sched-detail-table">
-                    <tbody>
-                        <tr><th>Lesson</th><td><strong><?= e($sl['title'] !== null && $sl['title'] !== '' ? $sl['title'] : 'Lesson') ?></strong> <span class="role-badge role-student"><?= e($sl['status']) ?></span></td></tr>
-                        <tr><th>Date</th><td><?= e(substr((string) $sl['lesson_date'], 0, 10)) ?> · <?= e(substr((string) $sl['start_time'], 0, 5)) ?>–<?= e(substr((string) $sl['end_time'], 0, 5)) ?></td></tr>
-                        <tr><th>Teacher</th><td><?= !empty($sl['teacher_name']) ? e($sl['teacher_name']) : 'Unassigned' ?></td></tr>
-                        <tr><th>Fees</th><td><?= (int) ($selectedTotals['student_count'] ?? 0) ?> student(s) · Total RM <?= e(number_format((float) ($selectedTotals['total_fee'] ?? 0), 2)) ?> · Paid RM <?= e(number_format((float) ($selectedTotals['paid_total'] ?? 0), 2)) ?> · Unpaid <?= (int) ($selectedTotals['unpaid_count'] ?? 0) ?></td></tr>
-                        <tr><th>Comm.</th><td><?= e($resolvedCommission[0]) ?> <?= e(number_format((float) $resolvedCommission[1], 2)) ?> → RM <?= e(number_format($payout, 2)) ?> (<?= e($sl['commission_status']) ?>)</td></tr>
-                        <?php if (!empty($groupSummary)): ?>
-                        <tr><th>Series</th><td>#<?= e(substr((string) $sl['recurrence_group'], 0, 8)) ?> · <?= count($groupSummary) ?> lessons · First <?= $glFirst ? e(substr((string) $glFirst['lesson_date'], 0, 10)) : '—' ?> · Next <?= $glNext ? e(substr((string) $glNext['lesson_date'], 0, 10)) : '—' ?></td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-
-                <?php if (!empty($groupSummary)): ?>
-                <table class="sched-detail-table sched-series-table">
-                    <thead><tr><th>Date</th><th>Time</th><th>Students</th><th>Fee</th><th>Paid</th><th>Status</th></tr></thead>
-                    <tbody>
-                        <?php foreach ($groupSummary as $gs): ?>
-                            <?php
-                            $gsDow = (int) date('N', strtotime($gs['lesson_date'] . 'T12:00:00'));
-                            $gsMon = date('Y-m-d', strtotime($gs['lesson_date'] . ' -' . ($gsDow - 1) . ' days'));
-                            $gsUrl = url_path('schedule.php?' . sched_qs(['month' => substr((string) $gs['lesson_date'], 0, 7), 'week' => $gsMon, 'lesson_id' => (int) $gs['lesson_id']])) . '#schedGrid';
-                            ?>
-                            <?php $gsCls = trim(((int) $gs['lesson_id'] === (int) $sl['lesson_id'] ? 'is-this ' : '') . ((int) $gs['student_count'] === 0 ? 'is-empty' : '')); ?>
-                            <tr data-href="<?= e($gsUrl) ?>"<?= $gsCls !== '' ? ' class="' . $gsCls . '"' : '' ?>>
-                                <td><a href="<?= e($gsUrl) ?>"><?= e(substr((string) $gs['lesson_date'], 0, 10)) ?></a></td>
-                                <td><?= e(substr((string) $gs['start_time'], 0, 5)) ?>–<?= e(substr((string) $gs['end_time'], 0, 5)) ?></td>
-                                <td><?= $gs['student_names'] !== null && $gs['student_names'] !== '' ? e($gs['student_names']) : '—' ?></td>
-                                <?php if ($role === 'ADMIN'): ?>
-                                <td class="sched-editable" data-lesson-fee="<?= (int) $gs['lesson_id'] ?>" data-fee="<?= e(number_format((float) $gs['total_fee'] / max(1, (int) $gs['student_count']), 2, '.', '')) ?>" data-count="<?= (int) $gs['student_count'] ?>" title="Click to set fee"><?= e(number_format((float) $gs['total_fee'], 2)) ?></td>
-                                <?php else: ?>
-                                <td><?= e(number_format((float) $gs['total_fee'], 2)) ?></td>
-                                <?php endif; ?>
-                                <td><?= (int) $gs['paid_count'] ?>/<?= (int) $gs['student_count'] ?></td>
-                                <?php if ($role === 'ADMIN'): ?>
-                                <td class="sched-editable" data-lesson-status="<?= (int) $gs['lesson_id'] ?>" data-status="<?= e($gs['status']) ?>" title="Click to change status"><?= e($gs['status']) ?></td>
-                                <?php else: ?>
-                                <td><?= e($gs['status']) ?></td>
-                                <?php endif; ?>
-                            </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-                <?php if ($role === 'ADMIN'): ?>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;">
-                    <button type="button" class="btn-outline-danger" data-del-lesson>Delete lesson</button>
-                    <button type="button" class="btn-outline-danger" id="schedDeleteSeriesBtn">Delete entire series (<?= count($groupSummary) ?>)</button>
-                </div>
-                <?php endif; ?>
-                <?php endif; ?>
-
-                <h3 class="sched-detail-sub" style="margin-top:18px;">Students &amp; Payments</h3>
-                <div class="table-wrapper" style="margin-top:8px;">
-                    <table class="data-table modern-table sched-sortable">
-                        <thead><tr><th class="sortable" data-sortkey="name">Student <span class="sort-arrow">↕</span></th><th class="sortable" data-sortkey="fee">Fee (RM) <span class="sort-arrow">↕</span></th><th class="sortable" data-sortkey="pay">Payment <span class="sort-arrow">↕</span></th><?php if ($role === 'ADMIN'): ?><th>Actions</th><?php endif; ?></tr></thead>
-                        <tbody>
-                            <?php if (empty($selectedEnrollments)): ?>
-                                <tr><td colspan="<?= $role === 'ADMIN' ? 4 : 3 ?>" style="text-align:center;color:var(--text-muted,#666);">No students enrolled yet.</td></tr>
-                            <?php else: ?>
-                                <?php foreach ($selectedEnrollments as $en): ?>
-                                    <tr data-name="<?= e(strtolower($en['student_name'])) ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>" data-pay="<?= e($en['payment_status']) ?>">
-                                        <td><a href="<?= e(url_path('transactions.php?student_id=' . (int) $en['student_id'])) ?>" title="All transactions for this student"><?= e($en['student_name']) ?></a></td>
-                                        <?php if ($role === 'ADMIN'): ?>
-                                        <td class="sched-editable" data-enroll-fee-cell="<?= (int) $en['enrollment_id'] ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>" title="Click to edit fee"><?= e(number_format((float) $en['fee_amount'], 2)) ?></td>
-                                        <td><?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></td>
-                                        <td>
-                                            <a class="action-btn view-btn" href="<?= e(url_path('transactions.php?lesson_id=' . (int) $sl['lesson_id'])) ?>" title="Manage payment in Transactions">Pay</a>
-                                            <button type="button" class="action-btn delete-btn" data-enroll-remove="<?= (int) $en['enrollment_id'] ?>">Remove</button>
-                                        </td>
-                                        <?php else: ?>
-                                        <td><?= e(number_format((float) $en['fee_amount'], 2)) ?></td>
-                                        <td><?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></td>
-                                        <?php endif; ?>
-                                    </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-                <?php if ($role === 'ADMIN'): ?>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
-                    <button type="button" class="secondary-btn" id="schedAddStudentBtn">＋ Add Student</button>
-                    <?php if (empty($groupSummary)): ?>
-                    <button type="button" class="btn-outline-danger" data-del-lesson>Delete lesson</button>
-                    <?php endif; ?>
-                </div>
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
-
+        <!-- Lesson Details removed (item 102): the Classes table substitutes it. Edit via the form deck. -->
         <!-- Right: Form Deck / Actions -->
         <div class="sched-panel sched-side">
             <?php if ($role === 'ADMIN'): ?>
@@ -1053,50 +1158,68 @@ include __DIR__ . '/includes/header.php';
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
                         <div class="form-field"><label>Title (optional)<input type="text" name="title" maxlength="200" value="<?= e($selectedLesson['title'] ?? '') ?>"></label></div>
-                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedEditDate" data-date-picker data-disable-sunday="1" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label><div class="sched-date-day" id="schedEditDateDay"><?= e(date('D, j M Y', strtotime(substr((string) $selectedLesson['lesson_date'], 0, 10) . 'T12:00:00'))) ?></div></div>
+                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedEditDate" data-date-picker data-disable-sunday="1" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label>
+                            <div class="sched-day-pick" data-daypick-for="schedEditDate" role="group" aria-label="Pick weekday">
+                                <button type="button" class="sched-day-sq" data-dow="1" aria-pressed="false" title="Monday">M</button>
+                                <button type="button" class="sched-day-sq" data-dow="2" aria-pressed="false" title="Tuesday">T</button>
+                                <button type="button" class="sched-day-sq" data-dow="3" aria-pressed="false" title="Wednesday">W</button>
+                                <button type="button" class="sched-day-sq" data-dow="4" aria-pressed="false" title="Thursday">T</button>
+                                <button type="button" class="sched-day-sq" data-dow="5" aria-pressed="false" title="Friday">F</button>
+                                <button type="button" class="sched-day-sq" data-dow="6" aria-pressed="false" title="Saturday">S</button>
+                                <button type="button" class="sched-day-sq is-sun" disabled title="Sunday — closed">S</button>
+                            </div>
+                            <div class="sched-date-day" id="schedEditDateDay"><?= e(date('D, j M Y', strtotime(substr((string) $selectedLesson['lesson_date'], 0, 10) . 'T12:00:00'))) ?></div>
+                        </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-field"><label>Start (HH:MM)<input type="text" name="start_time" id="schedEditStart" value="<?= e(substr((string) $selectedLesson['start_time'], 0, 5)) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
                             <div class="form-field"><label>End (HH:MM)<input type="text" name="end_time" id="schedEditEnd" value="<?= e(substr((string) $selectedLesson['end_time'], 0, 5)) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
                         </div>
-                        <div class="form-field"><label>Status
-                            <select name="status">
-                                <?php foreach (['SCHEDULED', 'COMPLETED', 'CANCELLED'] as $st): ?>
-                                    <option value="<?= $st ?>" <?= $selectedLesson['status'] === $st ? 'selected' : '' ?>><?= $st ?></option>
-                                <?php endforeach; ?>
-                            </select></label></div>
                     </fieldset>
                     <fieldset class="sched-group">
                         <legend>Teacher &amp; Commission</legend>
-                        <div class="form-field"><label>Teacher
-                            <select name="teacher_id" required>
-                                <option value="" <?= $selectedLesson['teacher_id'] === null ? 'selected' : '' ?>>— Unassigned —</option>
-                                <?php foreach ($teachers as $t): ?>
-                                    <option value="<?= (int) $t['user_id'] ?>" <?= (int) $selectedLesson['teacher_id'] === (int) $t['user_id'] ? 'selected' : '' ?>><?= e($t['username']) ?></option>
-                                <?php endforeach; ?>
-                            </select></label></div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <?php if (empty($teachers)): ?>
+                            <span class="sched-empty">No teachers yet — create accounts in Admin → Manage Users first.</span>
+                        <?php else: ?>
+                            <div class="sched-field-head">
+                                <span class="sched-field-title">Assigned teacher</span>
+                                <button type="button" class="secondary-btn" id="schedEditPickTeacherBtn">Pick teacher</button>
+                            </div>
+                            <div id="schedPickedTeacher" class="sched-picked-single">
+                                <span class="sched-empty" id="schedPickedTeacherLabel"><?= e($selectedTeacherName ?? 'Unassigned') ?></span>
+                                <input type="hidden" name="teacher_id" id="schedPickedTeacherId" value="<?= (int) $selectedLesson['teacher_id'] ?>">
+                                <input type="hidden" id="schedPickedTeacherName" value="<?= e($selectedTeacherName ?? '') ?>">
+                            </div>
+                        <?php endif; ?>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
                             <div class="form-field"><label>Commission<select name="commission_type"><option value="">Default</option><option value="PERCENT" <?= $selectedLesson['commission_type'] === 'PERCENT' ? 'selected' : '' ?>>Percent %</option><option value="FIXED" <?= $selectedLesson['commission_type'] === 'FIXED' ? 'selected' : '' ?>>Fixed RM</option></select></label></div>
                             <div class="form-field"><label>Value<input type="number" name="commission_value" min="0" step="0.01" value="<?= e($selectedLesson['commission_value'] !== null ? number_format((float) $selectedLesson['commission_value'], 2, '.', '') : '') ?>" placeholder="blank = default"></label></div>
                         </div>
                     </fieldset>
                     <fieldset class="sched-group">
                         <legend>Students (<?= count($selectedEnrollments) ?>)</legend>
-                        <?php if (empty($selectedEnrollments)): ?>
-                            <span class="sched-empty">No students enrolled yet.</span>
+                        <?php if (empty($students)): ?>
+                            <span class="sched-empty">No students yet — create accounts in Admin → Manage Users first.</span>
                         <?php else: ?>
-                            <div class="sched-detail-list">
-                                <?php foreach ($selectedEnrollments as $en): ?>
-                                    <div class="sched-student-row">
-                                        <span><?= e($en['student_name']) ?> · RM <?= e(number_format((float) $en['fee_amount'], 2)) ?> · <?= e($en['payment_status']) ?><?= !empty($en['proof_path']) ? ' · <a href="' . e(url_path($en['proof_path'])) . '" target="_blank" rel="noopener">proof</a>' : '' ?></span>
-                                        <span class="sched-row-actions">
-                                            <button type="button" class="action-btn edit-btn" data-enroll-fee="<?= (int) $en['enrollment_id'] ?>" data-fee="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>">Fee</button>
-                                            <button type="button" class="action-btn delete-btn" data-enroll-remove="<?= (int) $en['enrollment_id'] ?>">Remove</button>
-                                        </span>
-                                    </div>
-                                <?php endforeach; ?>
+                            <table class="data-table modern-table" style="margin:0 0 8px;" aria-label="Currently enrolled students">
+                                <thead><tr><th>ID</th><th>Name</th><th>Fee (RM/month)</th><th>Status</th><th></th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($selectedEnrollments as $en): ?>
+                                    <tr data-enroll-id="<?= (int) $en['enrollment_id'] ?>">
+                                        <td><?= e($en['student_id']) ?></td>
+                                        <td><?= e($en['student_name']) ?></td>
+                                        <td>RM <?= e(number_format((float) $en['fee_amount'], 2)) ?></td>
+                                        <td><?= e($en['payment_status']) ?></td>
+                                        <td><button type="button" class="action-btn delete-btn" data-enroll-remove="<?= (int) $en['enrollment_id'] ?>">Remove</button></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                            <div class="sched-field-head">
+                                <span class="sched-count" id="schedEditAddCount">Add new student(s)</span>
+                                <button type="button" class="secondary-btn" id="schedEditAddStudentBtn">＋ Add student</button>
                             </div>
+                            <p style="color:var(--text-muted,#666);font-size:13px;margin:0;">Click the button above to pick from the available student list.</p>
                         <?php endif; ?>
-                        <button type="button" class="secondary-btn" id="schedEditAddStudentBtn" style="margin-top:8px;">＋ Add Student</button>
                     </fieldset>
                     <button type="submit" class="primary-btn" style="width:100%;">Save Changes</button>
                 </form>
@@ -1119,13 +1242,7 @@ include __DIR__ . '/includes/header.php';
                             <input type="hidden" name="student_ids[]" value="<?= (int) $en['student_id'] ?>">
                             <input type="hidden" name="fees[<?= (int) $en['student_id'] ?>]" value="<?= e(number_format((float) $en['fee_amount'], 2, '.', '')) ?>">
                         <?php endforeach; ?>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                            <div class="form-field"><label>Repeat<select name="repeat_mode">
-                                <option value="weekly">Every week</option>
-                                <option value="biweekly">Every 2 weeks</option>
-                            </select></label></div>
-                            <div class="form-field"><label>Until month<input type="text" name="repeat_until" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 7)) ?>" placeholder="YYYY-MM" pattern="^\d{4}-\d{2}$" maxlength="7" inputmode="numeric" autocomplete="off" title="Month as YYYY-MM"></label></div>
-                        </div>
+                        <div class="form-field"><label>Repeat every week until month<input type="text" name="repeat_until" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 7)) ?>" placeholder="YYYY-MM" pattern="^\d{4}-\d{2}$" maxlength="7" inputmode="numeric" autocomplete="off" title="Month as YYYY-MM"></label></div>
                         <button type="submit" class="secondary-btn" style="width:100%;">Create repeats as new scheduled lessons</button>
                     </form>
                 </fieldset>
@@ -1136,8 +1253,32 @@ include __DIR__ . '/includes/header.php';
                 <form id="schedCreateForm">
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
-                        <div class="form-field"><label>Title (optional)<input type="text" name="title" maxlength="200" placeholder="e.g. Beginner piano"></label></div>
-                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedDate" data-date-picker data-disable-sunday="1" value="<?= e($defaultDate) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label><div class="sched-date-day" id="schedDateDay"><?= e(date('D, j M Y', strtotime($defaultDate . 'T12:00:00'))) ?></div></div>
+                        <div class="form-field"><label>Class preset<select id="schedClassPreset">
+                            <option value="">Custom…</option>
+                            <option value="Piano" data-mode="Single student">Piano</option>
+                            <option value="Violin" data-mode="Single student">Violin</option>
+                            <option value="Classical Guitar" data-mode="Single student">Classical Guitar</option>
+                            <option value="Popular Guitar" data-mode="Single or small group">Popular Guitar</option>
+                            <option value="Electric Guitar" data-mode="Single student">Electric Guitar</option>
+                            <option value="Bass Guitar" data-mode="Single student">Bass Guitar</option>
+                            <option value="Ukulele" data-mode="Single or small group">Ukulele</option>
+                            <option value="Keyboard" data-mode="Single student">Keyboard</option>
+                            <option value="Flute" data-mode="Single student">Flute</option>
+                            <option value="Saxophone" data-mode="Single student">Saxophone</option>
+                            <option value="Music Theory" data-mode="Single or small group">Music Theory</option>
+                            <option value="Little Mozart" data-mode="Small group">Little Mozart</option>
+                            <option value="Pop Vocal" data-mode="Single student">Pop Vocal</option>
+                        </select></label><div class="sched-date-day" id="schedPresetHint"></div></div>
+                        <div class="form-field"><label>Title (optional)<input type="text" name="title" id="schedTitle" maxlength="200" placeholder="e.g. Beginner piano"></label></div>
+                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedDate" data-date-picker data-disable-sunday="1" value="<?= e($defaultDate) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label>
+                            <div class="sched-day-pick" data-daypick-for="schedDate" role="group" aria-label="Pick weekday">
+                                <?php foreach ([1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'] as $dn => $dl): ?>
+                                    <button type="button" class="sched-day-sq" data-dow="<?= $dn ?>" aria-pressed="false" title="<?= $dl ?>"><?= substr($dl, 0, 1) ?></button>
+                                <?php endforeach; ?>
+                                <button type="button" class="sched-day-sq is-sun" disabled title="Sunday — closed">S</button>
+                            </div>
+                            <div class="sched-date-day" id="schedDateDay"><?= e(date('D, j M Y', strtotime($defaultDate . 'T12:00:00'))) ?></div>
+                        </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-field"><label>Start (HH:MM)<input type="text" name="start_time" id="schedStart" value="<?= e($defaultStart) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
                             <div class="form-field"><label>End (HH:MM)<input type="text" name="end_time" id="schedEnd" value="<?= e($defaultEnd) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
@@ -1148,19 +1289,15 @@ include __DIR__ . '/includes/header.php';
                         <?php if (empty($students)): ?>
                             <span class="sched-empty">No students yet — create accounts in Admin → Manage Users first.</span>
                         <?php else: ?>
-                            <div>
-                                <table class="sched-pick-table sched-sortable" id="schedStudentTable" aria-label="Pick students">
-                                    <thead><tr><th class="sortable" data-sortkey="name">Student <span class="sort-arrow">↕</span></th><th>Fee (RM)</th></tr></thead>
-                                    <tbody>
-                                        <?php foreach ($students as $s): ?>
-                                            <tr data-name="<?= e(strtolower($s['username'])) ?>">
-                                                <td><label class="sched-pick-label"><input type="checkbox" name="student_ids[]" value="<?= (int) $s['user_id'] ?>"> <?= e($s['username']) ?></label></td>
-                                                <td><input type="number" class="sched-fee-input" name="fees[<?= (int) $s['user_id'] ?>]" min="0" step="0.01" value="0" aria-label="Fee for <?= e($s['username']) ?>"></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                            <div class="sched-field-head">
+                                <span class="sched-count" id="schedPickedCount">0 picked</span>
+                                <button type="button" class="secondary-btn" id="schedPickStudentsBtn">＋ Add students</button>
                             </div>
+                            <table class="sched-pick-table" aria-label="Picked students">
+                                <thead><tr><th>ID</th><th>Name</th><th>Fee (RM/month)</th><th></th></tr></thead>
+                                <tbody id="schedPickedStudents"></tbody>
+                            </table>
+                            <p class="sched-empty" id="schedPickedEmpty">No students picked yet.</p>
                         <?php endif; ?>
                     </fieldset>
                     <fieldset class="sched-group">
@@ -1168,24 +1305,14 @@ include __DIR__ . '/includes/header.php';
                         <?php if (empty($teachers)): ?>
                             <span class="sched-empty">No teachers yet — create accounts in Admin → Manage Users first.</span>
                         <?php else: ?>
-                            <div>
-                                <table class="sched-pick-table sched-sortable" id="schedTeacherTable" aria-label="Pick teacher">
-                                    <thead><tr><th class="sortable" data-sortkey="name">Teacher <span class="sort-arrow">↕</span></th><th>Availability</th><th class="sortable" data-sortkey="status">Status <span class="sort-arrow">↕</span></th></tr></thead>
-                                    <tbody>
-                                        <tr data-teacher="0" data-name="~" data-status="3">
-                                            <td><label class="sched-pick-label"><input type="radio" name="teacher_id" value="" checked> <em>— Leave unassigned —</em></label></td>
-                                            <td class="sched-t-avail sched-empty">—</td>
-                                            <td class="sched-t-status"><span class="sched-pill is-muted">—</span></td>
-                                        </tr>
-                                        <?php foreach ($teachers as $t): ?>
-                                            <tr data-teacher="<?= (int) $t['user_id'] ?>" data-name="<?= e(strtolower($t['username'])) ?>" data-status="3">
-                                                <td><label class="sched-pick-label"><input type="radio" name="teacher_id" value="<?= (int) $t['user_id'] ?>" required> <?= e($t['username']) ?></label></td>
-                                                <td class="sched-t-avail sched-empty">—</td>
-                                                <td class="sched-t-status"><span class="sched-pill is-muted">—</span></td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                            <div class="sched-field-head">
+                                <span class="sched-field-title">Assigned teacher</span>
+                                <button type="button" class="secondary-btn" id="schedPickTeacherBtn">Pick teacher</button>
+                            </div>
+                            <div id="schedPickedTeacher" class="sched-picked-single">
+                                <span class="sched-empty" id="schedPickedTeacherLabel">Unassigned</span>
+                                <input type="hidden" name="teacher_id" id="schedPickedTeacherId" value="">
+                                <input type="hidden" id="schedPickedTeacherName" value="">
                             </div>
                         <?php endif; ?>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;">
@@ -1201,15 +1328,7 @@ include __DIR__ . '/includes/header.php';
                             <button type="button" class="secondary-btn" id="schedNewTeacherCreate" style="width:100%;">Create teacher</button>
                         </div>
                     </fieldset>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div class="form-field"><label>Repeat<select name="repeat_mode" id="schedRepeat">
-                            <option value="once">Just once</option>
-                            <option value="weekly">Every week</option>
-                            <option value="biweekly">Every 2 weeks</option>
-                        </select></label></div>
-                        <div class="form-field"><label>Until month<input type="text" name="repeat_until" value="<?= e($month) ?>" placeholder="YYYY-MM" pattern="^\d{4}-\d{2}$" maxlength="7" inputmode="numeric" autocomplete="off" title="Month as YYYY-MM"></label></div>
-                    </div>
-                    <p class="sched-empty" style="margin:0 0 12px;font-size:12px;">Same weekday and time each occurrence. Dates outside working hours are skipped automatically.</p>
+                    <p class="sched-empty" style="margin:0 0 12px;font-size:12px;">Repeats every week until the end of the lesson's month. Dates outside working hours are skipped automatically.</p>
                     <button type="submit" class="primary-btn" style="width:100%;">Save Timetable</button>
                 </form>
                 <?php endif; ?>
@@ -1220,7 +1339,7 @@ include __DIR__ . '/includes/header.php';
                 </datalist>
             <?php elseif ($role === 'TEACHER'): ?>
                 <h2>My Availability</h2>
-                <p style="color:var(--text-muted,#666);font-size:13px;">Mon–Sat only, :00/:30 slots. Administrators see this when scheduling your lessons.</p>
+                <p style="color:var(--text-muted,#666);font-size:13px;">Mon–Sat only, :00/:15/:30/:45 slots. Administrators see this when scheduling your lessons.</p>
                 <div id="schedAvailMsg" class="alert" style="display:none;"></div>
                 <div id="schedAvailRows" style="display:flex;flex-direction:column;gap:8px;"></div>
                 <div style="display:flex;gap:8px;margin-top:10px;">
@@ -1235,36 +1354,18 @@ include __DIR__ . '/includes/header.php';
     </div><!-- /.sched-workspace-grid -->
 </div>
 
+    <!-- Edit form student picker — table-based popup like create mode but no fee until added -->
 <?php if ($role === 'ADMIN' && $selectedLesson !== null): ?>
-<dialog class="sched-dialog" id="schedAddStudentDialog" aria-labelledby="schedAddStudentTitle">
-    <form method="dialog" id="schedAddStudentDialogForm">
-        <h2 id="schedAddStudentTitle">Add student</h2>
-        <div class="form-field"><label>Student
-            <select id="schedAddStudentSelect" required>
-                <?php $hasOptions = false; ?>
-                <?php foreach ($students as $s): ?>
-                    <?php if (in_array((int) $s['user_id'], $enrolledIds, true)) continue; ?>
-                    <?php $hasOptions = true; ?>
-                    <option value="<?= (int) $s['user_id'] ?>"><?= e($s['username']) ?><?= $s['email'] !== '' ? ' (' . e($s['email']) . ')' : '' ?></option>
-                <?php endforeach; ?>
-                <?php if (!$hasOptions): ?>
-                    <option value="">No more students to add</option>
-                <?php endif; ?>
-            </select></label></div>
-        <div class="form-field"><label>Fee (RM)<input type="number" id="schedAddStudentFee" min="0" step="0.01" value="0" required></label></div>
-        <p style="margin:0 0 4px;font-size:13px;"><a href="#" id="schedNewStudentToggle">＋ Create new student account</a></p>
-        <div id="schedNewStudentBox" style="display:none;border-top:1px solid var(--border-color,#eaeaea);padding-top:12px;margin-top:4px;">
-            <div id="schedNewStudentMsg" class="alert" style="display:none;"></div>
-            <div class="form-field"><label>Username<input type="text" id="schedNewUsername" maxlength="100" autocomplete="off"></label></div>
-            <div class="form-field"><label>Email (optional — may be left blank)<input type="email" id="schedNewEmail" maxlength="100" autocomplete="off"></label></div>
-            <div class="form-field"><label>Password (min 6 characters)<input type="password" id="schedNewPassword" autocomplete="new-password"></label></div>
-            <button type="button" class="secondary-btn" id="schedNewStudentCreate" style="width:100%;">Create account</button>
-        </div>
-        <div class="sched-dialog-actions">
-            <button type="button" class="secondary-btn" id="schedAddStudentCancel">Cancel</button>
-            <button type="submit" class="primary-btn" <?= $hasOptions ? '' : 'disabled' ?>>Add</button>
-        </div>
-    </form>
+<dialog class="sched-dialog sched-dialog-wide" id="schedEditStudentPicker" aria-labelledby="schedEditStudentPickerTitle">
+    <div class="sched-edit-head">
+        <h2 id="schedEditStudentPickerTitle">Add student</h2>
+        <button type="button" class="sched-x-btn" data-series-close aria-label="Close">×</button>
+    </div>
+    <div class="form-field"><label>Filter students<input type="search" id="schedEditStudentFilter" placeholder="Type a name…" autocomplete="off"></label></div>
+    <table class="sched-pick-table">
+        <thead><tr><th>ID</th><th>Student</th><th></th></tr></thead>
+        <tbody id="schedEditStudentRows"></tbody>
+    </table>
 </dialog>
 <?php endif; ?>
 
@@ -1326,6 +1427,265 @@ include __DIR__ . '/includes/header.php';
         });
     });
 
+    // Issue 90.4: class-table inline editors (admin only).
+    var apiSeriesUrl = '<?= e(url_path('api/series_save.php')) ?>';
+    var apiUserCreateUrl = '<?= e(url_path('admin/user_create.php')) ?>';
+    var apiMfeeUrl = '<?= e(url_path('api/monthly_fees_save.php')) ?>';
+    function seriesEsc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+    function seriesPost(action, extra) {
+        var fd = new FormData();
+        fd.append('action', action);
+        for (var k in extra) {
+            if (Object.prototype.hasOwnProperty.call(extra, k)) fd.append(k, extra[k]);
+        }
+        postForm(apiSeriesUrl, fd);
+    }
+    document.querySelectorAll('[data-series-close]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var d = b.closest('dialog');
+            if (d) d.close();
+        });
+    });
+    // Title rename.
+    document.querySelectorAll('[data-series-title]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            PSMModal.prompt({ title: 'Rename series', label: 'Class title (1–200 characters)', value: btn.getAttribute('data-name') || '' }).then(function (v) {
+                if (v === null) return;
+                seriesPost('rename_series', { group: btn.getAttribute('data-series-title'), title: v });
+            });
+        });
+    });
+    // Commission editor popup (cell shows the RM due).
+    var commGroup = '';
+    document.querySelectorAll('[data-series-commshow]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var dlg = document.getElementById('seriesCommDialog');
+            if (!dlg) { PSMModal.toast('Commission editor is unavailable.', 'error'); return; }
+            commGroup = btn.getAttribute('data-series-commshow');
+            var row = btn.closest('tr');
+            var name = row ? row.querySelector('strong').textContent : '';
+            document.getElementById('seriesCommSub').textContent = name + ' — ' + btn.title;
+            document.getElementById('seriesCommType').value = '';
+            document.getElementById('seriesCommValue').value = '';
+            try { if (!dlg.open) dlg.showModal(); } catch (e) { PSMModal.toast('Popup blocked: ' + e.message, 'error'); }
+        });
+    });
+    (function () {
+        var commSave = document.getElementById('seriesCommSave');
+        if (commSave) commSave.addEventListener('click', function () {
+            seriesPost('set_commission', {
+                group: commGroup,
+                commission_type: document.getElementById('seriesCommType').value,
+                commission_value: document.getElementById('seriesCommValue').value
+            });
+        });
+    })();
+    // Monthly fee inputs (admin): save on change.
+    document.querySelectorAll('[data-mfee]').forEach(function (inp) {
+        inp.addEventListener('change', function () {
+            var fd = new FormData();
+            fd.append('month', inp.getAttribute('data-month'));
+            fd.append('fees[' + inp.getAttribute('data-sid') + ']', inp.value);
+            fd.append('status[' + inp.getAttribute('data-sid') + ']', inp.getAttribute('data-status'));
+            postForm(apiMfeeUrl, fd);
+        });
+    });
+    // Teacher picker.
+    function seriesCoverage(slots, ranges) {
+        if (!slots || !slots.length) return { text: 'No info', cls: 'is-muted' };
+        if (!ranges.length) return { text: slots.length + ' slot(s) set', cls: 'is-muted' };
+        function covered(r) {
+            return slots.some(function (s) {
+                return parseInt(s.dow, 10) === r.dow && toMin(String(s.start || '')) <= toMin(r.start) && toMin(String(s.end || '')) >= toMin(r.end);
+            });
+        }
+        if (ranges.every(covered)) return { text: 'Available', cls: 'is-ok' };
+        if (ranges.some(covered)) return { text: 'Partial', cls: 'is-warn' };
+        return { text: 'Not available', cls: 'is-warn' };
+    }
+    function openTeacherPicker(group, seriesName, ranges, currentTid) {
+        var dlg = document.getElementById('seriesTeacherDialog');
+        var tbody = document.getElementById('seriesTeacherRows');
+        if (!dlg || !tbody) {
+            PSMModal.toast('Teacher picker is unavailable on this page.', 'error');
+            return;
+        }
+        sub.textContent = seriesName;
+        tbody.innerHTML = '<tr><td colspan="4" class="sched-empty">Loading…</td></tr>';
+        var box = document.getElementById('seriesNewTeacherBox');
+        if (box) box.hidden = true;
+        function row(t) {
+            var tr = document.createElement('tr');
+            if (t.id === currentTid) tr.className = 'is-current';
+            var cov = t.id === 0 ? { text: '—', cls: 'is-muted' } : seriesCoverage(t.availability, ranges);
+            tr.innerHTML =
+                '<td>#' + t.id + '</td><td><strong>' + seriesEsc(t.username) + '</strong>' +
+                (t.email ? '<span class="sched-mini-email">' + seriesEsc(t.email) + '</span>' : '') + '</td>' +
+                '<td>' + seriesEsc(t.commission || 'Default') + '</td>' +
+                '<td><span class="sched-pill ' + cov.cls + '">' + seriesEsc(cov.text) + '</span></td>';
+            var td = document.createElement('td');
+            var b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'series-btn' + (t.id === currentTid ? '' : ' is-primary');
+            b.textContent = t.id === currentTid ? 'Current' : (t.id === 0 ? 'Unassign' : 'Assign');
+            if (t.id === currentTid) b.disabled = true;
+            b.addEventListener('click', function () {
+                seriesPost('assign_teacher', { group: group, teacher_id: t.id });
+            });
+            td.appendChild(b);
+            tr.appendChild(td);
+            return tr;
+        }
+        var fd = new FormData();
+        fd.append('action', 'get_teachers');
+        fetch(apiSeriesUrl, { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    PSMModal.toast(data.error || 'Could not load teachers.', 'error');
+                    return;
+                }
+                tbody.innerHTML = '';
+                tbody.appendChild(row({ id: 0, username: 'Unassigned', email: '', commission: '', availability: [] }));
+                data.data.teachers.forEach(function (t) { tbody.appendChild(row(t)); });
+                if (!dlg.open) dlg.showModal();
+            })
+            .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
+    }
+    document.querySelectorAll('[data-series-teacher]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var ranges = [];
+            try { ranges = JSON.parse(btn.getAttribute('data-ranges') || '[]'); } catch (e) { ranges = []; }
+            var cell = btn.closest('tr');
+            var name = cell ? cell.querySelector('strong').textContent : '';
+            openTeacherPicker(btn.getAttribute('data-series-teacher'), name, ranges, parseInt(btn.getAttribute('data-teacher') || '0', 10));
+        });
+    });
+    // Create-teacher inside the picker (same endpoint as admin Users page).
+    (function () {
+        var toggle = document.getElementById('seriesNewTeacherToggle');
+        var create = document.getElementById('seriesNewTeacherCreate');
+        if (toggle) toggle.addEventListener('click', function () {
+            var box = document.getElementById('seriesNewTeacherBox');
+            if (box) box.hidden = !box.hidden;
+        });
+        if (create) create.addEventListener('click', function () {
+            var fd = new FormData();
+            fd.append('username', (document.getElementById('seriesNewTeacherUsername') || {}).value || '');
+            fd.append('email', (document.getElementById('seriesNewTeacherEmail') || {}).value || '');
+            fd.append('password', (document.getElementById('seriesNewTeacherPassword') || {}).value || '');
+            fd.append('role', 'TEACHER');
+            fetch(apiUserCreateUrl, { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) {
+                        PSMModal.toast(data.message || data.error || 'Could not create teacher.', 'error');
+                        return;
+                    }
+                    window.location.reload();
+                })
+                .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
+        });
+    })();
+    // Student picker.
+    function openStudentPicker(group, seriesName) {
+        var dlg = document.getElementById('seriesStudentDialog');
+        var tbody = document.getElementById('seriesStudentRows');
+        var sub = document.getElementById('seriesStudentSub');
+        var filter = document.getElementById('seriesStudentFilter');
+        if (!dlg || !tbody) {
+            PSMModal.toast('Student picker is unavailable on this page.', 'error');
+            return;
+        }
+        sub.textContent = seriesName;
+        if (filter) filter.value = '';
+        tbody.innerHTML = '<tr><td colspan="3" class="sched-empty">Loading…</td></tr>';
+        function row(s) {
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-search', (s.username + ' ' + (s.email || '')).toLowerCase());
+            var info = '<td>#' + s.id + '</td><td><strong>' + seriesEsc(s.username) + '</strong>' +
+                (s.email ? '<span class="sched-mini-email">' + seriesEsc(s.email) + '</span>' : '') +
+                (s.enrolled ? ' <span class="sched-pill is-ok">Enrolled' + (s.fee !== null ? ' · RM ' + seriesEsc(s.fee) : '') + '</span>' : '') + '</td>';
+            tr.innerHTML = info;
+            var feeTd = document.createElement('td');
+            var fee = document.createElement('input');
+            fee.type = 'number';
+            fee.min = '0';
+            fee.step = '0.01';
+            fee.value = s.fee !== null ? s.fee : '';
+            fee.placeholder = '0.00';
+            fee.setAttribute('aria-label', 'Fee in RM for ' + s.username);
+            fee.className = 'fee-input';
+            feeTd.appendChild(fee);
+            var actTd = document.createElement('td');
+            var act = document.createElement('button');
+            act.type = 'button';
+            act.className = 'series-btn' + (s.enrolled ? '' : ' is-primary');
+            act.textContent = s.enrolled ? 'Update' : 'Add';
+            act.addEventListener('click', function () {
+                seriesPost(s.enrolled ? 'set_student_fee' : 'add_student', { group: group, student_id: s.id, fee: fee.value });
+            });
+            actTd.appendChild(act);
+            if (s.enrolled) {
+                var del = document.createElement('button');
+                del.type = 'button';
+                del.className = 'series-btn is-danger';
+                del.textContent = 'Remove';
+                del.style.marginLeft = '6px';
+                del.addEventListener('click', function () {
+                    PSMModal.confirm({
+                        title: 'Remove student?',
+                        message: 'Remove ' + s.username + ' from every lesson of this series?',
+                        danger: true,
+                        confirmText: 'Remove'
+                    }).then(function (yes) {
+                        if (yes) seriesPost('remove_student', { group: group, student_id: s.id });
+                    });
+                });
+                actTd.appendChild(del);
+            }
+            tr.appendChild(feeTd);
+            tr.appendChild(actTd);
+            return tr;
+        }
+        var fd = new FormData();
+        fd.append('action', 'get_students');
+        fd.append('group', group);
+        fetch(apiSeriesUrl, { method: 'POST', body: fd })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.success) {
+                    PSMModal.toast(data.error || 'Could not load students.', 'error');
+                    return;
+                }
+                tbody.innerHTML = '';
+                data.data.students.forEach(function (s) { tbody.appendChild(row(s)); });
+                if (!dlg.open) dlg.showModal();
+            })
+            .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
+    }
+    document.querySelectorAll('[data-series-students]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var cell = btn.closest('tr');
+            var name = cell ? cell.querySelector('strong').textContent : '';
+            openStudentPicker(btn.getAttribute('data-series-students'), name);
+        });
+    });
+    (function () {
+        var filter = document.getElementById('seriesStudentFilter');
+        if (filter) filter.addEventListener('input', function () {
+            var q = filter.value.toLowerCase();
+            document.querySelectorAll('#seriesStudentRows tr').forEach(function (tr) {
+                var hay = tr.getAttribute('data-search') || '';
+                tr.style.display = hay.indexOf(q) === -1 ? 'none' : '';
+            });
+        });
+    })();
+
     // Timetable View Switcher (Horizontal Timeline vs Vertical Grid)
     var viewBtnH = document.getElementById('schedViewBtnH');
     var viewBtnV = document.getElementById('schedViewBtnV');
@@ -1385,8 +1745,12 @@ include __DIR__ . '/includes/header.php';
         var a = toMin(fromSlot), b = toMin(toSlot);
         t.date.value = date;
         t.start.value = fmtMin(Math.min(a, b));
-        t.end.value = fmtMin(Math.max(a, b) + 30);
+        t.end.value = fmtMin(Math.max(a, b) + 15);
         t.start.dispatchEvent(new Event('input', { bubbles: true }));
+        t.date.dispatchEvent(new Event('input', { bubbles: true }));
+        t.date.dispatchEvent(new Event('change', { bubbles: true }));
+        t.date.dispatchEvent(new Event('input', { bubbles: true }));
+        t.date.dispatchEvent(new Event('change', { bubbles: true }));
     }
     function paintDrag() {
         document.querySelectorAll('.sched-cell.sched-selected').forEach(function (c) { c.classList.remove('sched-selected'); });
@@ -1476,6 +1840,71 @@ include __DIR__ . '/includes/header.php';
     wireDateDay('schedDate', 'schedDateDay');
     wireDateDay('schedEditDate', 'schedEditDateDay');
 
+    // Issue 90: weekday squares drive their lesson date (single pick each).
+    document.querySelectorAll('[data-daypick-for]').forEach(function (box) {
+        var input = document.getElementById(box.getAttribute('data-daypick-for'));
+        if (!input) return;
+        var sqs = Array.prototype.slice.call(box.querySelectorAll('.sched-day-sq[data-dow]'));
+        function paint() {
+            var dow = 0;
+            var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.value || '');
+            if (m) {
+                var dt = new Date(input.value + 'T12:00:00');
+                if (!isNaN(dt)) {
+                    dow = dt.getDay();
+                    dow = dow === 0 ? 7 : dow;
+                }
+            }
+            sqs.forEach(function (b) {
+                var on = parseInt(b.getAttribute('data-dow'), 10) === dow;
+                b.classList.toggle('is-on', on);
+                b.setAttribute('aria-pressed', on ? 'true' : 'false');
+            });
+        }
+        sqs.forEach(function (b) {
+            b.addEventListener('click', function () {
+                var target = parseInt(b.getAttribute('data-dow'), 10);
+                var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input.value || '');
+                var base = m ? new Date(input.value + 'T12:00:00') : new Date();
+                if (isNaN(base)) base = new Date();
+                var cur = base.getDay();
+                cur = cur === 0 ? 7 : cur;
+                base.setDate(base.getDate() + (target - cur));
+                function p2(n) { return String(n).padStart(2, '0'); }
+                var v = base.getFullYear() + '-' + p2(base.getMonth() + 1) + '-' + p2(base.getDate());
+                if (input.value !== v) {
+                    input.value = v;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                    paint();
+                }
+            });
+        });
+        input.addEventListener('input', paint);
+        paint();
+    });
+
+    // Issue 90: class preset fills the lesson title (+ mode hint).
+    (function () {
+        var preset = document.getElementById('schedClassPreset');
+        var titleInput = document.getElementById('schedTitle');
+        var hint = document.getElementById('schedPresetHint');
+        if (!preset || !titleInput) return;
+        function applyPreset() {
+            var opt = preset.options[preset.selectedIndex];
+            var mode = opt ? opt.getAttribute('data-mode') : '';
+            if (preset.value !== '') {
+                titleInput.value = preset.value;
+                if (hint) hint.textContent = mode;
+            } else if (hint) {
+                hint.textContent = '';
+            }
+        }
+        preset.addEventListener('change', applyPreset);
+        preset.addEventListener('input', applyPreset);
+    })();
+
     // Issue 55: a form date outside the shown week moves the timetable to include it.
     // The half-typed form is stashed first so nothing is lost across the reload.
     function mondayOf(ymd) {
@@ -1536,6 +1965,258 @@ include __DIR__ . '/includes/header.php';
     if (schedEditDateInput) schedEditDateInput.addEventListener('change', function () { maybeJumpToDate(schedEditDateInput.value, 'schedEditForm', 'schedDraftEdit'); });
     restoreForm('schedCreateForm', 'schedDraftCreate');
     restoreForm('schedEditForm', 'schedDraftEdit');
+
+    // Issue 90: create-form staged pickers (students + teacher). Picks are
+    // staged as hidden inputs (not saved) until Save Timetable is pressed.
+    (function () {
+        var pickedBox = document.getElementById('schedPickedStudents');
+        var pickedTeacherId = document.getElementById('schedPickedTeacherId');
+        var pickedTeacherName = document.getElementById('schedPickedTeacherName');
+        var pickedTeacherLabel = document.getElementById('schedPickedTeacherLabel');
+        function stagedRow(sid, name, fee) {
+            var tr = document.createElement('tr');
+            tr.setAttribute('data-sid', sid);
+            var tdId = document.createElement('td');
+            tdId.textContent = '#' + sid;
+            var tdName = document.createElement('td');
+            var nm = document.createElement('strong');
+            nm.textContent = name;
+            tdName.appendChild(nm);
+            var tdFee = document.createElement('td');
+            var feeIn = document.createElement('input');
+            feeIn.type = 'number'; feeIn.min = '0'; feeIn.step = '0.01';
+            feeIn.className = 'fee-input';
+            feeIn.setAttribute('aria-label', 'Fee in RM per month for ' + name);
+            feeIn.value = fee;
+            var h1 = document.createElement('input');
+            h1.type = 'hidden'; h1.name = 'student_ids[]'; h1.value = sid;
+            var h2 = document.createElement('input');
+            h2.type = 'hidden'; h2.name = 'fees[' + sid + ']'; h2.value = fee;
+            var h3 = document.createElement('input');
+            h3.type = 'hidden'; h3.name = 'student_names[' + sid + ']'; h3.value = name;
+            feeIn.addEventListener('input', function () { h2.value = feeIn.value; });
+            tdFee.appendChild(feeIn); tdFee.appendChild(h1); tdFee.appendChild(h2); tdFee.appendChild(h3);
+            var tdAct = document.createElement('td');
+            var rm = document.createElement('button');
+            rm.type = 'button'; rm.className = 'series-btn is-danger'; rm.textContent = 'Remove';
+            rm.setAttribute('aria-label', 'Remove ' + name);
+            rm.addEventListener('click', function () { tr.remove(); syncPickedMeta(); });
+            tdAct.appendChild(rm);
+            tr.appendChild(tdId); tr.appendChild(tdName); tr.appendChild(tdFee); tr.appendChild(tdAct);
+            return tr;
+        }
+        function paintTeacher() {
+            var id = pickedTeacherId ? pickedTeacherId.value : '';
+            var nm = pickedTeacherName ? pickedTeacherName.value : '';
+            if (pickedTeacherLabel) {
+                pickedTeacherLabel.textContent = id ? '#' + id + ' · ' + nm : 'Unassigned';
+                pickedTeacherLabel.className = id ? '' : 'sched-empty';
+            }
+        }
+        function syncPickedMeta() {
+            var count = document.getElementById('schedPickedCount');
+            var empty = document.getElementById('schedPickedEmpty');
+            var n = pickedBox ? pickedBox.querySelectorAll('tr[data-sid]').length : 0;
+            if (count) count.textContent = n + ' picked';
+            if (empty) empty.style.display = n ? 'none' : '';
+        }
+        function rebuildStaged() {
+            var form = document.getElementById('schedCreateForm');
+            if (!pickedBox || !form) return;
+            var data = {};
+            Array.prototype.forEach.call(form.querySelectorAll('input[name="student_ids[]"]'), function (h) {
+                var sid = h.value;
+                if (!sid || data[sid]) return;
+                var feeH = form.querySelector('input[name="fees[' + sid + ']"]');
+                var nameH = form.querySelector('input[name="student_names[' + sid + ']"]');
+                data[sid] = { name: nameH ? nameH.value : ('#' + sid), fee: feeH ? feeH.value : '0' };
+            });
+            pickedBox.innerHTML = '';
+            Object.keys(data).forEach(function (sid) { pickedBox.appendChild(stagedRow(sid, data[sid].name, data[sid].fee)); });
+            paintTeacher();
+            syncPickedMeta();
+        }
+        function stagedIds() {
+            var out = {};
+            if (!pickedBox) return out;
+            Array.prototype.forEach.call(pickedBox.querySelectorAll('input[name="student_ids[]"]'), function (h) { out[h.value] = true; });
+            return out;
+        }
+        function openCreateStudents() {
+            var dlg = document.getElementById('createStudentDialog');
+            var tbody = document.getElementById('createStudentRows');
+            if (!dlg || !tbody) { PSMModal.toast('Student picker is unavailable.', 'error'); return; }
+            tbody.innerHTML = '<tr><td colspan="3" class="sched-empty">Loading…</td></tr>';
+            var fd = new FormData();
+            fd.append('action', 'get_students');
+            fd.append('group', '');
+            fetch(apiSeriesUrl, { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) {
+                        PSMModal.toast(data.error || 'Could not load students.', 'error');
+                        return;
+                    }
+                    var have = stagedIds();
+                    tbody.innerHTML = '';
+                    data.data.students.forEach(function (s) {
+                        var tr = document.createElement('tr');
+                        tr.setAttribute('data-search', (s.username + ' ' + (s.email || '')).toLowerCase());
+                        tr.innerHTML = '<td>#' + s.id + '</td><td><strong>' + seriesEsc(s.username) + '</strong>' +
+                            (s.email ? '<span class="sched-mini-email">' + seriesEsc(s.email) + '</span>' : '') + '</td>';
+                        var feeTd = document.createElement('td');
+                        var fee = document.createElement('input');
+                        fee.type = 'number'; fee.min = '0'; fee.step = '0.01';
+                        fee.className = 'fee-input'; fee.value = '0';
+                        fee.setAttribute('aria-label', 'Fee in RM for ' + s.username);
+                        feeTd.appendChild(fee);
+                        var actTd = document.createElement('td');
+                        var add = document.createElement('button');
+                        add.type = 'button'; add.className = 'series-btn is-primary'; add.textContent = 'Add';
+                        if (have[String(s.id)]) { add.disabled = true; add.textContent = 'Added'; }
+                        add.addEventListener('click', function () {
+                            if (!pickedBox) return;
+                            pickedBox.appendChild(stagedRow(String(s.id), s.username, fee.value === '' ? '0' : fee.value));
+                            add.disabled = true; add.textContent = 'Added';
+                            syncPickedMeta();
+                        });
+                        actTd.appendChild(add);
+                        tr.appendChild(feeTd);
+                        tr.appendChild(actTd);
+                        tbody.appendChild(tr);
+                    });
+                    if (!dlg.open) dlg.showModal();
+                })
+                .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
+        }
+        function openCreateTeacher() {
+            var dlg = document.getElementById('createTeacherDialog');
+            var tbody = document.getElementById('createTeacherRows');
+            if (!dlg || !tbody) { PSMModal.toast('Teacher picker is unavailable.', 'error'); return; }
+            var ranges = [];
+            var dEl = document.getElementById('schedDate');
+            var sEl = document.getElementById('schedStart');
+            var eEl = document.getElementById('schedEnd');
+            var dv = dEl ? dEl.value : '', sv = sEl ? sEl.value : '', ev = eEl ? eEl.value : '';
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dv) && /^\d{2}:\d{2}$/.test(sv) && /^\d{2}:\d{2}$/.test(ev)) {
+                var dt = new Date(dv + 'T12:00:00');
+                if (!isNaN(dt)) {
+                    var dow = dt.getDay();
+                    dow = dow === 0 ? 7 : dow;
+                    if (dow !== 7) ranges = [{ dow: dow, start: sv, end: ev }];
+                }
+            }
+            var cur = pickedTeacherId ? pickedTeacherId.value : '';
+            tbody.innerHTML = '<tr><td colspan="4" class="sched-empty">Loading…</td></tr>';
+            var fd = new FormData();
+            fd.append('action', 'get_teachers');
+            fetch(apiSeriesUrl, { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) {
+                        PSMModal.toast(data.error || 'Could not load teachers.', 'error');
+                        return;
+                    }
+                    tbody.innerHTML = '';
+                    function trow(t) {
+                        var tr = document.createElement('tr');
+                        if (String(t.id) === String(cur) && cur !== '') tr.className = 'is-current';
+                        var cov = (t.id === 0) ? { text: '—', cls: 'is-muted' } : seriesCoverage(t.availability, ranges);
+                        tr.innerHTML = '<td>#' + t.id + '</td><td><strong>' + seriesEsc(t.username) + '</strong>' +
+                            (t.email ? '<span class="sched-mini-email">' + seriesEsc(t.email) + '</span>' : '') + '</td>' +
+                            '<td>' + seriesEsc(t.commission || 'Default') + '</td>' +
+                            '<td><span class="sched-pill ' + cov.cls + '">' + seriesEsc(cov.text) + '</span></td>';
+                        var td = document.createElement('td');
+                        var b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'series-btn' + ((String(t.id) === String(cur) && cur !== '') ? '' : ' is-primary');
+                        b.textContent = (String(t.id) === String(cur) && cur !== '') ? 'Current' : (t.id === 0 ? 'Unassign' : 'Select');
+                        if (String(t.id) === String(cur) && cur !== '') b.disabled = true;
+                        b.addEventListener('click', function () {
+                            if (pickedTeacherId) pickedTeacherId.value = t.id === 0 ? '' : String(t.id);
+                            if (pickedTeacherName) pickedTeacherName.value = t.id === 0 ? '' : t.username;
+                            paintTeacher();
+                            dlg.close();
+                        });
+                        td.appendChild(b);
+                        tr.appendChild(td);
+                        return tr;
+                    }
+                    tbody.appendChild(trow({ id: 0, username: 'Unassigned', email: '', commission: '', availability: [] }));
+                    data.data.teachers.forEach(function (t) { tbody.appendChild(trow(t)); });
+                    if (!dlg.open) dlg.showModal();
+                })
+                .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
+        }
+        var pickS = document.getElementById('schedPickStudentsBtn');
+        if (pickS) pickS.addEventListener('click', openCreateStudents);
+        var pickT = document.getElementById('schedPickTeacherBtn');
+        if (pickT) pickT.addEventListener('click', openCreateTeacher);
+        var createFilter = document.getElementById('createStudentFilter');
+        if (createFilter) createFilter.addEventListener('input', function () {
+            var q = createFilter.value.toLowerCase();
+            document.querySelectorAll('#createStudentRows tr').forEach(function (tr) {
+                var hay = tr.getAttribute('data-search') || '';
+                tr.style.display = hay.indexOf(q) === -1 ? 'none' : '';
+            });
+        });
+        rebuildStaged();
+    })();
+
+    // Edit form teacher picker — table popup like create mode (no date/time availability).
+    (function () {
+        var pickET = document.getElementById('schedEditPickTeacherBtn');
+        if (!pickET) return;
+        var hidId = document.getElementById('schedPickedTeacherId');
+        var hidNm = document.getElementById('schedPickedTeacherName');
+        var labelEl = document.getElementById('schedPickedTeacherLabel');
+        pickET.addEventListener('click', function () {
+            var dlg = document.getElementById('createTeacherDialog');
+            var tbody = document.getElementById('createTeacherRows');
+            if (!dlg || !tbody) { PSMModal.toast('Teacher picker is unavailable.', 'error'); return; }
+            var curId = hidId ? hidId.value : '';
+            tbody.innerHTML = '<tr><td colspan="5" class="sched-empty">Loading…</td></tr>';
+            var fd = new FormData();
+            fd.append('action', 'get_teachers');
+            fetch(apiSeriesUrl, { method: 'POST', body: fd })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.success) {
+                        PSMModal.toast(data.error || 'Could not load teachers.', 'error');
+                        return;
+                    }
+                    tbody.innerHTML = '';
+                    function trow(t) {
+                        var tr = document.createElement('tr');
+                        var isCur = String(t.id) === String(curId) && curId !== '';
+                        if (isCur) tr.className = 'is-current';
+                        tr.innerHTML = '<td>#' + t.id + '</td><td><strong>' + seriesEsc(t.username) + '</strong>' +
+                            (t.email ? '<span class="sched-mini-email">' + seriesEsc(t.email) + '</span>' : '') +
+                            '<td>' + seriesEsc(t.commission || 'Default') + '</td><td><span class="sched-pill is-muted">—</span></td>';
+                        var td = document.createElement('td');
+                        var b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'series-btn' + (isCur ? '' : ' is-primary');
+                        b.textContent = isCur ? 'Assigned' : (t.id === 0 ? 'Unassign' : 'Assign');
+                        if (isCur) b.disabled = true;
+                        b.addEventListener('click', function () {
+                            if (hidId) hidId.value = t.id === 0 ? '' : String(t.id);
+                            if (hidNm) hidNm.value = t.id === 0 ? '' : t.username;
+                            if (labelEl) labelEl.textContent = t.id === 0 ? 'Unassigned' : ('#' + t.id + ' · ' + t.username);
+                            if (labelEl) labelEl.className = t.id === 0 ? 'sched-empty' : '';
+                            dlg.close();
+                        });
+                        td.appendChild(b);
+                        tr.appendChild(td);
+                        return tr;
+                    }
+                    tbody.appendChild(trow({ id: 0, username: 'Unassigned', email: '', commission: '', availability: [] }));
+                    data.data.teachers.forEach(function (t) { tbody.appendChild(trow(t)); });
+                    if (!dlg.open) dlg.showModal();
+                })
+                .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
+        });
+    })();
 
     // Teacher availability + clash per table row (admin create form, issue 36).
     var dateInput = document.getElementById('schedDate');
@@ -1620,7 +2301,7 @@ include __DIR__ . '/includes/header.php';
     if (createForm) {
         createForm.addEventListener('submit', function (ev) {
             ev.preventDefault();
-            var checked = createForm.querySelectorAll('input[name="student_ids[]"]:checked');
+            var checked = createForm.querySelectorAll('input[name="student_ids[]"]:checked, #schedPickedStudents input[name="student_ids[]"]');
             if (checked.length === 0) {
                 PSMModal.confirm({
                     title: 'No Students Selected',
@@ -1757,74 +2438,129 @@ include __DIR__ . '/includes/header.php';
                 .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
         });
     });
-    // Issue 63: pick from the student list instead of typing an ID manually.
-    var addDialog = document.getElementById('schedAddStudentDialog');
-    document.querySelectorAll('#schedAddStudentBtn, #schedEditAddStudentBtn').forEach(function (addBtn) {
-        addBtn.addEventListener('click', function () {
-            if (addDialog && typeof addDialog.showModal === 'function') { addDialog.showModal(); }
-        });
-    });
-    var addCancel = document.getElementById('schedAddStudentCancel');
-    if (addCancel) addCancel.addEventListener('click', function () { if (addDialog) addDialog.close(); });
-    var addDialogForm = document.getElementById('schedAddStudentDialogForm');
-    if (addDialogForm) addDialogForm.addEventListener('submit', function (ev) {
-        ev.preventDefault();
-        var sid = document.getElementById('schedAddStudentSelect').value;
-        var fee = document.getElementById('schedAddStudentFee').value;
-        if (!sid) return;
-        if (addDialog) addDialog.close();
-        var fd = new FormData(); fd.append('action', 'add'); fd.append('lesson_id', String(selectedLessonId));
-        fd.append('student_id', sid); fd.append('fee_amount', fee);
-        postForm('<?= e(url_path('api/enrollments_save.php')) ?>', fd);
-    });
-    // Issue 63 follow-up: create a student account without leaving the dialog.
-    var newToggle = document.getElementById('schedNewStudentToggle');
-    var newBox = document.getElementById('schedNewStudentBox');
-    if (newToggle && newBox) newToggle.addEventListener('click', function (ev) {
-        ev.preventDefault();
-        var open = newBox.style.display === 'none';
-        newBox.style.display = open ? 'block' : 'none';
-        newToggle.textContent = open ? '– Hide new account form' : '＋ Create new student account';
-    });
-    var newCreateBtn = document.getElementById('schedNewStudentCreate');
-    if (newCreateBtn) newCreateBtn.addEventListener('click', function () {
-        var u = document.getElementById('schedNewUsername').value.trim();
-        var m = document.getElementById('schedNewEmail').value.trim();
-        var p = document.getElementById('schedNewPassword').value;
-        var msg = document.getElementById('schedNewStudentMsg');
-        function newMsg(text, ok) {
-            msg.style.display = 'block';
-            msg.className = 'alert ' + (ok ? 'success' : 'error');
-            msg.textContent = text;
-        }
-        if (u === '' || p === '') { newMsg('Username and password are required (email may be left blank).', false); return; }
-        newCreateBtn.disabled = true; newCreateBtn.textContent = 'Creating...';
+    // Edit form student picker — table-based popup, no fee until added.
+    var _editPickedSids = [];
+    var editPickStudentBtn = document.getElementById('schedEditAddStudentBtn');
+    if (editPickStudentBtn) editPickStudentBtn.addEventListener('click', function () {
+        var dlg = document.getElementById('schedEditStudentPicker');
+        var tbody = document.getElementById('schedEditStudentRows');
+        if (!dlg || !tbody) { PSMModal.toast('Student picker is unavailable.', 'error'); return; }
+        tbody.innerHTML = '<tr><td colspan="3" class="sched-empty">Loading…</td></tr>';
         var fd = new FormData();
-        fd.append('username', u); fd.append('email', m); fd.append('password', p); fd.append('role', 'STUDENT');
-        fetch('<?= e(url_path('admin/user_create.php')) ?>', { method: 'POST', body: fd })
+        fd.append('action', 'get_students');
+        fd.append('group', '');
+        fetch(apiSeriesUrl, { method: 'POST', body: fd })
             .then(function (r) { return r.json(); })
             .then(function (data) {
-                newCreateBtn.disabled = false; newCreateBtn.textContent = 'Create account';
-                if (data.success && data.user) {
-                    var sel = document.getElementById('schedAddStudentSelect');
-                    var opt = document.createElement('option');
-                    opt.value = String(data.user.user_id);
-                    opt.textContent = data.user.username + ' (' + data.user.email + ')';
-                    sel.appendChild(opt);
-                    sel.value = String(data.user.user_id);
-                    document.getElementById('schedNewUsername').value = '';
-                    document.getElementById('schedNewEmail').value = '';
-                    document.getElementById('schedNewPassword').value = '';
-                    newMsg('Account created — press Add to enroll ' + data.user.username + '.', true);
-                } else {
-                    newMsg(data.message || 'Account creation failed.', false);
+                if (!data.success) {
+                    PSMModal.toast(data.error || 'Could not load students.', 'error');
+                    return;
                 }
+                var curEnrolledSet = {};
+                <?php foreach ($selectedEnrollments as $en): ?>
+                curEnrolledSet[<?= (int) $en['student_id'] ?>] = true;
+                <?php endforeach; ?>
+                data.data.students.forEach(function (s) {
+                    if (curEnrolledSet[s.id]) return;
+                    var tr = document.createElement('tr');
+                    tr.setAttribute('data-search', (s.username + ' ' + (s.email || '')).toLowerCase());
+                    tr.innerHTML = '<td>#' + s.id + '</td><td><strong>' + seriesEsc(s.username) + '</strong>' +
+                        (s.email ? '<span class="sched-mini-email">' + seriesEsc(s.email) + '</span>');
+                    var actTd = document.createElement('td');
+                    var addBtn = document.createElement('button');
+                    addBtn.type = 'button'; addBtn.className = 'series-btn is-primary'; addBtn.textContent = 'Add';
+                    addBtn.addEventListener('click', function () {
+                        if (!dlg) return; dlg.close();
+                        insertEditStudentRow(s.id, s.username);
+                    });
+                    actTd.appendChild(addBtn);
+                    tr.appendChild(actTd);
+                    tbody.appendChild(tr);
+                });
+                if (tbody.children.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="3" class="sched-empty">All students are already enrolled.</td></tr>';
+                }
+                if (!dlg.open) dlg.showModal();
             })
-            .catch(function (err) {
-                newCreateBtn.disabled = false; newCreateBtn.textContent = 'Create account';
-                newMsg('Network error: ' + err.message, false);
-            });
+            .catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
     });
+    // Filter inside edit student picker
+    (function () {
+        var filter = document.getElementById('schedEditStudentFilter');
+        if (!filter) return;
+        filter.addEventListener('input', function () {
+            var q = filter.value.toLowerCase();
+            document.querySelectorAll('#schedEditStudentRows tr').forEach(function (tr) {
+                var hay = tr.getAttribute('data-search') || '';
+                tr.style.display = hay.indexOf(q) === -1 ? 'none' : '';
+            });
+        });
+    })();
+
+    // Insert a student row into the edit form's enrolled-students table (editable fee).
+    function insertEditStudentRow(sid, name) {
+        var sidInt = parseInt(sid, 10);
+        if (_editPickedSids.indexOf(sidInt) !== -1) {
+            PSMModal.toast(name + ' has already been picked for this lesson.', 'info');
+            return;
+        }
+        var tbody = document.querySelector('[aria-label="Currently enrolled students"] tbody');
+        if (!tbody) return;
+        var existing = tbody.querySelector('[data-edit-pick-id="' + sid + '"]');
+        if (existing) { PSMModal.toast(name + ' is already being edited.', 'info'); return; }
+
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-edit-pick-id', String(sid));
+        tr.setAttribute('data-search', (name).toLowerCase());
+        tr.innerHTML = '<td>#' + sid + '</td>' +
+            '<td><strong>' + seriesEsc(name) + '</strong></td>' +
+            '<td><input type="number" class="fee-input" min="0" step="0.01" value="0" aria-label="Fee for ' + seriesEsc(name) + '" style="width:110px;"></td>' +
+            '<td>—</td>' +
+            '<td><button type="button" class="series-btn is-primary btn-save-fee" data-pick-sid="' + sid + '">Save</button> ' +
+            '<button type="button" class="action-btn delete-btn btn-cancel-add" data-pick-sid="' + sid + '">Cancel</button></td>';
+        tbody.appendChild(tr);
+        _editPickedSids.push(sidInt);
+
+        var legend = document.querySelector('.sched-group:has(#schedEditAddStudentBtn) legend');
+        if (legend) {
+            var n = tbody.querySelectorAll('tr[data-enroll-id], tr[data-edit-pick-id]').length;
+            legend.textContent = 'Students (' + n + ')';
+        }
+
+        // Wire save/cancel on dynamic buttons
+        var saveBtn = tr.querySelector('.btn-save-fee');
+        if (saveBtn) saveBtn.addEventListener('click', function () {
+            var feeInput = tr.querySelector('.fee-input');
+            var feeVal = feeInput ? (parseFloat(feeInput.value) || 0) : 0;
+            saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
+            var f = new FormData();
+            f.append('action', 'add'); f.append('lesson_id', String(selectedLessonId));
+            f.append('student_id', String(sid)); f.append('fee_amount', feeVal);
+            postForm('<?= e(url_path('api/enrollments_save.php')) ?>', f).then(function () {
+                tr.removeAttribute('data-edit-pick-id');
+                tr.querySelector('td:nth-child(3)').textContent = 'RM ' + Number(feeVal).toFixed(2);
+                var cancelBtn = tr.querySelector('.btn-cancel-add');
+                if (cancelBtn) cancelBtn.remove();
+                saveBtn.textContent = 'Saved'; saveBtn.disabled = true;
+                _editPickedSids = _editPickedSids.filter(function (x) { return x !== sidInt; });
+                PSMModal.toast(name + ' enrolled at RM ' + Number(feeVal).toFixed(2) + '.', 'success');
+            }).catch(function (err) {
+                saveBtn.disabled = false; saveBtn.textContent = 'Save';
+                PSMModal.toast(err && err.message ? err.message : 'Failed to enroll.', 'error');
+            });
+        });
+
+        var cancelBtn = tr.querySelector('.btn-cancel-add');
+        if (cancelBtn) cancelBtn.addEventListener('click', function () {
+            tr.remove();
+            _editPickedSids = _editPickedSids.filter(function (x) { return x !== sidInt; });
+            var legend = document.querySelector('.sched-group:has(#schedEditAddStudentBtn) legend');
+            if (legend) {
+                var n = tbody.querySelectorAll('tr[data-enroll-id]').length;
+                legend.textContent = 'Students (' + n + ')';
+            }
+        });
+    }
     // Issue 65 follow-up: create a teacher account without leaving the lesson form.
     var newTToggle = document.getElementById('schedNewTeacherToggle');
     var newTBox = document.getElementById('schedNewTeacherBox');
@@ -2036,8 +2772,8 @@ include __DIR__ . '/includes/header.php';
             if (String(slot.dow) === d[0]) o.selected = true;
             sel.appendChild(o);
         });
-        var s = document.createElement('input'); s.type = 'time'; s.step = '1800'; s.value = slot.start || '09:00';
-        var e = document.createElement('input'); e.type = 'time'; e.step = '1800'; e.value = slot.end || '12:00';
+        var s = document.createElement('input'); s.type = 'time'; s.step = '900'; s.value = slot.start || '09:00';
+        var e = document.createElement('input'); e.type = 'time'; e.step = '900'; e.value = slot.end || '12:00';
         var x = document.createElement('button'); x.type = 'button'; x.className = 'action-btn delete-btn'; x.textContent = '×';
         x.addEventListener('click', function () { div.remove(); });
         div.appendChild(sel); div.appendChild(s); div.appendChild(e); div.appendChild(x);

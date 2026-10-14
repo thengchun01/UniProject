@@ -21,6 +21,14 @@ try {
     $email = trim($_POST['email'] ?? '');
     $role = normalize_role($_POST['role'] ?? 'STUDENT');
 
+    if (!in_array($role, ['ADMIN', 'TEACHER', 'STUDENT'], true)) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid role selected'
+        ]);
+        exit;
+    }
+
     if (empty($username) || empty($email)) {
         echo json_encode([
             'success' => false,

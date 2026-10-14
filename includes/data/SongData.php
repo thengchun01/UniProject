@@ -194,30 +194,6 @@ class SongData
                         ],
                     ],
                     [
-                        'file_name'  => 'Left Hand',
-                        'difficulty' => 'Intermediate',
-                        'notes'      => [
-                            self::n('C3', 0,   2),
-                            self::n('G3', 2,   2),
-                            self::n('C3', 4,   2),
-                            self::n('G3', 6,   1),
-                            self::n('F3', 7,   1),
-                            self::n('C3', 8,   2),
-                            self::n('G3', 10,  2),
-                            self::n('C3', 12,  2),
-                            self::n('G3', 14,  2),
-
-                            self::n('C3', 16,  2),
-                            self::n('G3', 18,  2),
-                            self::n('C3', 20,  2),
-                            self::n('G3', 22,  1),
-                            self::n('F3', 23,  1),
-                            self::n('C3', 24,  2),
-                            self::n('G3', 26,  2),
-                            self::n('C3', 28,  4),
-                        ],
-                    ],
-                    [
                         'file_name'  => 'Both Hands',
                         'difficulty' => 'Intermediate',
                         'notes'      => [

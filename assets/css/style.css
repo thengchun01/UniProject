@@ -91,15 +91,13 @@ a:focus-visible, button:focus-visible {
     display: flex;
     align-items: center;
     gap: 10px;
+    font-family: var(--font-display, 'Poppins', sans-serif);
 }
 
-.logo::before {
-    content: '';
+.logo img {
+    width: 28px;
+    height: 28px;
     display: block;
-    width: 24px;
-    height: 24px;
-    background: var(--primary-color);
-    border-radius: 6px;
 }
 
 .mobile-menu-toggle {
@@ -340,6 +338,7 @@ textarea:disabled {
 }
 
 .dp-nav:hover {
+    background: #fff;
     border-color: var(--primary-color, #7c3aed);
     color: var(--primary-color, #7c3aed);
 }
@@ -458,6 +457,7 @@ textarea:disabled {
 }
 
 .dd-btn:hover {
+    background: #fff;
     border-color: var(--primary-color, #7c3aed);
 }
 
@@ -1434,6 +1434,7 @@ h1, h2 {
 }
 
 .psm-toast-close:hover {
+    background: transparent;
     color: var(--text-color, #111);
 }
 

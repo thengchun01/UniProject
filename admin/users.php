@@ -31,20 +31,108 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit;
 }
 
-// Get sort parameters
+// Get sort parameters (applied uniformly to every group table)
 $sortColumn = $_GET['sort'] ?? 'user_id';
 $sortOrder = $_GET['order'] ?? 'DESC';
-$allowedColumns = ['user_id', 'username', 'email', 'role', 'classroom', 'created_at'];
-$sortColumn = in_array($sortColumn, $allowedColumns) ? $sortColumn : 'user_id';
+$allowedColumns = ['user_id', 'username', 'email', 'classroom', 'created_at'];
+$sortColumn = in_array($sortColumn, $allowedColumns, true) ? $sortColumn : 'user_id';
 $sortOrder = strtoupper($sortOrder) === 'ASC' ? 'ASC' : 'DESC';
-
-$users = db()->query("SELECT * FROM users ORDER BY $sortColumn $sortOrder")->fetchAll();
 $nextOrder = $sortOrder === 'ASC' ? 'DESC' : 'ASC';
+
+// Partition by role: teachers and students each get their own table, while every
+// other role (admin, future staff, and any malformed value) lands in the staff
+// table so it stays visible and repairable.
+$staffUsers = $teachers = $students = [];
+foreach (db()->query("SELECT * FROM users ORDER BY `$sortColumn` $sortOrder")->fetchAll(PDO::FETCH_ASSOC) as $row) {
+    $row['role'] = normalize_role($row['role'] ?? '');
+    if ($row['role'] === 'TEACHER') {
+        $teachers[] = $row;
+    } elseif ($row['role'] === 'STUDENT') {
+        $students[] = $row;
+    } else {
+        $staffUsers[] = $row;
+    }
+}
+
+$sortLink = function (string $col) use ($sortColumn, $nextOrder): string {
+    return $sortColumn === $col ? $nextOrder : 'ASC';
+};
+$sortMark = function (string $col) use ($sortColumn, $sortOrder): string {
+    return $sortColumn === $col ? ($sortOrder === 'ASC' ? '↑' : '↓') : '';
+};
+
+// Shared row renderer so the three tables cannot drift apart. $showRole is used by
+// the mixed staff table; $showClassroom by the student table.
+$renderUsers = function (array $rows, bool $showRole, bool $showClassroom) use ($sortLink, $sortMark): void {
+    $cols = 5 + ($showRole ? 1 : 0) + ($showClassroom ? 1 : 0);
+    ?>
+    <div class="table-wrapper">
+        <table class="data-table modern-table">
+            <thead>
+                <tr>
+                    <th class="sortable" data-column="user_id" data-order="<?= e($sortLink('user_id')) ?>">ID <span class="sort-icon"><?= e($sortMark('user_id')) ?></span></th>
+                    <th class="sortable" data-column="username" data-order="<?= e($sortLink('username')) ?>">Username <span class="sort-icon"><?= e($sortMark('username')) ?></span></th>
+                    <th class="sortable" data-column="email" data-order="<?= e($sortLink('email')) ?>">Email <span class="sort-icon"><?= e($sortMark('email')) ?></span></th>
+                    <?php if ($showRole): ?>
+                    <th>Role</th>
+                    <?php endif; ?>
+                    <?php if ($showClassroom): ?>
+                    <th class="sortable" data-column="classroom" data-order="<?= e($sortLink('classroom')) ?>">Classroom ID <span class="sort-icon"><?= e($sortMark('classroom')) ?></span></th>
+                    <?php endif; ?>
+                    <th class="sortable" data-column="created_at" data-order="<?= e($sortLink('created_at')) ?>">Created <span class="sort-icon"><?= e($sortMark('created_at')) ?></span></th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if ($rows === []): ?>
+                <tr><td colspan="<?= $cols ?>" class="users-empty">No accounts in this group.</td></tr>
+                <?php else: ?>
+                <?php foreach ($rows as $u): ?>
+                <tr data-id="<?= (int) $u['user_id'] ?>">
+                    <td><?= e($u['user_id']) ?></td>
+                    <td class="col-username"><?= e($u['username']) ?></td>
+                    <td class="col-email"><?= e((string) $u['email']) ?></td>
+                    <?php if ($showRole): ?>
+                    <td class="col-role">
+                        <span class="role-badge role-<?= e(strtolower($u['role'])) ?>"><?= e($u['role'] !== '' ? $u['role'] : 'NONE') ?></span>
+                    </td>
+                    <?php endif; ?>
+                    <?php if ($showClassroom): ?>
+                    <td class="col-classroom">
+                        <?php if (!empty($u['classroom'])): ?>
+                        <span class="classroom-id-badge"><?= e($u['classroom']) ?></span>
+                        <?php else: ?>
+                        <span class="no-classroom">—</span>
+                        <?php endif; ?>
+                    </td>
+                    <?php endif; ?>
+                    <td><?= e(date('Y-m-d', strtotime((string) $u['created_at']))) ?></td>
+                    <td class="actions-cell">
+                        <button class="action-btn view-btn" onclick="viewUser(<?= (int) $u['user_id'] ?>)">View</button>
+                        <button class="action-btn edit-btn" onclick="openEdit(<?= (int) $u['user_id'] ?>, '<?= e($u['username']) ?>', '<?= e((string) $u['email']) ?>', '<?= e($u['role']) ?>')">Edit</button>
+                        <?php if ($showClassroom): ?>
+                        <?php if (!empty($u['classroom'])): ?>
+                        <button class="action-btn classroom-btn" onclick="viewClassroom('<?= e($u['classroom']) ?>', '<?= e($u['username']) ?>')">View Classroom</button>
+                        <?php else: ?>
+                        <button class="action-btn classroom-btn disabled" disabled title="This user does not belong to any classroom">View Classroom</button>
+                        <?php endif; ?>
+                        <?php endif; ?>
+                        <button class="action-btn reset-btn" onclick="openResetPassword(<?= (int) $u['user_id'] ?>, '<?= e($u['username']) ?>')">Reset Password</button>
+                        <button class="action-btn delete-btn" onclick="openDelete(<?= (int) $u['user_id'] ?>)">Delete</button>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+                <?php endif; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php
+};
 
 include __DIR__ . '/../includes/header.php';
 ?>
 
-<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/admin.css">
+<link rel="stylesheet" href="<?= BASE_URL ?>assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css'); ?>">
 
 <!-- Notification Toast Container -->
 <div id="notificationToast" class="toast"></div>
@@ -59,96 +147,19 @@ include __DIR__ . '/../includes/header.php';
         <a href="dashboard.php" class="return-btn">← Return to Dashboard</a>
     </div>
 </div>
-
-<div class="table-wrapper">
-    <table class="data-table modern-table" id="userTable">
-        <thead>
-            <tr>
-                <th class="sortable" data-column="user_id" data-order="<?= $sortColumn === 'user_id' ? $nextOrder : 'ASC' ?>">
-                    ID 
-                    <span class="sort-icon">
-                        <?php if ($sortColumn === 'user_id'): ?>
-                            <?= $sortOrder === 'ASC' ? '↑' : '↓' ?>
-                        <?php endif; ?>
-                    </span>
-                </th>
-                <th class="sortable" data-column="username" data-order="<?= $sortColumn === 'username' ? $nextOrder : 'ASC' ?>">
-                    Username
-                    <span class="sort-icon">
-                        <?php if ($sortColumn === 'username'): ?>
-                            <?= $sortOrder === 'ASC' ? '↑' : '↓' ?>
-                        <?php endif; ?>
-                    </span>
-                </th>
-                <th class="sortable" data-column="email" data-order="<?= $sortColumn === 'email' ? $nextOrder : 'ASC' ?>">
-                    Email
-                    <span class="sort-icon">
-                        <?php if ($sortColumn === 'email'): ?>
-                            <?= $sortOrder === 'ASC' ? '↑' : '↓' ?>
-                        <?php endif; ?>
-                    </span>
-                </th>
-                <th class="sortable" data-column="role" data-order="<?= $sortColumn === 'role' ? $nextOrder : 'ASC' ?>">
-                    Role
-                    <span class="sort-icon">
-                        <?php if ($sortColumn === 'role'): ?>
-                            <?= $sortOrder === 'ASC' ? '↑' : '↓' ?>
-                        <?php endif; ?>
-                    </span>
-                </th>
-                <th class="sortable" data-column="classroom" data-order="<?= $sortColumn === 'classroom' ? $nextOrder : 'ASC' ?>">
-                    Classroom ID
-                    <span class="sort-icon">
-                        <?php if ($sortColumn === 'classroom'): ?>
-                            <?= $sortOrder === 'ASC' ? '↑' : '↓' ?>
-                        <?php endif; ?>
-                    </span>
-                </th>
-                <th class="sortable" data-column="created_at" data-order="<?= $sortColumn === 'created_at' ? $nextOrder : 'ASC' ?>">
-                    Created
-                    <span class="sort-icon">
-                        <?php if ($sortColumn === 'created_at'): ?>
-                            <?= $sortOrder === 'ASC' ? '↑' : '↓' ?>
-                        <?php endif; ?>
-                    </span>
-                </th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php foreach ($users as $u): ?>
-                <tr data-id="<?= $u['user_id'] ?>">
-                    <td><?= e($u['user_id']) ?></td>
-                    <td class="col-username"><?= e($u['username']) ?></td>
-                    <td class="col-email"><?= e($u['email']) ?></td>
-                    <td class="col-role">
-                        <span class="role-badge role-<?= strtolower($u['role']) ?>">
-                            <?= e($u['role']) ?>
-                        </span>
-                    </td>
-                    <td class="col-classroom">
-                        <?php if (!empty($u['classroom'])): ?>
-                            <span class="classroom-id-badge"><?= e($u['classroom']) ?></span>
-                        <?php else: ?>
-                            <span class="no-classroom">—</span>
-                        <?php endif; ?>
-                    </td>
-                    <td><?= date('Y-m-d', strtotime($u['created_at'])) ?></td>
-                    <td class="actions-cell">
-                        <button class="action-btn view-btn" onclick="viewUser(<?= $u['user_id'] ?>)">View</button>
-                        <button class="action-btn edit-btn" onclick="openEdit(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>', '<?= htmlspecialchars($u['email'], ENT_QUOTES) ?>', '<?= $u['role'] ?>')">Edit</button>
-                        <?php if (!empty($u['classroom'])): ?>
-                            <button class="action-btn classroom-btn" onclick="viewClassroom('<?= e($u['classroom']) ?>', '<?= e($u['username']) ?>')">View Classroom</button>
-                        <?php else: ?>
-                            <button class="action-btn classroom-btn disabled" disabled title="This user does not belong to any classroom">View Classroom</button>
-                        <?php endif; ?>
-                        <button class="action-btn reset-btn" onclick="openResetPassword(<?= $u['user_id'] ?>, '<?= htmlspecialchars($u['username'], ENT_QUOTES) ?>')">Reset Password</button>
-                        <button class="action-btn delete-btn" onclick="openDelete(<?= $u['user_id'] ?>)">Delete</button>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
-        </tbody>
-    </table>
+<div class="users-grid">
+    <section class="users-panel users-staff">
+        <h2 class="users-panel-title">Staff <span class="users-count"><?= count($staffUsers) ?></span></h2>
+        <?php $renderUsers($staffUsers, true, false); ?>
+    </section>
+    <section class="users-panel users-teachers">
+        <h2 class="users-panel-title">Teachers <span class="users-count"><?= count($teachers) ?></span></h2>
+        <?php $renderUsers($teachers, false, false); ?>
+    </section>
+    <section class="users-panel users-students">
+        <h2 class="users-panel-title">Students <span class="users-count"><?= count($students) ?></span></h2>
+        <?php $renderUsers($students, false, true); ?>
+    </section>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>

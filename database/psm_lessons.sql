@@ -88,3 +88,24 @@ CREATE TABLE IF NOT EXISTS `proof_logs` (
   CONSTRAINT `proof_logs_ibfk_1` FOREIGN KEY (`lesson_id`) REFERENCES `lessons` (`lesson_id`) ON DELETE CASCADE,
   CONSTRAINT `proof_logs_ibfk_2` FOREIGN KEY (`performed_by`) REFERENCES `users` (`user_id`) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE IF NOT EXISTS `monthly_fees` (
+  `fee_id` int(11) NOT NULL AUTO_INCREMENT,
+  `student_id` int(11) NOT NULL,
+  `month` char(7) NOT NULL COMMENT 'YYYY-MM',
+  `amount` decimal(10,2) NOT NULL DEFAULT 0.00,
+  `status` enum('UNPAID','PENDING','PAID') NOT NULL DEFAULT 'UNPAID',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  PRIMARY KEY (`fee_id`),
+  UNIQUE KEY `uniq_student_month` (`student_id`, `month`),
+  KEY `idx_month` (`month`),
+  CONSTRAINT `monthly_fees_ibfk_1` FOREIGN KEY (`student_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- Monthly billing grain: one row per student x class x month (item 107).
+ALTER TABLE `monthly_fees`
+  ADD COLUMN IF NOT EXISTS `recurrence_group` VARCHAR(64) NULL DEFAULT '' AFTER `month`,
+  ADD COLUMN IF NOT EXISTS `proof_path` VARCHAR(512) DEFAULT NULL AFTER `status`;
+ALTER TABLE `monthly_fees` ADD UNIQUE KEY `uniq_student_month_group` (`student_id`, `month`, `recurrence_group`);
+ALTER TABLE `monthly_fees` DROP INDEX IF EXISTS `uniq_student_month`;

@@ -24,6 +24,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?php echo e(SITE_NAME); ?></title>
+<link rel="icon" type="image/svg+xml" href="<?php echo e(BASE_URL . 'assets/images/piano-icon.svg'); ?>">
+<link rel="icon" type="image/png" sizes="32x32" href="<?php echo e(BASE_URL . 'assets/images/favicon-32.png?v=' . filemtime(__DIR__ . '/../assets/images/favicon-32.png')); ?>">
+<link rel="apple-touch-icon" href="<?php echo e(BASE_URL . 'assets/images/apple-touch-icon.png?v=' . filemtime(__DIR__ . '/../assets/images/apple-touch-icon.png')); ?>">
 
 <link rel="stylesheet" href="<?php echo e(BASE_URL . 'assets/css/style.css?v=' . filemtime(__DIR__ . '/../assets/css/style.css')); ?>">
 <link rel="stylesheet" href="<?php echo e(BASE_URL . 'assets/css/user-widget.css?v=' . filemtime(__DIR__ . '/../assets/css/user-widget.css')); ?>">
@@ -44,7 +47,7 @@ window.PSM_CONFIG = {
 <body>
 
 <nav class="topnav">
-    <div class="logo">PIANO LOGO</div>
+    <div class="logo"><img src="<?php echo e(BASE_URL . 'assets/images/piano-icon.svg'); ?>" alt="" width="28" height="28"><span><?php echo e(SITE_NAME); ?></span></div>
     
     <!-- Mobile menu toggle button -->
     <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">☰</button>
@@ -58,6 +61,9 @@ window.PSM_CONFIG = {
         <?php if ($currentUser): ?>
             <a href="<?php echo BASE_URL . 'schedule.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'schedule.php' ? 'class="active"' : ''; ?>>Schedule</a>
             <a href="<?php echo BASE_URL . 'transactions.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'transactions.php' ? 'class="active"' : ''; ?>>Transactions</a>
+            <?php if ($currentUser && normalize_role($currentUser['role'] ?? '') === 'ADMIN'): ?>
+            <a href="<?php echo BASE_URL . 'admin/users.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'users.php' ? 'class="active"' : ''; ?>>Users</a>
+            <?php endif; ?>
         <?php endif; ?>
         <a href="<?php echo BASE_URL . 'account.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'account.php' ? 'class="active"' : ''; ?>>Account</a>
         <?php if ($currentUser): ?>
@@ -180,7 +186,7 @@ if (!$_ufw_hide):
     <!-- Guest panel -->
     <div class="ufw-panel guest-panel">
         <span class="ufw-guest-icon">🎵</span>
-        <div class="ufw-guest-title">Join Piano Course</div>
+        <div class="ufw-guest-title">Join Tasto</div>
         <div class="ufw-guest-sub">Sign in to track progress, earn XP and climb the rankings!</div>
         <a href="<?= BASE_URL ?>account.php?mode=login" class="ufw-login-btn">Log In</a>
         <a href="<?= BASE_URL ?>account.php?mode=register" class="ufw-register-link">Create a free account</a>

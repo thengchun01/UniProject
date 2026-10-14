@@ -34,3 +34,113 @@
 .txn-panel input, .txn-panel select { padding: 10px 12px; border: 1px solid var(--border-color, #eaeaea); border-radius: 10px; font-size: 14px; }
 @media (max-width: 900px) { .txn-totals { grid-template-columns: 1fr 1fr; } .txn-commission { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) { .txn-row-actions * { transition: none; } }
+
+/* Month strip (function.md §4): current on top, Jan–Dec multi-select. */
+.txn-months {
+    margin-bottom: 4px;
+}
+
+.txn-months-now {
+    font-size: 13px;
+    color: var(--text-muted, #666);
+    margin-bottom: 8px;
+}
+
+.txn-months-now strong {
+    color: var(--text-color, #0f172a);
+}
+
+.txn-month-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.txn-month {
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color, #eaeaea);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.txn-month.is-grey {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+}
+
+.txn-month.is-green {
+    background: var(--color-success-bg, #dcfce7);
+    color: var(--color-success, #166534);
+    border-color: #86efac;
+}
+
+.txn-month.is-red {
+    background: var(--color-danger-bg, #fee2e2);
+    color: var(--color-danger, #991b1b);
+    border-color: #fca5a5;
+}
+
+.txn-month.is-selected {
+    outline: 2px solid var(--primary-color, #7c3aed);
+    outline-offset: 1px;
+    font-weight: 800;
+}
+
+.txn-month.is-now {
+    background: #FEF9C3;
+    color: #854D0E;
+    border-color: #FDE68A;
+}
+
+.txn-months-now {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.txn-year-nav {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: #fff;
+    color: var(--text-color, #0f172a);
+    font-size: 16px;
+    line-height: 1;
+}
+
+.txn-year-nav:hover {
+    border-color: var(--primary-color, #7c3aed);
+    color: var(--primary-color, #7c3aed);
+}
+
+/* Monthly fee entry grid */
+.mfee-load {
+    display: flex;
+    gap: 10px;
+    align-items: end;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.mfee-load label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.mfee-table input[type="number"] {
+    width: 100px;
+}
+
+#monthly-fees {
+    margin-top: 16px;
+}

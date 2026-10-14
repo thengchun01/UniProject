@@ -356,6 +356,7 @@
 }
 
 .sched-view-btn:hover {
+    background: transparent;
     color: var(--text-color, #0f172a);
 }
 
@@ -401,7 +402,7 @@
 
 .sched-h-table {
     width: 100%;
-    min-width: 5070px;
+    min-width: 6370px;
     border-collapse: separate;
     border-spacing: 0;
     font-size: 12px;
@@ -438,10 +439,14 @@
     font-size: 12px;
     font-weight: 700;
     letter-spacing: 0.04em;
-    width: 190px;
-    min-width: 190px;
+    width: 120px;
+    min-width: 120px;
     border-right: 1px solid #1e293b;
     border-bottom: 2px solid #334155;
+}
+
+.sched-h-time-head.is-hour {
+    border-left: 2px solid #334155;
 }
 
 .sched-h-day-row {
@@ -507,8 +512,8 @@
 }
 
 .sched-h-cell {
-    width: 190px;
-    min-width: 190px;
+    width: 120px;
+    min-width: 120px;
     padding: 8px 10px;
     vertical-align: top;
     border-bottom: 1px solid var(--border-color, #e2e8f0);
@@ -520,6 +525,17 @@
 
 .sched-h-cell:hover {
     background: #f8fafc;
+}
+
+/* Narrow 15-min cells: let chip text wrap instead of spilling out of frame. */
+.sched-h-cell .sched-chip-time,
+.sched-h-cell .sched-chip-students,
+.sched-h-cell .sched-chip-teacher,
+.sched-table .sched-chip-time,
+.sched-table .sched-chip-students,
+.sched-table .sched-chip-teacher {
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 /* VERTICAL GRID VIEW */
@@ -708,7 +724,7 @@
 /* Lower Workspace Grid */
 .sched-workspace-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     align-items: start;
 }
@@ -1186,6 +1202,352 @@ dialog.sched-dialog .form-field select {
     font-size: 13px;
 }
 
+/* Class-table inline editors + picker dialogs (issue 90.4, admin only) */
+.sched-cell-btn {
+    background: none;
+    border: none;
+    padding: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+    border-radius: 6px;
+}
+
+button.sched-cell-btn:hover {
+    background: transparent;
+    transform: none;
+    color: var(--primary-color, #7c3aed);
+    text-decoration: underline;
+}
+
+.sched-cell-btn:focus-visible {
+    outline: 2px solid var(--primary-color, #7c3aed);
+    outline-offset: 2px;
+}
+
+.sched-comm-editor {
+    display: inline-flex;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+}
+
+.sched-comm-editor[hidden] {
+    display: none;
+}
+
+.sched-comm-editor select {
+    max-width: 110px;
+}
+
+.sched-comm-editor input[type="number"] {
+    width: 90px;
+}
+
+.sched-comm-editor button {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: #fff;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sched-comm-editor button:hover {
+    background: #fff;
+    border-color: var(--primary-color, #7c3aed);
+    color: var(--primary-color, #7c3aed);
+}
+
+dialog.sched-dialog-wide {
+    width: min(640px, 94vw);
+}
+
+.sched-dialog-sub {
+    color: var(--text-muted, #64748b);
+    font-size: 13px;
+    margin: 0 0 12px;
+}
+
+.sched-mini-email {
+    display: block;
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--text-muted, #64748b);
+}
+
+.sched-class-table tr.is-current td,
+.sched-pick-table tr.is-current td {
+    background: #faf5ff;
+}
+
+.series-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    background: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.series-btn:hover {
+    background: #fff;
+    border-color: var(--primary-color, #7c3aed);
+    color: var(--primary-color, #7c3aed);
+}
+
+.series-btn.is-primary:hover {
+    background: var(--primary-color, #7c3aed);
+    color: #fff;
+}
+
+.series-btn.is-primary {
+    background: var(--primary-color, #7c3aed);
+    border-color: var(--primary-color, #7c3aed);
+    color: #fff;
+}
+
+.series-btn.is-primary:hover {
+    color: #fff;
+}
+
+.series-btn.is-danger {
+    color: var(--color-danger, #dc2626);
+    border-color: #ef9a9a;
+}
+
+.series-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.series-btn:disabled:hover {
+    background: #fff;
+    border-color: var(--border-color, #e2e8f0);
+    color: inherit;
+}
+
+.sched-link-btn {
+    background: none;
+    border: none;
+    padding: 2px 0;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-color, #7c3aed);
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+button.sched-link-btn:hover {
+    background: transparent;
+    transform: none;
+    color: var(--primary-hover, #6d28d9);
+}
+
+.fee-input {
+    width: 84px;
+}
+
+/* Create-form field headers: label/count left, action button right. */
+.sched-field-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.sched-count,
+.sched-field-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted, #64748b);
+}
+
+/* Weekday square picker (create form): single pick, letters on top. */
+.sched-day-pick {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+}
+
+.sched-day-sq {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 9px;
+    border: 1.5px solid var(--border-color, #cbd5e1);
+    background: #fff;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-muted, #64748b);
+    cursor: pointer;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.sched-day-sq:hover {
+    background: #f5f3ff;
+    border-color: var(--primary-color, #7c3aed);
+    color: var(--primary-color, #7c3aed);
+}
+
+.sched-day-sq.is-on {
+    background: var(--primary-color, #7c3aed);
+    border-color: var(--primary-color, #7c3aed);
+    color: #fff;
+}
+
+.sched-day-sq.is-sun {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+/* Staged create-form picks (issue 90): rows built from hidden inputs. */
+.sched-picked-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.sched-picked-list:empty {
+    display: none;
+}
+
+.sched-picked-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sched-picked-row strong {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sched-picked-single {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+#schedPickedTeacherLabel {
+    font-weight: 700;
+}
+
+/* Fee/commission number fields use plain text entry (no spinner chrome). */
+.fee-input::-webkit-outer-spin-button,
+.fee-input::-webkit-inner-spin-button,
+.sched-comm-editor input::-webkit-outer-spin-button,
+.sched-comm-editor input::-webkit-inner-spin-button,
+.mfee-table input::-webkit-outer-spin-button,
+.mfee-table input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.fee-input,
+.sched-comm-editor input,
+.mfee-table input {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+/* Class table (issue 90.4): ID, title, teacher, commission, students, frequency, payment */
+.sched-series-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sched-series-head h2 {
+    margin: 0;
+}
+
+.sched-table-scroll {
+    overflow-x: auto;
+    margin-top: 12px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 12px;
+}
+
+table.sched-class-table {
+    width: 100%;
+    min-width: 880px;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+}
+
+.sched-class-table th {
+    background: #0f172a;
+    color: #fff;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+}
+
+.sched-class-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+    vertical-align: top;
+}
+
+.sched-class-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.sched-class-table td strong {
+    white-space: nowrap;
+}
+
+.stud-fee {
+    display: block;
+    white-space: nowrap;
+}
+
+.sched-freq {
+    display: inline-flex;
+    gap: 4px;
+}
+
+.sched-freq span {
+    display: block;
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: #e2e8f0;
+}
+
+.sched-freq span.is-on {
+    background: #22c55e;
+}
+
+.sched-freq span.is-clash {
+    background: #ef4444;
+}
+
+.sched-pay-link {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+    text-decoration: none;
+}
+
 .sched-series-teacher {
     font-size: 12px;
     font-weight: 600;
@@ -1209,6 +1571,7 @@ dialog.sched-dialog .form-field select {
 }
 
 .sched-series-toggle:hover {
+    background: #fff;
     border-color: var(--primary-color, #7c3aed);
     color: var(--primary-color, #7c3aed);
 }
