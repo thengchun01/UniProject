@@ -179,9 +179,10 @@ if ($user && is_database_connected()) {
         $userInfo = $stmt->fetch(PDO::FETCH_ASSOC);
         if (!$userInfo) {
             http_response_code(404);
-            $accountError = 'The requested account could not be found.';
-            $viewingOtherProfile = false;
-            $profileUserId = (int) $user['user_id'];
+            if ($viewingOtherProfile) {
+                redirect_to('admin/users.php');
+            }
+            $accountError = 'Your account could not be found.';
         }
         if ($userInfo && isset($userInfo['role'])) {
             $userInfo['role'] = normalize_role($userInfo['role']);
@@ -189,8 +190,8 @@ if ($user && is_database_connected()) {
 
         // Only refresh session fields when viewing the signed-in user's own account.
         if (!$viewingOtherProfile) {
-            $_SESSION['classroom'] = $userInfo['classroom'];
-            $_SESSION['classroom_status'] = $userInfo['classroom_status'];
+            $_SESSION['classroom'] = $userInfo['classroom'] ?? null;
+            $_SESSION['classroom_status'] = $userInfo['classroom_status'] ?? 'NONE';
         }
 
         $stmt = $db->query('SELECT COUNT(*) FROM tutorial_section');
