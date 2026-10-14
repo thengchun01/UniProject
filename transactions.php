@@ -677,23 +677,18 @@ include __DIR__ . '/includes/header.php';
                             <td><strong><?= e($clsName) ?></strong><br><span style="color:#666;font-size:12px;"><?= e($clsLabel) ?> · <?= e($c['month']) ?> · <?= count($c['lessons']) ?> lesson<?= count($c['lessons']) === 1 ? '' : 's' ?></span></td>
                             <td><?= e($c['tname']) ?><?= $c['tid'] > 0 ? ' <span style="color:#666;font-size:12px;">#' . (int) $c['tid'] . '</span>' : '' ?></td>
                             <td>
-                                RM <?= e(number_format((float) $c['due'], 2)) ?>
-                                <br><span style="color:#666;font-size:12px;"><?= e($c['rate_label'] ?? ($c['rate'][0] . ' ' . number_format((float) $c['rate'][1], 2))) ?><?= $c['series_paid'] ? '' : ' · open' ?></span>
                                 <?php if ($role === 'ADMIN' && $c['g'] !== ''): ?>
-                                    <details class="txn-rate-editor">
-                                        <summary>Edit rate</summary>
-                                        <div class="txn-rate-controls">
-                                            <select data-comm-type data-group="<?= e($c['g']) ?>" aria-label="Commission type">
-                                                <option value="">Default</option>
-                                                <option value="PERCENT"<?= $c['ctype'] === 'PERCENT' ? ' selected' : '' ?>>%</option>
-                                                <option value="FIXED"<?= $c['ctype'] === 'FIXED' ? ' selected' : '' ?>>RM</option>
-                                            </select>
-                                            <input type="number" data-comm-value data-group="<?= e($c['g']) ?>" min="0" step="0.01" value="<?= e($c['cvalue']) ?>" aria-label="Commission value">
-                                            <button type="button" class="action-btn edit-btn" data-comm-save data-group="<?= e($c['g']) ?>">Save</button>
-                                        </div>
-                                        <small>Applies to the whole series.</small>
-                                    </details>
+                                    <button type="button" class="sched-cell-btn txn-commission-value"
+                                        data-comm-show="<?= e($c['g']) ?>"
+                                        data-commission-type="<?= e($c['ctype']) ?>"
+                                        data-commission-value="<?= e($c['cvalue']) ?>"
+                                        title="<?= e($c['rate_label'] ?? ($c['rate'][0] . ' ' . number_format((float) $c['rate'][1], 2))) ?>">
+                                        RM <?= e(number_format((float) $c['due'], 2)) ?>
+                                    </button>
+                                <?php else: ?>
+                                    <span class="txn-commission-value">RM <?= e(number_format((float) $c['due'], 2)) ?></span>
                                 <?php endif; ?>
+                                <span class="txn-commission-note"><?= $c['series_paid'] ? 'Commission due' : 'Open commission' ?></span>
                             </td>
                             <td><?= e($c['sname']) ?> <span style="color:#666;font-size:12px;">#<?= (int) $c['sid'] ?></span></td>
                             <td>
@@ -741,7 +736,7 @@ include __DIR__ . '/includes/header.php';
                             <?php if ($role === 'ADMIN'): ?>
                             <td>
                                 <div class="txn-row-actions">
-                                    <a class="action-btn view-btn" style="text-decoration:none;" href="<?= e(url_path('schedule.php')) ?>">Schedule</a>
+                                    <a class="action-btn view-btn" style="text-decoration:none;" href="<?= e(url_path('schedule.php')) ?>">Details</a>
                                     <?php if ($c['fee_id'] !== null): ?>
                                         <button type="button" class="action-btn delete-btn" data-mfee-del data-feeid="<?= (int) $c['fee_id'] ?>">Delete</button>
                                     <?php elseif (!empty($c['enrollment_id']) && !empty($c['proof_lesson_id'])): ?>
@@ -798,14 +793,14 @@ include __DIR__ . '/includes/header.php';
             <?php endif; ?>
         </div>
         <div class="txn-panel">
-            <h2>Proof activity log</h2>
+            <h2>Transaction Log</h2>
             <p style="color:#666;font-size:13px;">Every upload/delete with date<?= $lessonFilter > 0 ? ' for lesson #' . $lessonFilter : '' ?>.</p>
             <?php if (empty($proofLogs)): ?>
                 <p style="color:#999;">No proof activity yet.</p>
             <?php else: ?>
     <div class="table-wrapper">
-                <table class="data-table modern-table">
-                    <thead><tr><th>Date</th><th>Kind</th><th>Action</th><th>File</th><th>By</th></tr></thead>
+                <table class="data-table modern-table txn-log-table">
+                    <thead><tr><th>Date</th><th>Type</th><th>Action</th><th>File / Lesson</th><th>By</th></tr></thead>
                     <tbody>
                         <?php foreach ($proofLogs as $pl): ?>
                             <tr>
@@ -824,6 +819,24 @@ include __DIR__ . '/includes/header.php';
     </div>
     <?php endif; ?>
 </div>
+
+    <dialog class="sched-dialog txn-comm-dialog" id="txnCommDialog" aria-labelledby="txnCommTitle">
+        <div class="sched-edit-head">
+            <h2 id="txnCommTitle">Edit commission</h2>
+            <button type="button" class="sched-x-btn" data-txn-comm-close aria-label="Close">×</button>
+        </div>
+        <p class="sched-dialog-sub" id="txnCommSub"></p>
+        <div class="form-field"><label>Type<select id="txnCommType">
+            <option value="">Default</option>
+            <option value="PERCENT">Percent %</option>
+            <option value="FIXED">Fixed RM</option>
+        </select></label></div>
+        <div class="form-field"><label>Value<input type="number" id="txnCommValue" min="0" step="0.01" placeholder="blank = default"></label></div>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-txn-comm-close>Cancel</button>
+            <button type="button" class="primary-btn" id="txnCommSave">Save</button>
+        </div>
+    </dialog>
 
 <script>
 (function () {
@@ -1052,25 +1065,41 @@ include __DIR__ . '/includes/header.php';
         });
     });
 
-    document.querySelectorAll('[data-comm-save]').forEach(function (b) {
-        b.addEventListener('click', function () {
-            var cell = b.closest('td');
-            var typeEl = cell ? cell.querySelector('[data-comm-type]') : null;
-            var valEl = cell ? cell.querySelector('[data-comm-value]') : null;
-            var fd = new FormData();
-            fd.append('action', 'set_commission');
-            fd.append('group', b.getAttribute('data-group'));
-            fd.append('commission_type', typeEl ? typeEl.value : '');
-            fd.append('commission_value', valEl ? valEl.value : '');
-            postForm(apiSeries, fd).then(function (d) {
-                if (d && d.success) {
-                    PSMModal.toast('Commission rate saved for the whole series.', 'success');
-                    setTimeout(function () { window.location.reload(); }, 400);
-                } else {
-                    PSMModal.toast((d && d.error) || 'Failed to save rate.', 'error');
-                }
-            }).catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
+    var commGroup = '';
+    document.querySelectorAll('[data-comm-show]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var dlg = document.getElementById('txnCommDialog');
+            if (!dlg) return;
+            commGroup = btn.getAttribute('data-comm-show') || '';
+            var row = btn.closest('tr');
+            var className = row ? (row.querySelector('td:nth-child(2) strong') || {}).textContent : 'Class';
+            document.getElementById('txnCommSub').textContent = (className || 'Class') + ' — ' + (btn.title || 'Commission rate');
+            document.getElementById('txnCommType').value = btn.getAttribute('data-commission-type') || '';
+            document.getElementById('txnCommValue').value = btn.getAttribute('data-commission-value') || '';
+            if (!dlg.open) dlg.showModal();
         });
+    });
+    document.querySelectorAll('[data-txn-comm-close]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var dlg = document.getElementById('txnCommDialog');
+            if (dlg) dlg.close();
+        });
+    });
+    var txnCommSave = document.getElementById('txnCommSave');
+    if (txnCommSave) txnCommSave.addEventListener('click', function () {
+        var fd = new FormData();
+        fd.append('action', 'set_commission');
+        fd.append('group', commGroup);
+        fd.append('commission_type', document.getElementById('txnCommType').value);
+        fd.append('commission_value', document.getElementById('txnCommValue').value);
+        postForm(apiSeries, fd).then(function (d) {
+            if (d && d.success) {
+                PSMModal.toast('Commission rate saved for the whole series.', 'success');
+                setTimeout(function () { window.location.reload(); }, 400);
+            } else {
+                PSMModal.toast((d && d.error) || 'Failed to save rate.', 'error');
+            }
+        }).catch(function (err) { PSMModal.toast('Network error: ' + err.message, 'error'); });
     });
 
     document.querySelectorAll('[data-txn-delproof]').forEach(function (b) {
