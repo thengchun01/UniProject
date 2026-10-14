@@ -65,7 +65,7 @@ if ($txAvailable && is_database_connected()) {
         // Issue 32: keep statuses current before listing.
         $lessonsManager->autoCompletePast();
         $stmt = $db->query("SELECT user_id, username FROM users WHERE role = 'TEACHER' ORDER BY username ASC");
-        $courseOptions = $db->query("SELECT course_id, course_name FROM courses WHERE is_active=1 ORDER BY course_name ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $courseOptions = $db->query("SELECT course_id, course_name FROM courses ORDER BY course_name ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $stmt = $db->query("SELECT user_id, username FROM users WHERE role = 'STUDENT' ORDER BY username ASC");
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -376,7 +376,7 @@ if ($txAvailable && is_database_connected()) {
         foreach ($combos as $key => $c) {
             if (!empty($c['courses'])) {
                 arsort($c['courses']);
-                $combos[$key]['course_name'] = (string) array_key_first($c['courses']);
+                $combos[$key]['course_name'] = implode(', ', array_keys($c['courses']));
             } else {
                 $combos[$key]['course_name'] = '';
             }
