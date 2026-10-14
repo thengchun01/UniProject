@@ -40,6 +40,7 @@ $payStatus = strtoupper(trim($_GET['payment'] ?? ''));
 $teacherFilter = (int) ($_GET['teacher_id'] ?? 0);
 $lessonFilter = (int) ($_GET['lesson_id'] ?? 0);
 $studentFilter = (int) ($_GET['student_id'] ?? 0);
+$courseFilter = $role === 'ADMIN' ? (int) ($_GET['course_id'] ?? 0) : 0;
 if (!in_array($lessonStatus, ['SCHEDULED', 'COMPLETED', 'CANCELLED'], true)) {
     $lessonStatus = '';
 }
@@ -54,6 +55,7 @@ $incompleteLessons = [];
 $defaultCommission = ['PERCENT', 0.0];
 $teachers = [];
 $students = [];
+$courseOptions = [];
 $studentFilterName = null;
 $proofLogs = [];
 
@@ -63,6 +65,7 @@ if ($txAvailable && is_database_connected()) {
         // Issue 32: keep statuses current before listing.
         $lessonsManager->autoCompletePast();
         $stmt = $db->query("SELECT user_id, username FROM users WHERE role = 'TEACHER' ORDER BY username ASC");
+        $courseOptions = $db->query("SELECT course_id, course_name FROM courses WHERE is_active=1 ORDER BY course_name ASC")->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $stmt = $db->query("SELECT user_id, username FROM users WHERE role = 'STUDENT' ORDER BY username ASC");
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
@@ -101,6 +104,11 @@ if ($txAvailable && is_database_connected()) {
             $where[] = 'e.student_id = :sfilter';
             $params['sfilter'] = $studentFilter;
         }
+        if ($role === 'ADMIN' && $courseFilter > 0) {
+            $where[] = "(l.course_id = :course_filter OR (l.course_id IS NULL AND l.title = (SELECT course_name FROM courses WHERE course_id = :course_title_filter LIMIT 1)))";
+            $params['course_filter'] = $courseFilter;
+            $params['course_title_filter'] = $courseFilter;
+        }
         if ($payStatus !== '') {
             // Payment now lives on monthly records: keep combos having one in this state.
             $where[] = "EXISTS (SELECT 1 FROM monthly_fees mfq WHERE mfq.student_id = e.student_id AND mfq.month = SUBSTR(l.lesson_date, 1, 7) AND COALESCE(mfq.recurrence_group, '') = COALESCE(l.recurrence_group, '') AND mfq.status = :pstatus)";
@@ -108,7 +116,7 @@ if ($txAvailable && is_database_connected()) {
         }
         $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-        $sql = "SELECT l.recurrence_group AS g, l.lesson_id, l.lesson_date, l.title, l.start_time, l.end_time,
+        $sql = "SELECT l.recurrence_group AS g, l.lesson_id, l.lesson_date, l.title, l.course_id, c.course_name, l.start_time, l.end_time,
                        l.teacher_id, l.commission_type, l.commission_value, l.commission_status, l.status AS lesson_status,
                        l.commission_proof_path, tu.username AS teacher_name,
                        e.enrollment_id, e.student_id, su.username AS student_name,
@@ -118,6 +126,7 @@ if ($txAvailable && is_database_connected()) {
                 INNER JOIN lessons l ON l.lesson_id = e.lesson_id
                 INNER JOIN users su ON su.user_id = e.student_id
                 LEFT JOIN users tu ON tu.user_id = l.teacher_id
+                LEFT JOIN courses c ON c.course_id = l.course_id
                 LEFT JOIN monthly_fees mf ON mf.student_id = e.student_id
                     AND mf.month = SUBSTR(l.lesson_date, 1, 7)
                     AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
@@ -136,7 +145,7 @@ if ($txAvailable && is_database_connected()) {
             if (!isset($combos[$key])) {
                 $combos[$key] = [
                     'month' => $m, 'g' => $g, 'sid' => $sid, 'sname' => (string) $r['student_name'],
-                    'lessons' => [], 'titles' => [], 'teachers' => [], 'tids' => [], 'comm' => [],
+                    'lessons' => [], 'titles' => [], 'courses' => [], 'teachers' => [], 'tids' => [], 'comm' => [],
                     'fee_id' => null, 'amount' => null, 'mstatus' => null, 'mproof' => null,
                     'enrollment_id' => null, 'cproof' => null, 'proof_lesson_id' => null,
                 ];
@@ -162,6 +171,15 @@ if ($txAvailable && is_database_connected()) {
             $t = trim((string) ($r['title'] ?? ''));
             if ($t !== '') {
                 $c['titles'][$t] = ($c['titles'][$t] ?? 0) + 1;
+            }
+            $courseName = trim((string) ($r['course_name'] ?? ''));
+            if ($courseName === '' && empty($r['course_id']) && $t !== '') {
+                $legacyCourseStmt = $db->prepare('SELECT course_name FROM courses WHERE course_name = :title LIMIT 1');
+                $legacyCourseStmt->execute(['title' => $t]);
+                $courseName = (string) ($legacyCourseStmt->fetchColumn() ?: '');
+            }
+            if ($courseName !== '') {
+                $c['courses'][$courseName] = ($c['courses'][$courseName] ?? 0) + 1;
             }
             $tn = trim((string) ($r['teacher_name'] ?? ''));
             if ($tn !== '') {
@@ -244,7 +262,7 @@ if ($txAvailable && is_database_connected()) {
                 }
                 $combos[$okey] = [
                     'month' => (string) $orow['month'], 'g' => $og, 'sid' => (int) $orow['student_id'],
-                    'sname' => (string) $orow['student_name'], 'lessons' => [], 'titles' => [],
+                    'sname' => (string) $orow['student_name'], 'lessons' => [], 'titles' => [], 'courses' => [],
                     'teachers' => [], 'tids' => [], 'comm' => [],
                     'fee_id' => (int) $orow['fee_id'], 'amount' => (float) $orow['amount'],
                     'mstatus' => (string) $orow['status'], 'mproof' => $orow['proof_path'],
@@ -356,11 +374,25 @@ if ($txAvailable && is_database_connected()) {
         $seriesPaid = [];
         $seriesDue = [];
         foreach ($combos as $key => $c) {
-            if (!empty($c['titles'])) {
+            if (!empty($c['courses'])) {
+                arsort($c['courses']);
+                $combos[$key]['course_name'] = (string) array_key_first($c['courses']);
+            } else {
+                $combos[$key]['course_name'] = '';
+            }
+            if ($combos[$key]['course_name'] !== '') {
+                $combos[$key]['dname'] = $combos[$key]['course_name'];
+            } elseif (!empty($c['titles'])) {
                 arsort($c['titles']);
                 $combos[$key]['dname'] = (string) array_key_first($c['titles']);
             } else {
                 $combos[$key]['dname'] = $c['g'] !== '' ? 'Series #' . substr($c['g'], 0, 8) : 'One-off lessons';
+            }
+            $combos[$key]['lesson_title'] = '';
+            if (!empty($c['titles'])) {
+                arsort($c['titles']);
+                $candidateTitle = (string) array_key_first($c['titles']);
+                if ($candidateTitle !== $combos[$key]['dname']) $combos[$key]['lesson_title'] = $candidateTitle;
             }
             $tname = 'Unassigned';
             $tid = 0;
@@ -624,6 +656,14 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </select>
         </label>
+        <label>Course
+            <select name="course_id">
+                <option value="">All</option>
+                <?php foreach ($courseOptions as $co): ?>
+                    <option value="<?= (int) $co['course_id'] ?>" <?= $courseFilter === (int) $co['course_id'] ? 'selected' : '' ?>><?= e($co['course_name']) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </label>
         <label>Student
             <select name="student_id">
                 <option value="">All</option>
@@ -637,7 +677,7 @@ include __DIR__ . '/includes/header.php';
         <?php endif; ?>
         <?php endif; ?>
         <button type="submit" class="primary-btn">Apply</button>
-        <?php if ($lessonFilter > 0 || $studentFilter > 0 || $lessonStatus !== '' || $payStatus !== '' || $teacherFilter > 0 || $months !== [$curYm]): ?>
+        <?php if ($lessonFilter > 0 || $studentFilter > 0 || $courseFilter > 0 || $lessonStatus !== '' || $payStatus !== '' || $teacherFilter > 0 || $months !== [$curYm]): ?>
             <a href="<?= e(url_path('transactions.php')); ?>" class="text-button">Clear</a>
         <?php endif; ?>
     </form>
@@ -671,7 +711,7 @@ include __DIR__ . '/includes/header.php';
                         ?>
                         <tr>
                             <td><?= $c['fee_id'] !== null ? (int) $c['fee_id'] : '—' ?></td>
-                            <td><strong><?= e($clsName) ?></strong><br><span style="color:#666;font-size:12px;"><?= e($clsLabel) ?> · <?= e($c['month']) ?> · <?= count($c['lessons']) ?> lesson<?= count($c['lessons']) === 1 ? '' : 's' ?></span></td>
+                            <td><strong><?= e($clsName) ?></strong><?php if (!empty($c['lesson_title'])): ?><br><span style="color:#64748b;font-size:12px;">Title: <?= e($c['lesson_title']) ?></span><?php endif; ?><br><span style="color:#666;font-size:12px;"><?= e($clsLabel) ?> · <?= e($c['month']) ?> · <?= count($c['lessons']) ?> lesson<?= count($c['lessons']) === 1 ? '' : 's' ?></span></td>
                             <td><?= e($c['tname']) ?><?= $c['tid'] > 0 ? ' <span style="color:#666;font-size:12px;">#' . (int) $c['tid'] . '</span>' : '' ?></td>
                             <td>
                                 <?php if ($role === 'ADMIN' && $c['g'] !== ''): ?>
