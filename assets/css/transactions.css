@@ -517,8 +517,26 @@ dialog.sched-dialog.txn-comm-dialog::backdrop {
 }
 
 
-/* Commission source indicator: universal default vs explicit lesson/series override. */
-.txn-commission-note.is-custom,
-.sched-commission-source.is-custom { color: var(--primary-color, #7c3aed); font-weight: 700; }
-.txn-commission-note.is-default,
-.sched-commission-source.is-default { color: var(--text-muted, #64748b); }
+.txn-commission-note.is-fixed,
+.sched-commission-source.is-fixed { color: var(--primary-color, #7c3aed); font-weight: 700; }
+.txn-commission-note.is-percentage,
+.sched-commission-source.is-percentage { color: var(--text-muted, #64748b); font-weight: 700; }
+
+/* Keep the Transactions close control pinned to the dialog's top-right. */
+dialog.sched-dialog.txn-comm-dialog .sched-edit-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+dialog.sched-dialog.txn-comm-dialog .sched-edit-head h2 {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+}
+dialog.sched-dialog.txn-comm-dialog .sched-x-btn {
+    flex: 0 0 32px;
+    margin-left: auto;
+    align-self: flex-start;
+}
