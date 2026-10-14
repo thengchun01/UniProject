@@ -396,6 +396,31 @@ try {
     }
 
     $title = trim($_POST['title'] ?? '') ?: null;
+    $courseRaw = trim((string)($_POST['course_id'] ?? ''));
+    $courseId = $courseRaw === '' ? null : (int)$courseRaw;
+    $minimumFee = 0.0;
+    if ($courseId !== null) {
+        $courseStmt = $db->prepare('SELECT course_name, minimum_fee, fee_period, is_active FROM courses WHERE course_id = :id LIMIT 1');
+        $courseStmt->execute(['id' => $courseId]);
+        $courseRow = $courseStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$courseRow || (int)$courseRow['is_active'] !== 1) lessons_error('Choose an active course preset.');
+        $minimumFee = (float)$courseRow['minimum_fee'];
+        if ($title === null) $title = (string)$courseRow['course_name'];
+        if ($teacherId !== null) {
+            $assignedStmt = $db->prepare('SELECT COUNT(*) FROM course_teachers WHERE course_id = :course');
+            $assignedStmt->execute(['course' => $courseId]);
+            if ((int)$assignedStmt->fetchColumn() > 0) {
+                $allowedStmt = $db->prepare('SELECT COUNT(*) FROM course_teachers WHERE course_id = :course AND teacher_id = :teacher');
+                $allowedStmt->execute(['course' => $courseId, 'teacher' => $teacherId]);
+                if ((int)$allowedStmt->fetchColumn() === 0) lessons_error('The selected teacher is not assigned to teach this course.');
+            }
+        }
+    }
+    foreach ($cleanStudents as $sid => $fee) {
+        if ($courseId !== null && $minimumFee > 0 && $fee < $minimumFee) {
+            lessons_error('The fee for each student in this course must be at least RM ' . number_format($minimumFee, 2) . '.');
+        }
+    }
     // Issue 66: repeat-from-existing clones only the NEW dates and joins the
     // original series (starting one and stamping the original when needed).
     $skipBase = !empty($_POST['skip_base']);
@@ -441,6 +466,10 @@ try {
             'commission_value' => $cvalue,
             'created_by' => (int) $user['user_id'],
         ]);
+        if ($courseId !== null) {
+            $courseLinkStmt = $db->prepare('UPDATE lessons SET course_id = :course_id WHERE lesson_id = :lesson_id');
+            $courseLinkStmt->execute(['course_id' => $courseId, 'lesson_id' => $lessonId]);
+        }
         foreach ($cleanStudents as $sid => $fee) {
             $lessonsManager->addEnrollment($lessonId, $sid, $fee);
         }
