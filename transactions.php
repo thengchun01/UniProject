@@ -314,6 +314,7 @@ if ($txAvailable && is_database_connected()) {
                     : $monthlyAmount / max(1, count($lessonCounts[$groupKey] ?? []));
                 $lessonPaidBases[$lessonKey] = ($lessonPaidBases[$lessonKey] ?? 0.0) + $basis;
             }
+            $percentBasesByRate = [];
             foreach ($commissionLessons as $lessonKey => $commissionRow) {
                 $paidBasis = (float) ($lessonPaidBases[$lessonKey] ?? 0.0);
                 if ($paidBasis <= 0) continue;
@@ -327,8 +328,21 @@ if ($txAvailable && is_database_connected()) {
                 $groupKey = $commissionMonth . '|' . $commissionGroup;
                 $rateKey = $commissionType . '|' . number_format((float) $commissionValue, 2, '.', '');
                 $commissionRateSets[$groupKey][$rateKey] = [$commissionType, (float) $commissionValue];
-                $commissionByMonthGroup[$groupKey] = ($commissionByMonthGroup[$groupKey] ?? 0.0)
-                    + $lessonsManager->commissionPayout($commissionType, (float) $commissionValue, $paidBasis);
+                if ($commissionType === 'PERCENT') {
+                    // Sum the fee bases first, then round the percentage once per rate/month/group.
+                    $percentBasesByRate[$groupKey][$rateKey] = ($percentBasesByRate[$groupKey][$rateKey] ?? 0.0) + $paidBasis;
+                } else {
+                    // Fixed commission is charged per lesson, so keep each lesson payout separate.
+                    $commissionByMonthGroup[$groupKey] = ($commissionByMonthGroup[$groupKey] ?? 0.0)
+                        + $lessonsManager->commissionPayout($commissionType, (float) $commissionValue, $paidBasis);
+                }
+            }
+            foreach ($percentBasesByRate as $groupKey => $rates) {
+                foreach ($rates as $rateKey => $totalBasis) {
+                    [$commissionType, $commissionValue] = $commissionRateSets[$groupKey][$rateKey];
+                    $commissionByMonthGroup[$groupKey] = ($commissionByMonthGroup[$groupKey] ?? 0.0)
+                        + $lessonsManager->commissionPayout($commissionType, (float) $commissionValue, (float) $totalBasis);
+                }
             }
             foreach ($combos as $comboKey => $combo) {
                 $comboGroupKey = $combo['month'] . '|' . $combo['g'];
