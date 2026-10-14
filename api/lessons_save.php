@@ -68,6 +68,19 @@ try {
         if ($lessonId <= 0) {
             lessons_error('Invalid lesson.');
         }
+        // Read class identity and enrolled students before deleting the lesson.
+        $metaStmt = $db->prepare('SELECT lesson_date, recurrence_group FROM lessons WHERE lesson_id = :id');
+        $metaStmt->execute(['id' => $lessonId]);
+        $lessonMeta = $metaStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$lessonMeta) {
+            lessons_error('Lesson not found.');
+        }
+        $lessonMonth = substr((string) $lessonMeta['lesson_date'], 0, 7);
+        $seriesGroup = trim((string) ($lessonMeta['recurrence_group'] ?? ''));
+        $studentStmt = $db->prepare('SELECT student_id FROM lesson_enrollments WHERE lesson_id = :id');
+        $studentStmt->execute(['id' => $lessonId]);
+        $studentIds = array_map('intval', $studentStmt->fetchAll(PDO::FETCH_COLUMN) ?: []);
+
         // Remove physical proof files scoped to uploads/proofs before cascade delete.
         $proofDir = realpath(__DIR__ . '/../uploads/proofs');
         $paths = [];
@@ -86,6 +99,36 @@ try {
         }
         $stmt = $db->prepare('DELETE FROM lessons WHERE lesson_id = :id');
         $stmt->execute(['id' => $lessonId]);
+
+        // Monthly fees for a series are retained while other occurrences remain.
+        if ($seriesGroup !== '') {
+            $remainingStmt = $db->prepare('SELECT COUNT(*) FROM lessons WHERE recurrence_group = :g');
+            $remainingStmt->execute(['g' => $seriesGroup]);
+            if ((int) $remainingStmt->fetchColumn() === 0) {
+                $deleteFees = $db->prepare('DELETE FROM monthly_fees WHERE recurrence_group = :g');
+                $deleteFees->execute(['g' => $seriesGroup]);
+            }
+        } else {
+            // Standalone class: remove its ungrouped fee only if the student has
+            // no other lesson that month (avoids deleting a shared monthly charge).
+            $otherStmt = $db->prepare(
+                "SELECT COUNT(*) FROM lessons l
+                 INNER JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+                 WHERE e.student_id = :sid AND DATE_FORMAT(l.lesson_date, '%Y-%m') = :month"
+            );
+            $deleteFee = $db->prepare(
+                "DELETE FROM monthly_fees
+                 WHERE student_id = :sid AND month = :month
+                   AND (recurrence_group IS NULL OR recurrence_group = '')"
+            );
+            foreach ($studentIds as $sid) {
+                $otherStmt->execute(['sid' => $sid, 'month' => $lessonMonth]);
+                if ((int) $otherStmt->fetchColumn() === 0) {
+                    $deleteFee->execute(['sid' => $sid, 'month' => $lessonMonth]);
+                }
+            }
+        }
+
         if ($proofDir !== false) {
             foreach ($paths as $p) {
                 $full = realpath(__DIR__ . '/../' . $p);
@@ -137,6 +180,11 @@ try {
         }
         $stmt = $db->prepare('DELETE FROM lessons WHERE recurrence_group = :g');
         $stmt->execute(['g' => $group]);
+
+        // Remove monthly billing transactions associated with the deleted class.
+        $monthlyStmt = $db->prepare('DELETE FROM monthly_fees WHERE recurrence_group = :g');
+        $monthlyStmt->execute(['g' => $group]);
+
         if ($proofDir !== false) {
             foreach ($paths as $p) {
                 $full = realpath(__DIR__ . '/../' . $p);
