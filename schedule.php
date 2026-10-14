@@ -828,7 +828,7 @@ include __DIR__ . '/includes/header.php';
                             <?php endif; ?>
                         </td>
                         <td>
-                            <span class="sched-freq" role="img" aria-label="Weekly meeting days">
+                            <span class="sched-freq" aria-label="Weekly meeting days">
                             <?php foreach ([1, 2, 3, 4, 5, 6, 7] as $fdow): ?>
                                 <?php
                                 $fcell = $freqMap[$g][$fdow] ?? null;
@@ -839,7 +839,11 @@ include __DIR__ . '/includes/header.php';
                                     $ftitle = $weekdayNames[$fdow] . ' ' . $fcell['start'] . '–' . $fcell['end'] . (isset($freqClash[$g][$fdow]) ? ' (clash!)' : '');
                                 }
                                 ?>
-                                <span class="<?= $fcls ?>" title="<?= e($ftitle) ?>"></span>
+                                <?php if ($role === 'ADMIN' && $fdow < 7): ?>
+                                    <button type="button" class="sched-freq-day <?= $fcls ?>" data-series-weekday="<?= e($g) ?>" data-target-dow="<?= $fdow ?>" title="Move this class to <?= e($weekdayNames[$fdow]) ?><?= $fcell !== null ? ' · ' . e($fcell['start'] . '–' . $fcell['end']) : '' ?>" aria-label="Move class to <?= e($weekdayNames[$fdow]) ?>"></button>
+                                <?php else: ?>
+                                    <span class="<?= $fcls ?><?= $fdow === 7 ? ' is-closed' : '' ?>" title="<?= e($ftitle) ?>"></span>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                             </span>
                         </td>
@@ -1158,8 +1162,8 @@ include __DIR__ . '/includes/header.php';
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
                         <div class="form-field"><label>Title (optional)<input type="text" name="title" maxlength="200" value="<?= e($selectedLesson['title'] ?? '') ?>"></label></div>
-                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedEditDate" data-date-picker data-disable-sunday="1" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label>
-                            <div class="sched-day-pick" data-daypick-for="schedEditDate" role="group" aria-label="Pick weekday">
+                        <div class="form-field"><label>Class weekday</label><input type="hidden" name="lesson_date" id="schedEditDate" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>">
+                            <div class="sched-day-pick" data-daypick-for="schedEditDate" role="group" aria-label="Pick class weekday">
                                 <button type="button" class="sched-day-sq" data-dow="1" aria-pressed="false" title="Monday">M</button>
                                 <button type="button" class="sched-day-sq" data-dow="2" aria-pressed="false" title="Tuesday">T</button>
                                 <button type="button" class="sched-day-sq" data-dow="3" aria-pressed="false" title="Wednesday">W</button>
@@ -1168,7 +1172,7 @@ include __DIR__ . '/includes/header.php';
                                 <button type="button" class="sched-day-sq" data-dow="6" aria-pressed="false" title="Saturday">S</button>
                                 <button type="button" class="sched-day-sq is-sun" disabled title="Sunday — closed">S</button>
                             </div>
-                            <div class="sched-date-day" id="schedEditDateDay"><?= e(date('D, j M Y', strtotime(substr((string) $selectedLesson['lesson_date'], 0, 10) . 'T12:00:00'))) ?></div>
+                            <div class="sched-date-day" id="schedEditDateDay">Every <?= e(date('l', strtotime(substr((string) $selectedLesson['lesson_date'], 0, 10) . 'T12:00:00'))) ?></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-field"><label>Start (HH:MM)<input type="text" name="start_time" id="schedEditStart" value="<?= e(substr((string) $selectedLesson['start_time'], 0, 5)) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
@@ -1270,14 +1274,14 @@ include __DIR__ . '/includes/header.php';
                             <option value="Pop Vocal" data-mode="Single student">Pop Vocal</option>
                         </select></label><div class="sched-date-day" id="schedPresetHint"></div></div>
                         <div class="form-field"><label>Title (optional)<input type="text" name="title" id="schedTitle" maxlength="200" placeholder="e.g. Beginner piano"></label></div>
-                        <div class="form-field"><label>Date<input type="text" name="lesson_date" id="schedDate" data-date-picker data-disable-sunday="1" value="<?= e($defaultDate) ?>" required placeholder="YYYY-MM-DD" pattern="^\d{4}-\d{2}-\d{2}$" maxlength="10" inputmode="numeric" autocomplete="off" title="Date as YYYY-MM-DD"></label>
-                            <div class="sched-day-pick" data-daypick-for="schedDate" role="group" aria-label="Pick weekday">
+                        <div class="form-field"><label>Class weekday</label><input type="hidden" name="lesson_date" id="schedDate" value="<?= e($defaultDate) ?>">
+                            <div class="sched-day-pick" data-daypick-for="schedDate" role="group" aria-label="Pick class weekday">
                                 <?php foreach ([1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'] as $dn => $dl): ?>
                                     <button type="button" class="sched-day-sq" data-dow="<?= $dn ?>" aria-pressed="false" title="<?= $dl ?>"><?= substr($dl, 0, 1) ?></button>
                                 <?php endforeach; ?>
                                 <button type="button" class="sched-day-sq is-sun" disabled title="Sunday — closed">S</button>
                             </div>
-                            <div class="sched-date-day" id="schedDateDay"><?= e(date('D, j M Y', strtotime($defaultDate . 'T12:00:00'))) ?></div>
+                            <div class="sched-date-day" id="schedDateDay">Every <?= e(date('l', strtotime($defaultDate . 'T12:00:00'))) ?></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-field"><label>Start (HH:MM)<input type="text" name="start_time" id="schedStart" value="<?= e($defaultStart) ?>" pattern="^\d{2}:\d{2}$" placeholder="HH:MM" list="schedTimeList" inputmode="numeric" required></label></div>
@@ -1448,6 +1452,21 @@ include __DIR__ . '/includes/header.php';
         b.addEventListener('click', function () {
             var d = b.closest('dialog');
             if (d) d.close();
+        });
+    });
+    // Click a weekday square to move every lesson in that class series.
+    document.querySelectorAll('[data-series-weekday]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var group = btn.getAttribute('data-series-weekday');
+            var weekday = btn.getAttribute('data-target-dow');
+            var dayNames = ['', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            PSMModal.confirm({
+                title: 'Move entire class?',
+                message: 'Move every lesson in this class to ' + dayNames[parseInt(weekday, 10)] + '? Lesson times, students, fees, and payment records will be preserved.',
+                confirmText: 'Move class'
+            }).then(function (yes) {
+                if (yes) seriesPost('set_weekday', { group: group, weekday: weekday });
+            });
         });
     });
     // Title rename.
@@ -1827,7 +1846,7 @@ include __DIR__ . '/includes/header.php';
         if (!/^\d{4}-\d{2}-\d{2}$/.test(ymd)) return '';
         var d = new Date(ymd + 'T12:00:00');
         if (isNaN(d)) return '';
-        return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        return 'Every ' + d.toLocaleDateString('en-GB', { weekday: 'long' });
     }
     function wireDateDay(dateId, badgeId) {
         var di = document.getElementById(dateId), badge = document.getElementById(badgeId);
@@ -1869,7 +1888,9 @@ include __DIR__ . '/includes/header.php';
                 if (isNaN(base)) base = new Date();
                 var cur = base.getDay();
                 cur = cur === 0 ? 7 : cur;
-                base.setDate(base.getDate() + (target - cur));
+                var dayShift = target - cur;
+                if (input.id === 'schedDate' && dayShift < 0) dayShift += 7; // create the next occurrence, not a past date
+                base.setDate(base.getDate() + dayShift);
                 function p2(n) { return String(n).padStart(2, '0'); }
                 var v = base.getFullYear() + '-' + p2(base.getMonth() + 1) + '-' + p2(base.getDate());
                 if (input.value !== v) {
