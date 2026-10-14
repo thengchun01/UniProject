@@ -162,6 +162,49 @@ try {
     $lessonIds = series_lesson_ids($db, $group);
     $inList = implode(',', array_fill(0, count($lessonIds), '?'));
 
+    // Move every occurrence in a class to the chosen weekday, preserving its
+    // week and time. This keeps the series aligned instead of editing one row.
+    if ($action === 'set_weekday') {
+        $targetDow = (int) ($_POST['weekday'] ?? 0); // 1=Mon ... 6=Sat
+        if ($targetDow < 1 || $targetDow > 6) {
+            series_error('Choose a weekday from Monday to Saturday.');
+        }
+        $stmt = $db->prepare(
+            "SELECT lesson_id, lesson_date, start_time, end_time
+             FROM lessons WHERE recurrence_group = :g ORDER BY lesson_date ASC"
+        );
+        $stmt->execute(['g' => $group]);
+        $occurrences = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $updates = [];
+        foreach ($occurrences as $occurrence) {
+            $oldDate = substr((string) $occurrence['lesson_date'], 0, 10);
+            $oldDow = (int) date('N', strtotime($oldDate . 'T12:00:00'));
+            $newDate = date('Y-m-d', strtotime($oldDate . ' ' . ($targetDow - $oldDow >= 0 ? '+' : '') . ($targetDow - $oldDow) . ' days'));
+            [$slotOk, $slotError] = $lessonsManager->checkSlot(
+                $newDate,
+                substr((string) $occurrence['start_time'], 0, 5),
+                substr((string) $occurrence['end_time'], 0, 5)
+            );
+            if (!$slotOk) {
+                series_error('Cannot move the class to that weekday: ' . $slotError);
+            }
+            $updates[] = [(int) $occurrence['lesson_id'], $newDate];
+        }
+        $db->beginTransaction();
+        try {
+            $updateDate = $db->prepare('UPDATE lessons SET lesson_date = :d WHERE lesson_id = :id');
+            foreach ($updates as [$id, $newDate]) {
+                $updateDate->execute(['d' => $newDate, 'id' => $id]);
+            }
+            $db->commit();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            throw $e;
+        }
+        echo json_encode(['success' => true, 'data' => ['updated' => count($updates), 'weekday' => $targetDow]]);
+        exit;
+    }
+
     if ($action === 'rename_series') {
         $title = trim($_POST['title'] ?? '');
         if ($title === '' || mb_strlen($title) > 200) {
