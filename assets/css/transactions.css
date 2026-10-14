@@ -409,3 +409,23 @@
     border-radius: 10px;
     background: #fff;
 }
+
+
+/* Keep payment and commission proof controls aligned within their table cells. */
+.txn-wrap .txn-payment-cell,
+.txn-wrap .txn-proof-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 7px;
+    min-height: 32px;
+    margin-top: 0;
+}
+.txn-wrap .txn-payment-cell .txn-upload-button,
+.txn-wrap .txn-proof-cell .txn-upload-button,
+.txn-wrap .txn-payment-cell .txn-file-pill,
+.txn-wrap .txn-proof-cell .txn-file-pill {
+    margin-top: 0;
+    vertical-align: middle;
+}
