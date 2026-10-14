@@ -35,6 +35,7 @@ if (!in_array($statusFilter, ['SCHEDULED', 'COMPLETED', 'CANCELLED'], true)) {
 }
 $teacherFilter = (int) ($_GET['teacher_id'] ?? 0);
 $studentFilter = (int) ($_GET['student_id'] ?? 0);
+$courseFilter = $role === 'ADMIN' ? (int) ($_GET['course_id'] ?? 0) : 0;
 $selectedLessonId = (int) ($_GET['lesson_id'] ?? 0);
 
 // ---- issue 29: create-form defaults (next open day, next :00/:15/:30/:45 slot, +45 min) ----
@@ -149,7 +150,7 @@ if ($lessonsAvailable && is_database_connected()) {
         $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $stmt = $db->query("SELECT user_id, username, email FROM users WHERE role = 'STUDENT' ORDER BY username ASC");
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
-        $coursePresets = $db->query("SELECT course_id, course_name, class_mode, age_range, duration_options, minimum_fee, fee_period FROM courses WHERE is_active = 1 ORDER BY course_name")->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $coursePresets = $db->query("SELECT course_id, course_name, class_mode, age_range, duration_options, minimum_fee FROM courses WHERE is_active = 1 ORDER BY course_name")->fetchAll(PDO::FETCH_ASSOC) ?: [];
         // Issue 38: teacher's own students for the filter dropdown.
         $teacherStudents = [];
         if ($role === 'TEACHER') {
@@ -177,6 +178,9 @@ if ($lessonsAvailable && is_database_connected()) {
         } elseif ($studentFilter > 0) {
             // Issue 38: find all lessons for a certain student (admin + teacher).
             $filters['student_id'] = $studentFilter;
+        }
+        if ($role === 'ADMIN' && $courseFilter > 0) {
+            $filters['course_id'] = $courseFilter;
         }
         $lessons = $lessonsManager->listLessons($filters, 'lesson_date', 'ASC', 500, 0);
 
@@ -1355,7 +1359,7 @@ include __DIR__ . '/includes/header.php';
                         <div class="form-field"><label>Class preset<select id="schedClassPreset" name="course_id">
                             <option value="">Custom…</option>
                             <?php foreach ($coursePresets as $course): ?>
-                                <option value="<?= (int)$course['course_id'] ?>" data-title="<?= e($course['course_name']) ?>" data-mode="<?= e($course['class_mode']) ?>" data-min-fee="<?= e(number_format((float)$course['minimum_fee'], 2, '.', '')) ?>" data-fee-period="<?= e($course['fee_period']) ?>"><?= e($course['course_name']) ?></option>
+                                <option value="<?= (int)$course['course_id'] ?>" data-title="<?= e($course['course_name']) ?>" data-mode="<?= e($course['class_mode']) ?>" data-min-fee="<?= e(number_format((float)$course['minimum_fee'], 2, '.', '')) ?>" data-duration-options="<?= e($course['duration_options'] ?? '') ?>"><?= e($course['course_name']) ?></option>
                             <?php endforeach; ?>
                         </select></label><div class="sched-date-day" id="schedPresetHint"></div></div>
                         <div class="form-field"><label>Title (optional)<input type="text" name="title" id="schedTitle" maxlength="200" placeholder="e.g. Beginner piano"></label></div>
@@ -2112,23 +2116,43 @@ include __DIR__ . '/includes/header.php';
         paint();
     });
 
-    // Issue 90: class preset fills the lesson title (+ mode hint).
+    // Course preset fills the title, shows the monthly fee, and enforces the
+    // first listed duration as the minimum. Example: "30 / 45 min" => 30 min.
     (function () {
         var preset = document.getElementById('schedClassPreset');
         var titleInput = document.getElementById('schedTitle');
         var hint = document.getElementById('schedPresetHint');
+        var startInput = document.getElementById('schedStart');
+        var endInput = document.getElementById('schedEnd');
         if (!preset || !titleInput) return;
+        function minDuration(opt) {
+            var raw = opt ? (opt.getAttribute('data-duration-options') || '') : '';
+            var match = raw.match(/\\d+/);
+            return match ? parseInt(match[0], 10) : 0;
+        }
+        function enforceMinimumDuration() {
+            var opt = preset.options[preset.selectedIndex];
+            var minimum = minDuration(opt);
+            if (!minimum || !startInput || !endInput) return;
+            var startMatch = (startInput.value || '').match(/^(\\d{1,2}):(\\d{2})$/);
+            var endMatch = (endInput.value || '').match(/^(\\d{1,2}):(\\d{2})$/);
+            if (!startMatch) return;
+            var startMinutes = Number(startMatch[1]) * 60 + Number(startMatch[2]);
+            var endMinutes = endMatch ? Number(endMatch[1]) * 60 + Number(endMatch[2]) : -1;
+            if (endMinutes - startMinutes < minimum) {
+                var next = startMinutes + minimum;
+                endInput.value = String(Math.floor(next / 60)).padStart(2, '0') + ':' + String(next % 60).padStart(2, '0');
+            }
+        }
         function applyPreset() {
             var opt = preset.options[preset.selectedIndex];
-            var mode = opt ? opt.getAttribute('data-mode') : '';
+            var mode = opt ? (opt.getAttribute('data-mode') || '') : '';
             var courseTitle = opt ? (opt.getAttribute('data-title') || '') : '';
             var minFee = opt ? (opt.getAttribute('data-min-fee') || '') : '';
-            var period = opt ? (opt.getAttribute('data-fee-period') || 'month') : 'month';
+            var minimum = minDuration(opt);
             if (preset.value !== '') {
                 titleInput.value = courseTitle || titleInput.value;
-                if (hint) hint.textContent = mode + (minFee !== '' ? ' · Minimum RM ' + Number(minFee).toFixed(2) + (period === 'lesson' ? '/lesson' : '/month') : '');
-                // When a preset is selected, initialise untouched/zero student fees
-                // to the course minimum. Staff can still enter a higher amount.
+                if (hint) hint.textContent = mode + (minFee !== '' ? ' · Minimum RM ' + Number(minFee).toFixed(2) + '/month' : '') + (minimum ? ' · Minimum lesson ' + minimum + ' min' : '');
                 var rows = document.querySelectorAll('#schedPickedStudents tr[data-sid]');
                 rows.forEach(function (row) {
                     var feeInput = row.querySelector('.fee-input');
@@ -2138,12 +2162,15 @@ include __DIR__ . '/includes/header.php';
                         hiddenFee.value = minFee;
                     }
                 });
+                enforceMinimumDuration();
             } else if (hint) {
                 hint.textContent = '';
             }
         }
         preset.addEventListener('change', applyPreset);
         preset.addEventListener('input', applyPreset);
+        if (startInput) startInput.addEventListener('change', enforceMinimumDuration);
+        if (endInput) endInput.addEventListener('change', enforceMinimumDuration);
     })();
 
     // Issue 55: a form date outside the shown week moves the timetable to include it.
