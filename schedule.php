@@ -796,7 +796,7 @@ include __DIR__ . '/includes/header.php';
                         <td><span class="sched-series-hash">#<?= e(substr($g, 0, 8)) ?></span></td>
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-title="<?= e($g) ?>" data-name="<?= e($seriesNames[$g] ?? '') ?>"><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></button><?php else: ?><strong><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></strong><?php endif; ?></td>
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-teacher="<?= e($g) ?>" data-teacher="<?= (int) $teacherIdNow ?>" data-ranges="<?= e($rangesJson) ?>"><?= e($teacherLabel) ?></button><?php else: ?><?= e($teacherLabel) ?><?php endif; ?></td>
-                        <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-commshow="<?= e($g) ?>" title="<?= e($commLabel) ?>">RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?></button><?php else: ?>RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?><?php endif; ?></td>
+                        <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-commshow="<?= e($g) ?>" data-commission-type="<?= e($commParts[0] ?? '') ?>" data-commission-value="<?= e($commParts[1] ?? '') ?>" title="<?= e($commLabel) ?>">RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?></button><?php else: ?>RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?><?php endif; ?></td>
                         <td>
                             <?php if ($studentList === []): ?>
                                 <span class="sched-empty">—</span>
@@ -1488,8 +1488,8 @@ include __DIR__ . '/includes/header.php';
             var row = btn.closest('tr');
             var name = row ? row.querySelector('strong').textContent : '';
             document.getElementById('seriesCommSub').textContent = name + ' — ' + btn.title;
-            document.getElementById('seriesCommType').value = '';
-            document.getElementById('seriesCommValue').value = '';
+            document.getElementById('seriesCommType').value = btn.getAttribute('data-commission-type') || '';
+            document.getElementById('seriesCommValue').value = btn.getAttribute('data-commission-value') || '';
             try { if (!dlg.open) dlg.showModal(); } catch (e) { PSMModal.toast('Popup blocked: ' + e.message, 'error'); }
         });
     });
