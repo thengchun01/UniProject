@@ -52,6 +52,7 @@ $courses = $db->query(
                SELECT 1 FROM lesson_enrollments e
                INNER JOIN lessons l ON l.lesson_id=e.lesson_id
                WHERE e.student_id=su.user_id
+                 AND l.status <> 'CANCELLED'
                  AND (l.course_id=c.course_id OR (l.course_id IS NULL AND l.title=c.course_name))
              )
            )) AS enrolled_count
