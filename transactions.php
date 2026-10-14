@@ -381,15 +381,6 @@ if ($txAvailable && is_database_connected()) {
             }
             $combos[$key]['ctype'] = $ctype;
             $combos[$key]['cvalue'] = $cvalue;
-            $hasCustomCommission = false;
-            foreach (array_keys($c['comm']) as $commissionKey) {
-                $commissionParts = explode('|', (string) $commissionKey, 2);
-                if (trim((string) ($commissionParts[0] ?? '')) !== '' && trim((string) ($commissionParts[1] ?? '')) !== '') {
-                    $hasCustomCommission = true;
-                    break;
-                }
-            }
-            $combos[$key]['commission_source'] = $hasCustomCommission ? 'Custom' : 'Default';
             [$rct, $rcv] = $lessonsManager->resolveCommission($tid > 0 ? $tid : null, $ctype !== '' ? $ctype : null, $cvalue !== '' ? $cvalue : null);
             $combos[$key]['rate'] = [$rct, (float) $rcv];
             $combos[$key]['commission_type_label'] = strtoupper((string) $rct) === 'FIXED' ? 'Fixed' : 'Percentage';
