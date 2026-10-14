@@ -678,7 +678,7 @@ include __DIR__ . '/includes/header.php';
                             <td><?= e($c['tname']) ?><?= $c['tid'] > 0 ? ' <span style="color:#666;font-size:12px;">#' . (int) $c['tid'] . '</span>' : '' ?></td>
                             <td>
                                 <?php if ($role === 'ADMIN' && $c['g'] !== ''): ?>
-                                    <button type="button" class="sched-cell-btn txn-commission-value"
+                                    <button type="button" class="txn-commission-value"
                                         data-comm-show="<?= e($c['g']) ?>"
                                         data-commission-type="<?= e($c['ctype']) ?>"
                                         data-commission-value="<?= e($c['cvalue']) ?>"
