@@ -243,3 +243,72 @@
 @media (max-width: 900px) {
     .txn-wrap .modern-table { min-width: 1000px; }
 }
+
+
+/* Compact proof controls: one upload button or a clickable rounded file chip. */
+.txn-upload-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 6px 11px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 9px;
+    background: #fff;
+    color: var(--primary-color, #6d28d9);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+.txn-upload-button:hover {
+    border-color: var(--primary-color, #6d28d9);
+    background: #f5f3ff;
+}
+.txn-file-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 170px;
+    min-height: 32px;
+    padding: 3px 4px 3px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    background: #f8fafc;
+    box-sizing: border-box;
+}
+.txn-file-pill a {
+    display: block;
+    max-width: 125px;
+    overflow: hidden;
+    color: var(--primary-color, #6d28d9);
+    font-size: 12px;
+    font-weight: 700;
+    text-decoration: none;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.txn-file-pill a:hover { text-decoration: underline; }
+.txn-file-pill button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 0;
+    border-radius: 7px;
+    background: #fee2e2;
+    color: #b91c1c;
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: pointer;
+}
+.txn-file-pill button:hover { background: #fecaca; }
+.txn-file-readonly { padding-right: 10px; }
+.txn-payment-cell { gap: 7px; }
+.txn-payment-cell .txn-upload-button,
+.txn-payment-cell .txn-file-pill { margin-top: 2px; }
