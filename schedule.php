@@ -1495,7 +1495,9 @@ include __DIR__ . '/includes/header.php';
 
         if (msg) dlg.appendChild(msg);
 
-        // Keep the existing delete action available while the edit form is in the popup.
+        dlg.appendChild(form);
+
+        // Keep the delete action below the edit form and its message in the popup.
         if (isEditing && side) {
             var deleteButton = side.querySelector('[data-del-lesson]');
             if (deleteButton) {
@@ -1505,8 +1507,6 @@ include __DIR__ . '/includes/header.php';
                 dlg.appendChild(actions);
             }
         }
-
-        dlg.appendChild(form);
         var timeList = document.getElementById('schedTimeList');
         if (timeList) dlg.appendChild(timeList);
         document.body.appendChild(dlg);
