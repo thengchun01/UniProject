@@ -1524,20 +1524,47 @@ table.sched-class-table {
     gap: 4px;
 }
 
-.sched-freq span {
+.sched-freq span,
+.sched-freq .sched-freq-day {
     display: block;
+    flex: 0 0 14px;
     width: 14px;
     height: 14px;
+    min-width: 14px;
+    padding: 0;
+    border: 0;
     border-radius: 4px;
     background: #e2e8f0;
+    box-sizing: border-box;
 }
 
-.sched-freq span.is-on {
+.sched-freq .sched-freq-day {
+    cursor: pointer;
+    outline-offset: 2px;
+    transition: transform .12s ease, box-shadow .12s ease, background .12s ease;
+}
+
+.sched-freq .sched-freq-day:hover {
+    transform: scale(1.18);
+    box-shadow: 0 0 0 2px rgba(124, 58, 237, .18);
+}
+
+.sched-freq .sched-freq-day:focus-visible {
+    outline: 2px solid var(--primary-color, #7c3aed);
+}
+
+.sched-freq span.is-on,
+.sched-freq .sched-freq-day.is-on {
     background: #22c55e;
 }
 
-.sched-freq span.is-clash {
+.sched-freq span.is-clash,
+.sched-freq .sched-freq-day.is-clash {
     background: #ef4444;
+}
+
+.sched-freq span.is-closed {
+    opacity: .35;
 }
 
 .sched-pay-link {
