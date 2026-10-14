@@ -66,7 +66,7 @@ try {
 
     $stmt->execute([
         'username' => $username,
-        'email' => $email,
+        'email' => $email !== '' ? $email : null,
         'role' => $role,
         'id' => $id
     ]);
