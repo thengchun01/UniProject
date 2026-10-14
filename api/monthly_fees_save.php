@@ -99,6 +99,7 @@ if (trim($_POST['action'] ?? '') === 'delete') {
                     $proofPaths[] = (string) $lessonRow['commission_proof_path'];
                 }
             }
+            $affectedStudents = [$studentId];
             if ($lessonIds !== []) {
                 $marks = implode(',', array_fill(0, count($lessonIds), '?'));
                 $enrollProofs = $db->prepare("SELECT proof_path FROM lesson_enrollments WHERE lesson_id IN ($marks)");
@@ -106,14 +107,39 @@ if (trim($_POST['action'] ?? '') === 'delete') {
                 foreach ($enrollProofs->fetchAll(PDO::FETCH_COLUMN) as $path) {
                     if (is_string($path) && $path !== '') $proofPaths[] = $path;
                 }
+                $studentStmt = $db->prepare("SELECT DISTINCT student_id FROM lesson_enrollments WHERE lesson_id IN ($marks)");
+                $studentStmt->execute($lessonIds);
+                $affectedStudents = array_values(array_unique(array_merge(
+                    $affectedStudents,
+                    array_map('intval', $studentStmt->fetchAll(PDO::FETCH_COLUMN) ?: [])
+                )));
                 $deleteLessons = $db->prepare("DELETE FROM lessons WHERE lesson_id IN ($marks)");
                 $deleteLessons->execute($lessonIds);
             }
+            $remainingLessons = $db->prepare(
+                "SELECT COUNT(*) FROM lessons l
+                 INNER JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+                 WHERE e.student_id = :sid AND DATE_FORMAT(l.lesson_date, '%Y-%m') = :month
+                   AND (l.recurrence_group IS NULL OR l.recurrence_group = '')"
+            );
             $deleteFee = $db->prepare(
                 "DELETE FROM monthly_fees WHERE student_id = :sid AND month = :month
                  AND (recurrence_group IS NULL OR recurrence_group = '')"
             );
-            $deleteFee->execute(['sid' => $studentId, 'month' => $month]);
+            $monthlyProof = $db->prepare(
+                "SELECT proof_path FROM monthly_fees WHERE student_id = :sid AND month = :month
+                 AND (recurrence_group IS NULL OR recurrence_group = '')"
+            );
+            foreach ($affectedStudents as $affectedSid) {
+                $remainingLessons->execute(['sid' => $affectedSid, 'month' => $month]);
+                if ((int) $remainingLessons->fetchColumn() === 0) {
+                    $monthlyProof->execute(['sid' => $affectedSid, 'month' => $month]);
+                    foreach ($monthlyProof->fetchAll(PDO::FETCH_COLUMN) as $path) {
+                        if (is_string($path) && $path !== '') $proofPaths[] = $path;
+                    }
+                    $deleteFee->execute(['sid' => $affectedSid, 'month' => $month]);
+                }
+            }
         }
         $db->commit();
     } catch (Throwable $e) {
