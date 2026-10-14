@@ -199,8 +199,9 @@ class Lessons
             $params['teacher_id'] = (int) $filters['teacher_id'];
         }
         if (!empty($filters['course_id'])) {
-            $where[] = 'l.course_id = :course_id';
+            $where[] = "(l.course_id = :course_id OR (l.course_id IS NULL AND l.title = (SELECT course_name FROM courses WHERE course_id = :course_title_id LIMIT 1)))";
             $params['course_id'] = (int) $filters['course_id'];
+            $params['course_title_id'] = (int) $filters['course_id'];
         }
         if (!empty($filters['status'])) {
             $where[] = 'l.status = :status';
