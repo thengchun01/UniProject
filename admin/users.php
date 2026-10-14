@@ -90,12 +90,10 @@ $renderUsers = function (array $rows, bool $showRole, bool $showClassroom) use (
                 <?php foreach ($rows as $u): ?>
                 <tr data-id="<?= (int) $u['user_id'] ?>">
                     <td><?= e($u['user_id']) ?></td>
-                    <td class="col-username"><?= e($u['username']) ?></td>
-                    <td class="col-email"><?= e((string) $u['email']) ?></td>
+                    <td class="col-username user-editable-cell" data-inline-user-field="username" tabindex="0" title="Click to edit"><?= e($u['username']) ?></td>
+                    <td class="col-email user-editable-cell" data-inline-user-field="email" tabindex="0" title="Click to edit"><?= e((string) $u['email']) ?></td>
                     <?php if ($showRole): ?>
-                    <td class="col-role">
-                        <span class="role-badge role-<?= e(strtolower($u['role'])) ?>"><?= e($u['role'] !== '' ? $u['role'] : 'NONE') ?></span>
-                    </td>
+                    <td class="col-role user-editable-cell" data-inline-user-field="role" tabindex="0" title="Click to edit"><span class="role-badge role-<?= e(strtolower($u['role'])) ?>"><?= e($u['role'] !== '' ? $u['role'] : 'NONE') ?></span></td>
                     <?php endif; ?>
                     <?php if ($showClassroom): ?>
                     <td class="col-classroom">
@@ -108,8 +106,7 @@ $renderUsers = function (array $rows, bool $showRole, bool $showClassroom) use (
                     <?php endif; ?>
                     <td><?= e(date('Y-m-d', strtotime((string) $u['created_at']))) ?></td>
                     <td class="actions-cell">
-                        <button class="action-btn view-btn" onclick="viewUser(<?= (int) $u['user_id'] ?>)">View</button>
-                        <button class="action-btn edit-btn" onclick="openEdit(<?= (int) $u['user_id'] ?>, '<?= e($u['username']) ?>', '<?= e((string) $u['email']) ?>', '<?= e($u['role']) ?>')">Edit</button>
+                        <a class="action-btn view-btn" href="<?= e(url_path('account.php?profile_id=' . (int) $u['user_id'])) ?>">Profile</a>
                         <?php if ($showClassroom): ?>
                         <?php if (!empty($u['classroom'])): ?>
                         <button class="action-btn classroom-btn" onclick="viewClassroom('<?= e($u['classroom']) ?>', '<?= e($u['username']) ?>')">View Classroom</button>
@@ -117,7 +114,7 @@ $renderUsers = function (array $rows, bool $showRole, bool $showClassroom) use (
                         <button class="action-btn classroom-btn disabled" disabled title="This user does not belong to any classroom">View Classroom</button>
                         <?php endif; ?>
                         <?php endif; ?>
-                        <button class="action-btn reset-btn" onclick="openResetPassword(<?= (int) $u['user_id'] ?>, '<?= e($u['username']) ?>')">Reset Password</button>
+                        <button class="action-btn reset-btn" onclick="openResetPassword(<?= (int) $u['user_id'] ?>, '<?= e($u['username']) ?>')">Password</button>
                         <button class="action-btn delete-btn" onclick="openDelete(<?= (int) $u['user_id'] ?>)">Delete</button>
                     </td>
                 </tr>
@@ -148,18 +145,18 @@ include __DIR__ . '/../includes/header.php';
     </div>
 </div>
 <div class="users-grid">
-    <section class="users-panel users-staff">
-        <h2 class="users-panel-title">Staff <span class="users-count"><?= count($staffUsers) ?></span></h2>
+    <details class="users-panel users-staff" open>
+        <summary class="users-panel-title">Staff <span class="users-count"><?= count($staffUsers) ?></span><span class="users-expand-hint">Click to collapse</span></summary>
         <?php $renderUsers($staffUsers, true, false); ?>
-    </section>
-    <section class="users-panel users-teachers">
-        <h2 class="users-panel-title">Teachers <span class="users-count"><?= count($teachers) ?></span></h2>
-        <?php $renderUsers($teachers, false, false); ?>
-    </section>
-    <section class="users-panel users-students">
-        <h2 class="users-panel-title">Students <span class="users-count"><?= count($students) ?></span></h2>
-        <?php $renderUsers($students, false, true); ?>
-    </section>
+    </details>
+    <details class="users-panel users-teachers" open>
+        <summary class="users-panel-title">Teachers <span class="users-count"><?= count($teachers) ?></span><span class="users-expand-hint">Click to collapse</span></summary>
+        <?php $renderUsers($teachers, true, false); ?>
+    </details>
+    <details class="users-panel users-students" open>
+        <summary class="users-panel-title">Students <span class="users-count"><?= count($students) ?></span><span class="users-expand-hint">Click to collapse</span></summary>
+        <?php $renderUsers($students, true, true); ?>
+    </details>
 </div>
 
 <?php include __DIR__ . '/../includes/footer.php'; ?>
@@ -306,6 +303,58 @@ include __DIR__ . '/../includes/header.php';
 
 
 <script>
+
+/* Inline-edit compact user table cells. Every change is confirmed before saving. */
+(function () {
+    const endpoint = 'user_edit.php';
+    document.querySelectorAll('[data-inline-user-field]').forEach(function (cell) {
+        function editCell() {
+            const row = cell.closest('tr[data-id]');
+            if (!row || cell.dataset.editing === '1') return;
+            const field = cell.dataset.inlineUserField;
+            const labels = { username: 'username', email: 'email address', role: 'role' };
+            const current = field === 'role' ? (row.dataset.role || '') : (row.dataset[field] || '');
+            let next = window.prompt('Enter the new ' + labels[field] + ':', current);
+            if (next === null) return;
+            next = next.trim();
+            if (field === 'role') next = next.toUpperCase();
+            if (next === current) return;
+            if (field === 'username' && !next) { window.alert('Username cannot be empty.'); return; }
+            if (field === 'email' && next && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(next)) { window.alert('Enter a valid email address, or leave it blank.'); return; }
+            if (field === 'role' && !['ADMIN', 'TEACHER', 'STUDENT'].includes(next)) { window.alert('Role must be ADMIN, TEACHER, or STUDENT.'); return; }
+            if (!window.confirm('Save the new ' + labels[field] + ' "' + (next || '(blank)') + '" for user #' + row.dataset.id + '?')) return;
+
+            const username = field === 'username' ? next : (row.dataset.username || '');
+            const email = field === 'email' ? next : (row.dataset.email || '');
+            const role = field === 'role' ? next : (row.dataset.role || 'STUDENT');
+            const body = new FormData();
+            body.append('user_id', row.dataset.id);
+            body.append('username', username);
+            body.append('email', email);
+            body.append('role', role);
+            cell.classList.add('is-saving');
+            fetch(endpoint, { method: 'POST', body: body })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.message || 'Could not save changes.');
+                    // Reload so role changes move the user into the correct vertical section.
+                    window.location.reload();
+                })
+                .catch(function (error) {
+                    cell.classList.remove('is-saving');
+                    window.alert(error.message || 'Could not save changes.');
+                });
+        }
+        cell.addEventListener('click', editCell);
+        cell.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                editCell();
+            }
+        });
+    });
+})();
+
 // ============================================
 // CLASSROOM VIEW FUNCTION
 // ============================================
