@@ -259,6 +259,45 @@ if ($txAvailable && is_database_connected()) {
         } catch (Throwable $e) {
             // Orphan visibility is best-effort; enrollment combos already loaded.
         }
+        // Calculate commission consistently per lesson, using only fees from students
+        // whose monthly transaction is marked PAID. Fixed commission is per lesson.
+        $commissionByMonthGroup = [];
+        $commissionMonths = array_values(array_unique($months));
+        if ($commissionMonths !== []) {
+            $commissionHolders = [];
+            $commissionParams = [];
+            foreach ($commissionMonths as $i => $commissionMonth) {
+                $commissionHolders[] = ':commission_month_' . $i;
+                $commissionParams['commission_month_' . $i] = $commissionMonth;
+            }
+            $commissionSql = "SELECT l.lesson_id, l.lesson_date, l.recurrence_group AS g, l.teacher_id,
+                                     l.commission_type, l.commission_value,
+                                     COALESCE(SUM(CASE WHEN mf.status = 'PAID' THEN e.fee_amount ELSE 0 END), 0) AS paid_total
+                              FROM lessons l
+                              LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+                              LEFT JOIN monthly_fees mf ON mf.student_id = e.student_id
+                                  AND mf.month = SUBSTR(l.lesson_date, 1, 7)
+                                  AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
+                              WHERE SUBSTR(l.lesson_date, 1, 7) IN (" . implode(',', $commissionHolders) . ")
+                              GROUP BY l.lesson_id";
+            $commissionStmt = $db->prepare($commissionSql);
+            $commissionStmt->execute($commissionParams);
+            foreach ($commissionStmt->fetchAll(PDO::FETCH_ASSOC) as $commissionRow) {
+                $paidTotal = (float) $commissionRow['paid_total'];
+                if ($paidTotal <= 0) continue;
+                [$commissionType, $commissionValue] = $lessonsManager->resolveCommission(
+                    $commissionRow['teacher_id'] !== null ? (int) $commissionRow['teacher_id'] : null,
+                    $commissionRow['commission_type'],
+                    $commissionRow['commission_value']
+                );
+                $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
+                $commissionGroup = (string) ($commissionRow['g'] ?? '');
+                $commissionKey = $commissionMonth . '|' . $commissionGroup;
+                $commissionByMonthGroup[$commissionKey] = ($commissionByMonthGroup[$commissionKey] ?? 0.0)
+                    + $lessonsManager->commissionPayout($commissionType, (float) $commissionValue, $paidTotal);
+            }
+        }
+
         // Finalize display fields + header totals from monthly records.
         $seenFee = [];
         $seriesPaid = [];
@@ -302,7 +341,7 @@ if ($txAvailable && is_database_connected()) {
         }
         foreach ($combos as $key => $c) {
             $skey = $c['month'] . '|' . $c['g'];
-            $due = $lessonsManager->commissionPayout($c['rate'][0], $c['rate'][1], (float) ($seriesPaid[$skey] ?? 0.0));
+            $due = (float) ($commissionByMonthGroup[$skey] ?? 0.0);
             $combos[$key]['due'] = $due;
             if (!isset($seriesDue[$skey])) {
                 $seriesDue[$skey] = $due;
