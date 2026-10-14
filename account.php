@@ -592,6 +592,7 @@ include __DIR__ . '/includes/header.php';
                 <nav class="pagination" aria-label="Activity pages">
                     <span class="pagination-count">Showing <?php echo e($activityOffset + 1); ?>–<?php echo e($activityOffset + count($recentActivities)); ?> of <?php echo e($summary['activity_count']); ?> items</span>
                     <form class="per-page-form" method="get" action="<?php echo e(url_path('account.php')); ?>">
+                        <?php if ($viewingOtherProfile): ?><input type="hidden" name="profile_id" value="<?= (int) $profileUserId ?>"><?php endif; ?>
                         <label for="per-page-select">Per page</label>
                         <select id="per-page-select" name="per_page" onchange="this.form.submit()">
                             <?php foreach ($activityAllowedPerPage as $perPageOption): ?>
@@ -600,21 +601,21 @@ include __DIR__ . '/includes/header.php';
                         </select>
                     </form>
                     <?php if ($activityPage > 1): ?>
-                        <a href="<?php echo e(url_path('account.php?activity_page=' . ($activityPage - 1) . '&per_page=' . $activityPerPage)); ?>">&larr; Prev</a>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . ($activityPage - 1) . '&per_page=' . $activityPerPage . ($viewingOtherProfile ? '&profile_id=' . $profileUserId : ''))); ?>">&larr; Prev</a>
                     <?php endif; ?>
                     <?php if ($pageStart > 1): ?>
-                        <a href="<?php echo e(url_path('account.php?activity_page=1&per_page=' . $activityPerPage)); ?>">1</a>
+                        <a href="<?php echo e(url_path('account.php?activity_page=1&per_page=' . $activityPerPage . ($viewingOtherProfile ? '&profile_id=' . $profileUserId : ''))); ?>">1</a>
                         <?php if ($pageStart > 2): ?><span class="pagination-gap">…</span><?php endif; ?>
                     <?php endif; ?>
                     <?php for ($p = $pageStart; $p <= $pageEnd; $p++): ?>
-                        <a href="<?php echo e(url_path('account.php?activity_page=' . $p . '&per_page=' . $activityPerPage)); ?>" class="<?php echo $p === $activityPage ? 'active' : ''; ?>" <?php echo $p === $activityPage ? 'aria-current="page"' : ''; ?>><?php echo $p; ?></a>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . $p . '&per_page=' . $activityPerPage . ($viewingOtherProfile ? '&profile_id=' . $profileUserId : ''))); ?>" class="<?php echo $p === $activityPage ? 'active' : ''; ?>" <?php echo $p === $activityPage ? 'aria-current="page"' : ''; ?>><?php echo $p; ?></a>
                     <?php endfor; ?>
                     <?php if ($pageEnd < $totalActivityPages): ?>
                         <?php if ($pageEnd < $totalActivityPages - 1): ?><span class="pagination-gap">…</span><?php endif; ?>
-                        <a href="<?php echo e(url_path('account.php?activity_page=' . $totalActivityPages . '&per_page=' . $activityPerPage)); ?>"><?php echo $totalActivityPages; ?></a>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . $totalActivityPages . '&per_page=' . $activityPerPage . ($viewingOtherProfile ? '&profile_id=' . $profileUserId : ''))); ?>"><?php echo $totalActivityPages; ?></a>
                     <?php endif; ?>
                     <?php if ($activityPage < $totalActivityPages): ?>
-                        <a href="<?php echo e(url_path('account.php?activity_page=' . ($activityPage + 1) . '&per_page=' . $activityPerPage)); ?>">Next &rarr;</a>
+                        <a href="<?php echo e(url_path('account.php?activity_page=' . ($activityPage + 1) . '&per_page=' . $activityPerPage . ($viewingOtherProfile ? '&profile_id=' . $profileUserId : ''))); ?>">Next &rarr;</a>
                     <?php endif; ?>
                 </nav>
             <?php endif; ?>
