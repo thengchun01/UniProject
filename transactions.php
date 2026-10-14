@@ -392,6 +392,7 @@ if ($txAvailable && is_database_connected()) {
             $combos[$key]['commission_source'] = $hasCustomCommission ? 'Custom' : 'Default';
             [$rct, $rcv] = $lessonsManager->resolveCommission($tid > 0 ? $tid : null, $ctype !== '' ? $ctype : null, $cvalue !== '' ? $cvalue : null);
             $combos[$key]['rate'] = [$rct, (float) $rcv];
+            $combos[$key]['commission_type_label'] = strtoupper((string) $rct) === 'FIXED' ? 'Fixed' : 'Percentage';
             if ($c['fee_id'] !== null && !isset($seenFee[$c['fee_id']])) {
                 $seenFee[$c['fee_id']] = true;
                 $totals['fee'] += (float) $c['amount'];
@@ -693,7 +694,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php else: ?>
                                     <span class="txn-commission-value">RM <?= e(number_format((float) $c['due'], 2)) ?></span>
                                 <?php endif; ?>
-                                <span class="txn-commission-note <?= ($c['commission_source'] ?? 'Default') === 'Custom' ? 'is-custom' : 'is-default' ?>"><?= e($c['commission_source'] ?? 'Default') ?></span>
+                                <span class="txn-commission-note <?= ($c['commission_type_label'] ?? 'Percentage') === 'Fixed' ? 'is-fixed' : 'is-percentage' ?>"><?= e($c['commission_type_label'] ?? 'Percentage') ?></span>
                             </td>
                             <td>
                                 <div class="txn-proof-cell">
