@@ -29,6 +29,18 @@ $scheduleSummary = [
 ];
 $accountError = null;
 
+// Admins may open another user's read-only profile from User Management.
+// Teachers and students are always restricted to their own account.
+$requestedProfileId = (int) ($_GET['profile_id'] ?? 0);
+$viewingOtherProfile = false;
+if ($user && $requestedProfileId > 0) {
+    if (normalize_role($user['role'] ?? '') !== 'ADMIN') {
+        redirect_to('account.php');
+    }
+    $viewingOtherProfile = $requestedProfileId !== (int) $user['user_id'];
+}
+$profileUserId = $viewingOtherProfile ? $requestedProfileId : (int) ($user['user_id'] ?? 0);
+
 if (!$user && $_SERVER['REQUEST_METHOD'] === 'POST') {
     $authAction = $_POST['auth_action'] ?? '';
 
@@ -163,21 +175,29 @@ if ($user && is_database_connected()) {
              FROM users
              WHERE user_id = :user_id'
         );
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->execute(['user_id' => $profileUserId]);
         $userInfo = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$userInfo) {
+            http_response_code(404);
+            $accountError = 'The requested account could not be found.';
+            $viewingOtherProfile = false;
+            $profileUserId = (int) $user['user_id'];
+        }
         if ($userInfo && isset($userInfo['role'])) {
             $userInfo['role'] = normalize_role($userInfo['role']);
         }
 
-        // Update session with latest classroom data
-        $_SESSION['classroom'] = $userInfo['classroom'];
-        $_SESSION['classroom_status'] = $userInfo['classroom_status'];
+        // Only refresh session fields when viewing the signed-in user's own account.
+        if (!$viewingOtherProfile) {
+            $_SESSION['classroom'] = $userInfo['classroom'];
+            $_SESSION['classroom_status'] = $userInfo['classroom_status'];
+        }
 
         $stmt = $db->query('SELECT COUNT(*) FROM tutorial_section');
         $summary['total_sections'] = (int) $stmt->fetchColumn();
 
         $stmt = $db->prepare('SELECT COUNT(*) FROM user_progress WHERE user_id = :user_id AND is_completed = 1');
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->execute(['user_id' => $profileUserId]);
         $summary['completed_sections'] = (int) $stmt->fetchColumn();
 
         $stmt = $db->prepare(
@@ -190,16 +210,16 @@ if ($user && is_database_connected()) {
              FROM performance_session
              WHERE user_id = :user_id'
         );
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->execute(['user_id' => $profileUserId]);
         $performance = $stmt->fetch() ?: [];
         $summary = array_merge($summary, $performance);
 
         $stmt = $db->prepare('SELECT COUNT(*) FROM midi_file WHERE user_id = :user_id');
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->execute(['user_id' => $profileUserId]);
         $summary['midi_count'] = (int) $stmt->fetchColumn();
 
         $stmt = $db->prepare('SELECT COUNT(*) FROM user_activity_log WHERE user_id = :user_id');
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->execute(['user_id' => $profileUserId]);
         $summary['activity_count'] = (int) $stmt->fetchColumn();
 
         $stmt = $db->prepare(
@@ -209,7 +229,7 @@ if ($user && is_database_connected()) {
              ORDER BY datetime DESC, session_id DESC
              LIMIT 5'
         );
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->execute(['user_id' => $profileUserId]);
         $recentSessions = $stmt->fetchAll();
 
         $stmt = $db->prepare(
@@ -221,7 +241,7 @@ if ($user && is_database_connected()) {
              ORDER BY up.last_accessed DESC
              LIMIT 5'
         );
-        $stmt->execute(['user_id' => $user['user_id']]);
+        $stmt->execute(['user_id' => $profileUserId]);
         $recentProgress = $stmt->fetchAll();
 
         $activityAllowedPerPage = [5, 10, 20];
@@ -243,7 +263,7 @@ if ($user && is_database_connected()) {
              ORDER BY created_at DESC, activity_id DESC
              LIMIT :limit OFFSET :offset'
         );
-        $stmt->bindValue('user_id', $user['user_id'], PDO::PARAM_INT);
+        $stmt->bindValue('user_id', $profileUserId, PDO::PARAM_INT);
         $stmt->bindValue('limit', $activityPerPage, PDO::PARAM_INT);
         $stmt->bindValue('offset', $activityOffset, PDO::PARAM_INT);
         $stmt->execute();
@@ -261,22 +281,23 @@ if ($user && is_database_connected()) {
         // Primary account elements: upcoming schedule + unpaid transactions (role-scoped).
         if ($lessonsManager !== null) {
             try {
+                $profileRole = normalize_role($userInfo['role'] ?? $user['role']);
                 $schedFilters = ['from' => date('Y-m-d'), 'status' => 'SCHEDULED'];
-                if ($user['role'] === 'TEACHER') {
-                    $schedFilters['teacher_id'] = (int) $user['user_id'];
-                } elseif ($user['role'] === 'STUDENT') {
-                    $schedFilters['student_id'] = (int) $user['user_id'];
+                if ($profileRole === 'TEACHER') {
+                    $schedFilters['teacher_id'] = $profileUserId;
+                } elseif ($profileRole === 'STUDENT') {
+                    $schedFilters['student_id'] = $profileUserId;
                 }
                 $scheduleSummary['upcoming'] = count($lessonsManager->listLessons($schedFilters, 'lesson_date', 'ASC', 200, 0));
-                if ($user['role'] === 'ADMIN') {
+                if ($profileRole === 'ADMIN') {
                     $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee_amount), 0) AS t FROM lesson_enrollments WHERE payment_status <> 'PAID'");
                     $unpaidStmt->execute();
-                } elseif ($user['role'] === 'TEACHER') {
+                } elseif ($profileRole === 'TEACHER') {
                     $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(e.fee_amount), 0) AS t FROM lesson_enrollments e INNER JOIN lessons l ON l.lesson_id = e.lesson_id WHERE l.teacher_id = :me AND e.payment_status <> 'PAID'");
-                    $unpaidStmt->execute(['me' => (int) $user['user_id']]);
+                    $unpaidStmt->execute(['me' => $profileUserId]);
                 } else {
                     $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee_amount), 0) AS t FROM lesson_enrollments WHERE student_id = :me AND payment_status <> 'PAID'");
-                    $unpaidStmt->execute(['me' => (int) $user['user_id']]);
+                    $unpaidStmt->execute(['me' => $profileUserId]);
                 }
                 $unpaidRow = $unpaidStmt->fetch(PDO::FETCH_ASSOC) ?: [];
                 $scheduleSummary['unpaid_rows'] = (int) ($unpaidRow['n'] ?? 0);
@@ -302,8 +323,9 @@ include __DIR__ . '/includes/header.php';
 <div class="account-page-content">
     <div style="display: flex; flex-direction: row; width: 100%; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 15px;">
         <?php if ($user): ?>
-            <h1 class="section-title">Account</h1>
+            <h1 class="section-title"><?= $viewingOtherProfile ? 'Account Profile' : 'Account' ?></h1>
             <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <?php if (!$viewingOtherProfile): ?>
                 <?php if ($user['role'] === 'ADMIN'): ?>
                 <a href="<?= e(url_path('admin/dashboard.php')); ?>">
                     <button type="button" class="primary-btn">Open Admin Panel</button>
@@ -361,7 +383,7 @@ include __DIR__ . '/includes/header.php';
                             <button type="button" class="secondary-btn">My Transactions</button>
                         </a>
                     </div>
-                <?php endif; ?>
+                <?php endif; // hide self-service actions when an admin views another profile ?>
             </div>
         <?php endif; ?>
     </div>
@@ -449,10 +471,13 @@ include __DIR__ . '/includes/header.php';
         <div class="alert error"><?php echo ($accountError); ?></div>
     <?php endif; ?>
 
+    <?php if ($viewingOtherProfile): ?>
+    <p><a class="text-button" href="<?= e(url_path('admin/users.php')) ?>">&larr; Back to User Management</a></p>
+    <?php endif; ?>
     <div class="account-header">
         <div>
-            <p class="eyebrow">Signed in as</p>
-            <h2><?php echo e($user['username']); ?></h2>
+            <p class="eyebrow"><?= $viewingOtherProfile ? 'Account profile' : 'Signed in as' ?></p>
+            <h2><?php echo e($userInfo['username'] ?? $user['username']); ?></h2>
                 <div style="margin-top:10px; font-size:14px;">
                 <div><b>Email:</b> <?= e($userInfo['email']); ?></div>
                 <div><b>Role:</b> <?= e($userInfo['role']); ?></div>
@@ -464,7 +489,7 @@ include __DIR__ . '/includes/header.php';
                 <div><b>Last Login:</b> <?= e($user_last_login[0] ?? 'Never'); ?></div>
             </div>
         </div>
-        <div class="role-pill"><?php echo e($user['role']); ?></div>
+        <div class="role-pill"><?php echo e($userInfo['role'] ?? $user['role']); ?></div>
     </div>
 
     <div class="card-grid account-primary">
