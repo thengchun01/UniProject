@@ -1,12 +1,8 @@
 <?php
 require_once __DIR__ . '/includes/config.php';
 $user = current_user();
-if (!$user || normalize_role($user['role'] ?? '') !== 'ADMIN') {
-    redirect_to('account.php?mode=login');
-}
-if (!is_database_connected()) {
-    redirect_to('index.php');
-}
+if (!$user || normalize_role($user['role'] ?? '') !== 'ADMIN') redirect_to('account.php?mode=login');
+if (!is_database_connected()) redirect_to('index.php');
 $db = db();
 $message = '';
 $error = '';
@@ -37,9 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $id = (int)($_POST['course_id'] ?? 0);
             $db->prepare('UPDATE courses SET is_active = IF(is_active=1,0,1) WHERE course_id=?')->execute([$id]);
             $message = 'Course status updated.';
-        } else {
-            throw new RuntimeException('Unknown action.');
-        }
+        } else throw new RuntimeException('Unknown action.');
     } catch (Throwable $e) {
         $error = $e instanceof PDOException && (string)$e->getCode() === '23000'
             ? 'A course with that name already exists.'
@@ -51,11 +45,8 @@ $courses = $db->query(
     "SELECT c.*,
         (SELECT COUNT(DISTINCT cs.student_id)
          FROM course_students cs INNER JOIN users su ON su.user_id=cs.student_id
-         WHERE cs.course_id=c.course_id AND su.role='STUDENT') AS enrolled_count,
-        (SELECT MAX(l.lesson_date) FROM lessons l
-         WHERE l.course_id=c.course_id AND l.teacher_id IS NOT NULL AND l.status <> 'CANCELLED') AS last_taught
-     FROM courses c
-     ORDER BY c.is_active DESC, c.course_name"
+         WHERE cs.course_id=c.course_id AND su.role='STUDENT') AS enrolled_count
+     FROM courses c ORDER BY c.is_active DESC, c.course_name"
 )->fetchAll(PDO::FETCH_ASSOC);
 
 $teacherMap = [];
@@ -72,31 +63,25 @@ if ($courses) {
          ORDER BY c.course_id ASC, last_taught DESC, u.username ASC"
     );
     $stmt->execute($ids);
-    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $teacher) {
-        $teacherMap[(int)$teacher['course_id']][] = $teacher;
-    }
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $teacher) $teacherMap[(int)$teacher['course_id']][] = $teacher;
 }
-
-function course_min_duration($value): int
-{
-    if (preg_match('/\d+/', (string)$value, $match)) return (int)$match[0];
-    return 0;
+function course_min_duration($value): int {
+    return preg_match('/\d+/', (string)$value, $m) ? (int)$m[0] : 0;
 }
-
 $pageTitle = 'Courses';
 include __DIR__ . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="<?= e(url_path('assets/css/courses.css')) ?>">
 <section class="courses-page">
     <div class="courses-heading">
-        <div><p class="courses-eyebrow">COURSE MANAGEMENT</p><h1>Courses</h1><p>Manage the course catalogue. Enrolment counts and teachers are based on course assignments and scheduled lessons. Active courses appear in Schedule.</p></div>
+        <div><p class="courses-eyebrow">COURSE MANAGEMENT</p><h1>Courses</h1><p>Manage course presets, monthly minimum fees and lesson durations. Enrolment counts and recent teaching history are shown on each course card.</p></div>
         <span class="courses-count"><?= count(array_filter($courses, static fn($c)=>(int)$c['is_active']===1)) ?> active courses</span>
     </div>
     <?php if ($message !== ''): ?><div class="courses-alert success"><?= e($message) ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="courses-alert error"><?= e($error) ?></div><?php endif; ?>
 
     <section class="courses-panel">
-        <div class="courses-panel-title"><div><h2>Create a course</h2><p>Course fees are monthly, matching the stakeholder's standard billing model. The first duration listed is treated as the minimum lesson duration.</p></div></div>
+        <div class="courses-panel-title"><div><h2>Create a course</h2><p>The first duration listed is treated as the minimum lesson duration.</p></div></div>
         <form method="post" class="course-form">
             <input type="hidden" name="action" value="create">
             <label>Course name<input name="course_name" maxlength="120" required placeholder="e.g. Drums"></label>
@@ -109,104 +94,79 @@ include __DIR__ . '/includes/header.php';
         </form>
     </section>
 
-    <div class="courses-list-heading"><div><h2>Course catalogue</h2><p>Choose a column heading to sort the table. Student counts open the course schedule.</p></div><span><?= count($courses) ?> total</span></div>
-    <div class="courses-table-wrap">
-        <table class="courses-table" id="coursesTable">
-            <thead><tr>
-                <th><button type="button" data-sort="name" data-type="text">Course <span>↕</span></button></th>
-                <th>Class format</th>
-                <th><button type="button" data-sort="duration" data-type="number">Min. duration <span>↕</span></button></th>
-                <th>Monthly fee</th>
-                <th><button type="button" data-sort="students" data-type="number">Enrolled students <span>↕</span></button></th>
-                <th>Recently taught by</th>
-                <th>Status</th>
-                <th>Manage</th>
-            </tr></thead>
-            <tbody>
-            <?php foreach ($courses as $course):
-                $cid=(int)$course['course_id'];
-                $minDuration=course_min_duration($course['duration_options'] ?? '');
-                $recentTeachers=$teacherMap[$cid] ?? [];
-                $recentTeacher=$recentTeachers[0] ?? null;
-                $lastMonth=$recentTeacher && !empty($recentTeacher['last_taught']) ? date('Y-m', strtotime($recentTeacher['last_taught'])) : date('Y-m');
-            ?>
-                <tr class="course-row" data-course-id="<?= $cid ?>" data-name="<?= e(mb_strtolower($course['course_name'])) ?>" data-duration="<?= $minDuration ?>" data-students="<?= (int)$course['enrolled_count'] ?>">
-                    <td><strong><?= e($course['course_name']) ?></strong><small><?= e($course['age_range'] ?: 'Age not specified') ?></small></td>
-                    <td><?= e($course['class_mode']) ?></td>
-                    <td><?= $minDuration > 0 ? $minDuration . ' min' : 'Not set' ?></td>
-                    <td>RM <?= number_format((float)$course['minimum_fee'],2) ?></td>
-                    <td><a class="course-count-link" href="<?= e(url_path('schedule.php?course_id='.$cid)) ?>" title="View scheduled lessons for this course"><strong><?= (int)$course['enrolled_count'] ?></strong><span>View schedule ↗</span></a></td>
-                    <td>
-                        <?php if ($recentTeachers): ?>
-                            <div class="course-teacher-list">
-                            <?php foreach (array_slice($recentTeachers,0,3) as $teacher): $teacherMonth=!empty($teacher['last_taught'])?date('Y-m',strtotime($teacher['last_taught'])):$lastMonth; ?>
-                                <a href="<?= e(url_path('schedule.php?course_id='.$cid.'&teacher_id='.(int)$teacher['user_id'].'&month='.$teacherMonth)) ?>" title="View this teacher's course schedule"><?= e($teacher['username']) ?><small><?= e(date('d M Y',strtotime($teacher['last_taught']))) ?></small></a>
+    <div class="courses-list-heading">
+        <div><h2>Course catalogue</h2><p>Sort by course name, minimum duration or current enrolment.</p></div>
+        <div class="course-sort-controls"><label for="courseSort">Sort by</label><select id="courseSort"><option value="name">Course name</option><option value="duration">Minimum duration</option><option value="students">Enrolled students</option></select><button type="button" id="courseSortDirection" class="course-secondary-btn" aria-label="Toggle sort direction">A–Z ↑</button><span><?= count($courses) ?> total</span></div>
+    </div>
+
+    <div class="course-cards" id="courseCards">
+    <?php foreach ($courses as $course):
+        $cid=(int)$course['course_id'];
+        $minDuration=course_min_duration($course['duration_options'] ?? '');
+        $recentTeachers=$teacherMap[$cid] ?? [];
+    ?>
+        <details class="course-card" data-name="<?= e(mb_strtolower($course['course_name'])) ?>" data-duration="<?= $minDuration ?>" data-students="<?= (int)$course['enrolled_count'] ?>" data-course-id="<?= $cid ?>">
+            <summary>
+                <span class="course-card-name"><?= e($course['course_name']) ?></span>
+                <span class="course-card-meta"><?= e($course['class_mode']) ?> · Minimum RM <?= number_format((float)$course['minimum_fee'],2) ?>/month · <?= $minDuration ? $minDuration.' min minimum' : 'Duration not set' ?></span>
+                <span class="course-enrollment-count" title="Currently enrolled students"><strong><?= (int)$course['enrolled_count'] ?></strong><small>students</small></span>
+                <span class="course-status <?= (int)$course['is_active']===1?'active':'inactive' ?>"><?= (int)$course['is_active']===1?'Active':'Inactive' ?></span>
+            </summary>
+            <div class="course-card-body">
+                <?php if (!empty($course['description'])): ?><p class="course-card-description"><?= e($course['description']) ?></p><?php endif; ?>
+                <div class="course-card-info">
+                    <div><span class="course-info-label">Recommended age</span><strong><?= e($course['age_range'] ?: 'Not specified') ?></strong></div>
+                    <div><span class="course-info-label">Minimum lesson</span><strong><?= $minDuration ? $minDuration.' minutes' : 'Not set' ?></strong></div>
+                    <div><span class="course-info-label">Enrolled students</span><a class="course-schedule-link" href="<?= e(url_path('schedule.php?course_id='.$cid)) ?>"><?= (int)$course['enrolled_count'] ?> student<?= (int)$course['enrolled_count']===1?'':'s' ?> · View schedule ↗</a></div>
+                    <div><span class="course-info-label">Recently taught by</span>
+                        <?php if ($recentTeachers): ?><div class="course-teacher-list">
+                            <?php foreach (array_slice($recentTeachers,0,3) as $teacher): $teacherMonth=!empty($teacher['last_taught'])?date('Y-m',strtotime($teacher['last_taught'])):date('Y-m'); ?>
+                                <a href="<?= e(url_path('schedule.php?course_id='.$cid.'&teacher_id='.(int)$teacher['user_id'].'&month='.$teacherMonth)) ?>"><?= e($teacher['username']) ?><small><?= e(date('d M Y',strtotime($teacher['last_taught']))) ?></small></a>
                             <?php endforeach; ?>
                             <?php if (count($recentTeachers)>3): ?><span class="course-more-teachers">+<?= count($recentTeachers)-3 ?> more</span><?php endif; ?>
-                            </div>
-                        <?php else: ?><span class="course-muted">No lessons recorded yet</span><?php endif; ?>
-                    </td>
-                    <td><span class="course-status <?= (int)$course['is_active']===1?'active':'inactive' ?>"><?= (int)$course['is_active']===1?'Active':'Inactive' ?></span></td>
-                    <td><button type="button" class="course-secondary-btn course-edit-toggle" data-target="course-edit-<?= $cid ?>">Edit</button>
-                        <form method="post" class="course-inline-toggle"><input type="hidden" name="action" value="toggle"><input type="hidden" name="course_id" value="<?= $cid ?>"><button class="course-secondary-btn" type="submit"><?= (int)$course['is_active']===1?'Deactivate':'Reactivate' ?></button></form>
-                    </td>
-                </tr>
-                <tr class="course-edit-row" id="course-edit-<?= $cid ?>" hidden><td colspan="8">
-                    <form method="post" class="course-edit-form">
-                        <input type="hidden" name="action" value="update"><input type="hidden" name="course_id" value="<?= $cid ?>">
-                        <div class="course-form">
-                            <label>Course name<input name="course_name" maxlength="120" required value="<?= e($course['course_name']) ?>"></label>
-                            <label>Class format<select name="class_mode"><?php foreach (['Individual','Individual / small group','Small group'] as $m): ?><option <?= $course['class_mode']===$m?'selected':'' ?>><?= e($m) ?></option><?php endforeach; ?></select></label>
-                            <label>Minimum monthly fee (RM)<input type="number" name="minimum_fee" min="0" step="0.01" required value="<?= e(number_format((float)$course['minimum_fee'],2,'.','')) ?>"></label>
-                            <label>Recommended age<input name="age_range" maxlength="40" value="<?= e($course['age_range']??'') ?>"></label>
-                            <label>Lesson durations<input name="duration_options" maxlength="80" required value="<?= e($course['duration_options']??'') ?>"></label>
-                            <label class="course-description">Description / learning focus<textarea name="description" rows="2"><?= e($course['description']??'') ?></textarea></label>
-                        </div>
-                        <div class="course-edit-actions"><button type="submit" class="course-primary-btn">Save course</button></div>
-                    </form>
-                </td></tr>
-            <?php endforeach; ?>
-            </tbody>
-        </table>
+                        </div><?php else: ?><span class="course-muted">No lessons recorded yet</span><?php endif; ?>
+                    </div>
+                </div>
+                <form method="post" class="course-edit-form">
+                    <input type="hidden" name="action" value="update"><input type="hidden" name="course_id" value="<?= $cid ?>">
+                    <div class="course-form">
+                        <label>Course name<input name="course_name" maxlength="120" required value="<?= e($course['course_name']) ?>"></label>
+                        <label>Class format<select name="class_mode"><?php foreach (['Individual','Individual / small group','Small group'] as $m): ?><option <?= $course['class_mode']===$m?'selected':'' ?>><?= e($m) ?></option><?php endforeach; ?></select></label>
+                        <label>Minimum monthly fee (RM)<input type="number" name="minimum_fee" min="0" step="0.01" required value="<?= e(number_format((float)$course['minimum_fee'],2,'.','')) ?>"></label>
+                        <label>Recommended age<input name="age_range" maxlength="40" value="<?= e($course['age_range']??'') ?>"></label>
+                        <label>Lesson durations<input name="duration_options" maxlength="80" required value="<?= e($course['duration_options']??'') ?>"></label>
+                        <label class="course-description">Description / learning focus<textarea name="description" rows="2"><?= e($course['description']??'') ?></textarea></label>
+                    </div>
+                    <div class="course-edit-actions"><button type="submit" class="course-primary-btn">Save course</button></div>
+                </form>
+                <form method="post" class="course-toggle-form"><input type="hidden" name="action" value="toggle"><input type="hidden" name="course_id" value="<?= $cid ?>"><button class="course-secondary-btn" type="submit"><?= (int)$course['is_active']===1?'Deactivate course':'Reactivate course' ?></button></form>
+            </div>
+        </details>
+    <?php endforeach; ?>
     </div>
 </section>
 <script>
 (function () {
-    var table = document.getElementById('coursesTable');
-    if (!table) return;
-    var tbody = table.querySelector('tbody');
-    var direction = {};
-    table.querySelectorAll('thead button[data-sort]').forEach(function (button) {
-        button.addEventListener('click', function () {
-            var key = button.getAttribute('data-sort');
-            var type = button.getAttribute('data-type');
-            direction[key] = direction[key] === 'asc' ? 'desc' : 'asc';
-            var rows = Array.from(tbody.querySelectorAll('tr.course-row'));
-            rows.sort(function (a, b) {
-                var av = a.getAttribute('data-' + key) || '';
-                var bv = b.getAttribute('data-' + key) || '';
-                var cmp = type === 'number' ? (Number(av) - Number(bv)) : av.localeCompare(bv);
-                return direction[key] === 'asc' ? cmp : -cmp;
-            });
-            rows.forEach(function (row) {
-                var detail = document.getElementById('course-edit-' + row.getAttribute('data-course-id'));
-                tbody.appendChild(row);
-                if (detail) tbody.appendChild(detail);
-            });
-            table.querySelectorAll('thead button[data-sort] span').forEach(function (span) { span.textContent = '↕'; });
-            button.querySelector('span').textContent = direction[key] === 'asc' ? '↑' : '↓';
+    var cards = document.getElementById('courseCards');
+    var sort = document.getElementById('courseSort');
+    var direction = document.getElementById('courseSortDirection');
+    if (!cards || !sort || !direction) return;
+    var descending = false;
+    function renderSort() {
+        var key = sort.value;
+        var list = Array.from(cards.querySelectorAll('.course-card'));
+        list.sort(function (a, b) {
+            var av = a.getAttribute('data-' + key) || '';
+            var bv = b.getAttribute('data-' + key) || '';
+            var cmp = key === 'name' ? av.localeCompare(bv) : Number(av) - Number(bv);
+            return descending ? -cmp : cmp;
         });
-    });
-    table.querySelectorAll('.course-edit-toggle').forEach(function (button) {
-        button.addEventListener('click', function () {
-            var row = document.getElementById(button.getAttribute('data-target'));
-            if (row) {
-                row.hidden = !row.hidden;
-                button.textContent = row.hidden ? 'Edit' : 'Close';
-                if (!row.hidden) row.scrollIntoView({behavior:'smooth', block:'nearest'});
-            }
-        });
-    });
+        list.forEach(function (card) { cards.appendChild(card); });
+        direction.textContent = key === 'name' ? (descending ? 'Z–A ↓' : 'A–Z ↑') : (descending ? 'High–low ↓' : 'Low–high ↑');
+    }
+    sort.addEventListener('change', renderSort);
+    direction.addEventListener('click', function () { descending = !descending; renderSort(); });
+    renderSort();
 })();
 </script>
 <?php include __DIR__ . '/includes/footer.php'; ?>
