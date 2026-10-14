@@ -29,7 +29,7 @@
 .course-sort-controls>span{white-space:nowrap;background:#f5f3ff;color:#6d28d9;border-radius:999px;padding:8px 12px;font-size:12px;font-weight:800}
 .course-card summary{display:flex;align-items:center;gap:14px;padding:17px 20px;cursor:pointer;list-style:none}
 .course-card summary::-webkit-details-marker{display:none}
-.course-card summary:after{content:'＋';margin-left:2px;font-size:20px;color:#64748b}
+.course-card summary:after{content:'＋';margin-left:auto;font-size:20px;color:#64748b}
 .course-card[open] summary:after{content:'−'}
 .course-card-name{font-size:15px;font-weight:850;min-width:150px}
 .course-card-meta{font-size:12px;color:var(--text-muted,#64748b);flex:1}
