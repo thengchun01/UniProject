@@ -398,16 +398,57 @@
 .txn-log-table td { overflow-wrap: anywhere; }
 .txn-panel { min-width: 0; }
 .txn-panel .table-wrapper { max-width: 100%; overflow-x: auto; }
-.txn-comm-dialog .form-field { margin-bottom: 12px; }
-.txn-comm-dialog .form-field label { display: block; font-size: 13px; font-weight: 600; }
+/* Keep the Transactions commission editor consistent with Schedule. */
+dialog.sched-dialog.txn-comm-dialog {
+    width: min(440px, 94vw);
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 32px);
+    margin: auto;
+    padding: 24px;
+    border: 1px solid var(--border-color, #eaeaea);
+    border-radius: 16px;
+    box-sizing: border-box;
+    box-shadow: var(--shadow-md, 0 8px 24px rgba(0, 0, 0, 0.1));
+}
+
+dialog.sched-dialog.txn-comm-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+}
+
+.txn-comm-dialog h2 {
+    margin: 0 0 14px;
+    font-size: 1.15rem;
+}
+
+.txn-comm-dialog .form-field {
+    margin-bottom: 12px;
+}
+
+.txn-comm-dialog .form-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 .txn-comm-dialog .form-field input,
 .txn-comm-dialog .form-field select {
+    display: block;
     box-sizing: border-box;
     width: 100%;
-    padding: 9px 12px;
+    padding: 10px 12px;
     border: 1px solid var(--border-color, #cbd5e1);
     border-radius: 10px;
+    font-size: 14px;
     background: #fff;
+}
+
+.txn-comm-dialog .sched-dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
 }
 
 
@@ -465,17 +506,7 @@
     overflow-wrap: anywhere;
     word-break: break-word;
 }
-.txn-comm-dialog {
-    position: fixed;
-    inset: 0;
-    margin: auto;
-    max-width: calc(100vw - 32px);
-    max-height: calc(100vh - 32px);
-    box-sizing: border-box;
-}
-.txn-comm-dialog[open] {
-    display: block;
-}
+/* Native dialog positioning keeps the commission editor centered. */
 @media (max-width: 900px) {
     .txn-commission {
         grid-template-columns: minmax(0, 1fr);
