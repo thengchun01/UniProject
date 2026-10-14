@@ -558,7 +558,8 @@ if ($lessonsAvailable && is_database_connected()) {
     }
 }
 
-// Series commission due: per-lesson payout on collected fees, summed.
+// Series commission due: per-lesson payout on saved monthly transaction amounts,
+ // regardless of student payment status. Teacher commission status is tracked separately.
 $commDue = [];
 if ($allGroupIds !== [] && $lessonsAvailable && $lessonsManager !== null && is_database_connected()) {
     try {
@@ -573,13 +574,12 @@ if ($allGroupIds !== [] && $lessonsAvailable && $lessonsManager !== null && is_d
              INNER JOIN monthly_fees mf ON mf.student_id = e.student_id
                  AND mf.month = SUBSTR(l.lesson_date, 1, 7)
                  AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
-                 AND mf.status = 'PAID'
              WHERE l.recurrence_group IN ($placeholders)"
         );
         $stmt->execute($allGroupIds);
         $commissionRows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Allocate each paid monthly transaction amount over its lessons in
+        // Allocate each monthly transaction amount over its lessons in
         // proportion to the lesson fees, then apply each lesson's own rate.
         $studentFeeTotals = [];
         $lessonCounts = [];
