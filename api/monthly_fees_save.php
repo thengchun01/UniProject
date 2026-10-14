@@ -25,8 +25,22 @@ if (!is_database_connected()) {
     monthly_fee_error('Database is not connected.', 500);
 }
 
+$db = db();
+
+// A transaction delete needs only its ID; do not require month/fee fields.
+if (trim($_POST['action'] ?? '') === 'delete') {
+    $fid = (int) ($_POST['fee_id'] ?? 0);
+    if ($fid <= 0) {
+        monthly_fee_error('Invalid record.');
+    }
+    $stmt = $db->prepare('DELETE FROM monthly_fees WHERE fee_id = :id');
+    $stmt->execute(['id' => $fid]);
+    echo json_encode(['success' => true, 'data' => ['deleted' => $stmt->rowCount()]]);
+    exit;
+}
+
 $month = trim($_POST['month'] ?? '');
-if (preg_match('/^\d{4}-\d{2}$/', $month) !== 1) {
+if (preg_match('/^\\d{4}-\\d{2}$/', $month) !== 1) {
     monthly_fee_error('Month must be YYYY-MM.');
 }
 [$y, $m] = array_map('intval', explode('-', $month));
@@ -46,21 +60,11 @@ if ($fees === []) {
     monthly_fee_error('No student fees submitted.');
 }
 
-$db = db();
 $group = trim($_POST['group'] ?? '');
 if ($group !== '' && preg_match('/^[0-9a-fA-F]{1,64}$/', $group) !== 1) {
     monthly_fee_error('Invalid class series.');
 }
-if (trim($_POST['action'] ?? '') === 'delete') {
-    $fid = (int) ($_POST['fee_id'] ?? 0);
-    if ($fid <= 0) {
-        monthly_fee_error('Invalid record.');
-    }
-    $stmt = $db->prepare('DELETE FROM monthly_fees WHERE fee_id = :id');
-    $stmt->execute(['id' => $fid]);
-    echo json_encode(['success' => true, 'data' => ['deleted' => $stmt->rowCount()]]);
-    exit;
-}
+
 try {
     $roleStmt = $db->prepare('SELECT role FROM users WHERE user_id = :id LIMIT 1');
     $stmt = $db->prepare(
