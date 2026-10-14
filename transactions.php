@@ -52,7 +52,6 @@ $combos = [];
 $totals = ['fee' => 0.0, 'paid' => 0.0, 'lessons' => 0, 'comm_due' => 0.0, 'comm_paid' => 0.0];
 $incompleteLessons = [];
 $defaultCommission = ['PERCENT', 0.0];
-$teacherOverrides = [];
 $teachers = [];
 $students = [];
 $studentFilterName = null;
@@ -77,9 +76,6 @@ if ($txAvailable && is_database_connected()) {
             }
         }
         $defaultCommission = $lessonsManager->getDefaultCommission();
-
-        $stmt = $db->query('SELECT teacher_id, commission_type, commission_value FROM teacher_commission');
-        $teacherOverrides = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
 
         $where = [];
         $params = [];
@@ -759,7 +755,7 @@ include __DIR__ . '/includes/header.php';
     <div class="txn-commission">
         <div class="txn-panel">
             <h2>Commission defaults</h2>
-            <p style="color:#666;font-size:13px;">Global default: <?= e($defaultCommission[0]) ?> <?= e(number_format((float) $defaultCommission[1], 2)) ?>. Per-lesson values (schedule) override per-teacher, which override this default.</p>
+            <p style="color:#666;font-size:13px;">This default applies to all lessons unless a custom commission is set for the lesson or series in Schedule.</p>
             <form id="txnDefaultForm">
                 <select name="commission_type">
                     <option value="PERCENT" <?= $defaultCommission[0] === 'PERCENT' ? 'selected' : '' ?>>Percent %</option>
@@ -768,32 +764,6 @@ include __DIR__ . '/includes/header.php';
                 <input type="number" name="commission_value" min="0" step="0.01" value="<?= e(number_format((float) $defaultCommission[1], 2, '.', '')) ?>" required>
                 <button type="submit" class="primary-btn">Save default</button>
             </form>
-            <form id="txnTeacherForm" style="margin-top:12px;">
-                <select name="teacher_id" required>
-                    <option value="">— teacher —</option>
-                    <?php foreach ($teachers as $t): ?>
-                        <option value="<?= (int) $t['user_id'] ?>"><?= e($t['username']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <select name="commission_type">
-                    <option value="PERCENT">Percent %</option>
-                    <option value="FIXED">Fixed RM</option>
-                </select>
-                <input type="number" name="commission_value" min="0" step="0.01" value="0" required>
-                <button type="submit" class="secondary-btn">Save teacher rate</button>
-            </form>
-            <?php if (!empty($teacherOverrides)): ?>
-            <div class="table-wrapper" style="margin-top:12px;">
-                <table class="data-table modern-table">
-                    <thead><tr><th>Teacher ID</th><th>Type</th><th>Value</th></tr></thead>
-                    <tbody>
-                        <?php foreach ($teacherOverrides as $ov): ?>
-                            <tr><td><?= (int) $ov['teacher_id'] ?></td><td><?= e($ov['commission_type']) ?></td><td><?= e(number_format((float) $ov['commission_value'], 2)) ?></td></tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <?php endif; ?>
         </div>
         <div class="txn-panel">
             <h2>Transaction Log</h2>
@@ -1206,21 +1176,6 @@ include __DIR__ . '/includes/header.php';
         });
     });
 
-    var tForm = document.getElementById('txnTeacherForm');
-    if (tForm) tForm.addEventListener('submit', function (ev) {
-        ev.preventDefault();
-        var fd = new FormData(tForm); fd.append('action', 'teacher');
-        postForm(apiComm, fd).then(function (d) {
-            if (d && d.success) {
-                PSMModal.toast('Teacher commission rate saved!', 'success');
-                setTimeout(function () { window.location.reload(); }, 500);
-            } else {
-                PSMModal.toast((d && d.error) || 'Failed to save teacher rate.', 'error');
-            }
-        }).catch(function (err) {
-            PSMModal.toast('Network error: ' + err.message, 'error');
-        });
-    });
 })();
 </script>
 
