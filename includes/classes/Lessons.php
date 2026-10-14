@@ -198,6 +198,10 @@ class Lessons
             $where[] = 'l.teacher_id = :teacher_id';
             $params['teacher_id'] = (int) $filters['teacher_id'];
         }
+        if (!empty($filters['course_id'])) {
+            $where[] = 'l.course_id = :course_id';
+            $params['course_id'] = (int) $filters['course_id'];
+        }
         if (!empty($filters['status'])) {
             $where[] = 'l.status = :status';
             $params['status'] = $filters['status'];
