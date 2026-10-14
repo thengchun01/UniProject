@@ -128,6 +128,7 @@ $hLast = $hDays[count($hDays) - 1]['ymd'];
 // ---- reference data ----
 $teachers = [];
 $students = [];
+$coursePresets = [];
 $teacherStudents = [];
 $lessonStudents = [];
 $lessons = [];
@@ -148,6 +149,7 @@ if ($lessonsAvailable && is_database_connected()) {
         $teachers = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
         $stmt = $db->query("SELECT user_id, username, email FROM users WHERE role = 'STUDENT' ORDER BY username ASC");
         $students = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        $coursePresets = $db->query("SELECT course_id, course_name, class_mode, age_range, duration_options, minimum_fee, fee_period FROM courses WHERE is_active = 1 ORDER BY course_name")->fetchAll(PDO::FETCH_ASSOC) ?: [];
         // Issue 38: teacher's own students for the filter dropdown.
         $teacherStudents = [];
         if ($role === 'TEACHER') {
@@ -1350,21 +1352,11 @@ include __DIR__ . '/includes/header.php';
                 <form id="schedCreateForm">
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
-                        <div class="form-field"><label>Class preset<select id="schedClassPreset">
+                        <div class="form-field"><label>Class preset<select id="schedClassPreset" name="course_id">
                             <option value="">Custom…</option>
-                            <option value="Piano" data-mode="Single student">Piano</option>
-                            <option value="Violin" data-mode="Single student">Violin</option>
-                            <option value="Classical Guitar" data-mode="Single student">Classical Guitar</option>
-                            <option value="Popular Guitar" data-mode="Single or small group">Popular Guitar</option>
-                            <option value="Electric Guitar" data-mode="Single student">Electric Guitar</option>
-                            <option value="Bass Guitar" data-mode="Single student">Bass Guitar</option>
-                            <option value="Ukulele" data-mode="Single or small group">Ukulele</option>
-                            <option value="Keyboard" data-mode="Single student">Keyboard</option>
-                            <option value="Flute" data-mode="Single student">Flute</option>
-                            <option value="Saxophone" data-mode="Single student">Saxophone</option>
-                            <option value="Music Theory" data-mode="Single or small group">Music Theory</option>
-                            <option value="Little Mozart" data-mode="Small group">Little Mozart</option>
-                            <option value="Pop Vocal" data-mode="Single student">Pop Vocal</option>
+                            <?php foreach ($coursePresets as $course): ?>
+                                <option value="<?= (int)$course['course_id'] ?>" data-title="<?= e($course['course_name']) ?>" data-mode="<?= e($course['class_mode']) ?>" data-min-fee="<?= e(number_format((float)$course['minimum_fee'], 2, '.', '')) ?>" data-fee-period="<?= e($course['fee_period']) ?>"><?= e($course['course_name']) ?></option>
+                            <?php endforeach; ?>
                         </select></label><div class="sched-date-day" id="schedPresetHint"></div></div>
                         <div class="form-field"><label>Title (optional)<input type="text" name="title" id="schedTitle" maxlength="200" placeholder="e.g. Beginner piano"></label></div>
                         <div class="form-field"><label>Class weekday</label><input type="hidden" name="lesson_date" id="schedDate" value="<?= e($defaultDate) ?>">
@@ -2129,9 +2121,23 @@ include __DIR__ . '/includes/header.php';
         function applyPreset() {
             var opt = preset.options[preset.selectedIndex];
             var mode = opt ? opt.getAttribute('data-mode') : '';
+            var courseTitle = opt ? (opt.getAttribute('data-title') || '') : '';
+            var minFee = opt ? (opt.getAttribute('data-min-fee') || '') : '';
+            var period = opt ? (opt.getAttribute('data-fee-period') || 'month') : 'month';
             if (preset.value !== '') {
-                titleInput.value = preset.value;
-                if (hint) hint.textContent = mode;
+                titleInput.value = courseTitle || titleInput.value;
+                if (hint) hint.textContent = mode + (minFee !== '' ? ' · Minimum RM ' + Number(minFee).toFixed(2) + (period === 'lesson' ? '/lesson' : '/month') : '');
+                // When a preset is selected, initialise untouched/zero student fees
+                // to the course minimum. Staff can still enter a higher amount.
+                var rows = document.querySelectorAll('#schedPickedStudents tr[data-sid]');
+                rows.forEach(function (row) {
+                    var feeInput = row.querySelector('.fee-input');
+                    var hiddenFee = row.querySelector('input[name^="fees["]');
+                    if (feeInput && hiddenFee && (feeInput.value === '' || Number(feeInput.value) === 0) && Number(minFee) > 0) {
+                        feeInput.value = minFee;
+                        hiddenFee.value = minFee;
+                    }
+                });
             } else if (hint) {
                 hint.textContent = '';
             }
