@@ -522,21 +522,32 @@ dialog.sched-dialog.txn-comm-dialog::backdrop {
 .txn-commission-note.is-percentage,
 .sched-commission-source.is-percentage { color: var(--text-muted, #64748b); font-weight: 700; }
 
-/* Keep the Transactions close control pinned to the dialog's top-right. */
+/* Match Schedule's commission dialog, with the close button fixed to its top-right corner. */
+dialog.sched-dialog.txn-comm-dialog {
+    position: relative;
+}
+
 dialog.sched-dialog.txn-comm-dialog .sched-edit-head {
+    position: relative;
     display: flex;
-    align-items: center;
-    justify-content: space-between;
+    align-items: flex-start;
+    justify-content: flex-start;
     gap: 12px;
     width: 100%;
+    padding-right: 42px;
+    box-sizing: border-box;
 }
+
 dialog.sched-dialog.txn-comm-dialog .sched-edit-head h2 {
     flex: 1 1 auto;
     min-width: 0;
-    margin: 0;
+    margin: 0 0 14px;
 }
+
 dialog.sched-dialog.txn-comm-dialog .sched-x-btn {
+    position: absolute;
+    top: 0;
+    right: 0;
     flex: 0 0 32px;
-    margin-left: auto;
-    align-self: flex-start;
+    margin: 0;
 }
