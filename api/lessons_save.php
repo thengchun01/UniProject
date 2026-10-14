@@ -324,10 +324,6 @@ try {
     if ($date === '' || $start === '' || $end === '') {
         lessons_error('Date, start and end time are required.');
     }
-    [$ok, $err] = $lessonsManager->checkSlot($date, $start, $end);
-    if (!$ok) {
-        lessons_error($err);
-    }
     [$ctype, $cvalue] = validate_commission(
         $_POST['commission_type'] ?? null,
         $_POST['commission_value'] ?? null
@@ -400,22 +396,38 @@ try {
     $courseId = $courseRaw === '' ? null : (int)$courseRaw;
     $minimumFee = 0.0;
     if ($courseId !== null) {
-        $courseStmt = $db->prepare('SELECT course_name, minimum_fee, fee_period, is_active FROM courses WHERE course_id = :id LIMIT 1');
+        $courseStmt = $db->prepare('SELECT course_name, minimum_fee, duration_options, is_active FROM courses WHERE course_id = :id LIMIT 1');
         $courseStmt->execute(['id' => $courseId]);
         $courseRow = $courseStmt->fetch(PDO::FETCH_ASSOC);
         if (!$courseRow || (int)$courseRow['is_active'] !== 1) lessons_error('Choose an active course preset.');
         $minimumFee = (float)$courseRow['minimum_fee'];
         if ($title === null) $title = (string)$courseRow['course_name'];
-        if ($teacherId !== null) {
-            $assignedStmt = $db->prepare('SELECT COUNT(*) FROM course_teachers WHERE course_id = :course');
-            $assignedStmt->execute(['course' => $courseId]);
-            if ((int)$assignedStmt->fetchColumn() > 0) {
-                $allowedStmt = $db->prepare('SELECT COUNT(*) FROM course_teachers WHERE course_id = :course AND teacher_id = :teacher');
-                $allowedStmt->execute(['course' => $courseId, 'teacher' => $teacherId]);
-                if ((int)$allowedStmt->fetchColumn() === 0) lessons_error('The selected teacher is not assigned to teach this course.');
-            }
+    }
+
+    // Enforce the first listed duration as the course minimum (e.g. "30 / 45 min" => 30).
+    // If the submitted end time is too early, extend it from the selected start time.
+    $minimumDuration = 0;
+    if ($courseId !== null && !empty($courseRow['duration_options'])
+        && preg_match('/\\d+/', (string)$courseRow['duration_options'], $durationMatch)) {
+        $minimumDuration = (int)$durationMatch[0];
+    }
+    if ($minimumDuration > 0
+        && preg_match('/^([01]\\d|2[0-3]):([0-5]\\d)$/', substr($start, 0, 5), $startParts)) {
+        $startMinutes = ((int)$startParts[1] * 60) + (int)$startParts[2];
+        $endMinutes = -1;
+        if (preg_match('/^([01]\\d|2[0-3]):([0-5]\\d)$/', substr($end, 0, 5), $endParts)) {
+            $endMinutes = ((int)$endParts[1] * 60) + (int)$endParts[2];
+        }
+        if ($endMinutes - $startMinutes < $minimumDuration) {
+            $adjustedEnd = $startMinutes + $minimumDuration;
+            $end = sprintf('%02d:%02d', intdiv($adjustedEnd, 60), $adjustedEnd % 60);
         }
     }
+    [$ok, $err] = $lessonsManager->checkSlot($date, $start, $end);
+    if (!$ok) {
+        lessons_error($err);
+    }
+
     foreach ($cleanStudents as $sid => $fee) {
         if ($courseId !== null && $minimumFee > 0 && $fee < $minimumFee) {
             lessons_error('The fee for each student in this course must be at least RM ' . number_format($minimumFee, 2) . '.');
