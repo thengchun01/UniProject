@@ -608,6 +608,7 @@ if ($allGroupIds !== [] && $lessonsAvailable && $lessonsManager !== null && is_d
                 : $monthlyAmount / max(1, count($lessonCounts[$groupKey] ?? []));
             $lessonPaidBases[$lessonKey] = ($lessonPaidBases[$lessonKey] ?? 0.0) + $basis;
         }
+        $percentBasesByRate = [];
         foreach ($commissionLessons as $lessonKey => $commissionRow) {
             $paidBasis = (float) ($lessonPaidBases[$lessonKey] ?? 0.0);
             if ($paidBasis <= 0) continue;
@@ -617,7 +618,20 @@ if ($allGroupIds !== [] && $lessonsAvailable && $lessonsManager !== null && is_d
                 $commissionRow['commission_type'],
                 $commissionRow['commission_value']
             );
-            $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout($ct, (float) $cv, $paidBasis);
+            if ($ct === 'PERCENT') {
+                $rateKey = number_format((float) $cv, 2, '.', '');
+                $percentBasesByRate[$g][$rateKey]['value'] = (float) $cv;
+                $percentBasesByRate[$g][$rateKey]['basis'] = ($percentBasesByRate[$g][$rateKey]['basis'] ?? 0.0) + $paidBasis;
+            } else {
+                // Fixed commission remains a per-lesson amount.
+                $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout($ct, (float) $cv, $paidBasis);
+            }
+        }
+        foreach ($percentBasesByRate as $g => $rates) {
+            foreach ($rates as $rate) {
+                // Round percentage commission once for each rate within the series.
+                $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout('PERCENT', $rate['value'], $rate['basis']);
+            }
         }
     } catch (Throwable $e) {
         $commDue = [];
