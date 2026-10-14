@@ -25,6 +25,40 @@ if ($lessonsManager === null) {
     enroll_error('Lessons module is not available. Import database/psm_lessons.sql first.', 500);
 }
 
+
+// Keep monthly transaction amounts synchronized with enrollment fees. A monthly
+// record represents the sum of this student's fees for the same month/group.
+function sync_monthly_fee_amount(PDO $db, int $lessonId, ?int $studentId = null): void
+{
+    $stmt = $db->prepare('SELECT lesson_date, recurrence_group FROM lessons WHERE lesson_id = :id LIMIT 1');
+    $stmt->execute(['id' => $lessonId]);
+    $lesson = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$lesson) return;
+
+    $month = substr((string) $lesson['lesson_date'], 0, 7);
+    $group = (string) ($lesson['recurrence_group'] ?? '');
+    $studentsSql = 'SELECT DISTINCT e.student_id FROM lesson_enrollments e INNER JOIN lessons l ON l.lesson_id = e.lesson_id WHERE SUBSTR(l.lesson_date, 1, 7) = :month AND COALESCE(l.recurrence_group, \'\') = :grp';
+    $params = ['month' => $month, 'grp' => $group];
+    if ($studentId !== null) {
+        $studentsSql .= ' AND e.student_id = :sid';
+        $params['sid'] = $studentId;
+    } else {
+        $studentsSql .= ' AND e.lesson_id = :lid';
+        $params['lid'] = $lessonId;
+    }
+    $stmt = $db->prepare($studentsSql);
+    $stmt->execute($params);
+    $studentIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $amountSql = 'SELECT COALESCE(SUM(e.fee_amount), 0) FROM lesson_enrollments e INNER JOIN lessons l ON l.lesson_id = e.lesson_id WHERE e.student_id = :sid AND SUBSTR(l.lesson_date, 1, 7) = :month AND COALESCE(l.recurrence_group, \'\') = :grp';
+    $amountStmt = $db->prepare($amountSql);
+    $updateStmt = $db->prepare('UPDATE monthly_fees SET amount = :amount WHERE student_id = :sid AND month = :month AND COALESCE(recurrence_group, \'\') = :grp');
+    foreach ($studentIds as $sid) {
+        $amountStmt->execute(['sid' => (int) $sid, 'month' => $month, 'grp' => $group]);
+        $updateStmt->execute(['amount' => round((float) $amountStmt->fetchColumn(), 2), 'sid' => (int) $sid, 'month' => $month, 'grp' => $group]);
+    }
+}
+
 $action = trim($_POST['action'] ?? '');
 $db = db();
 
@@ -71,8 +105,13 @@ try {
         if ($enrollmentId <= 0 || !is_numeric($fee) || (float) $fee < 0) {
             enroll_error('Invalid enrollment or fee.');
         }
+        $lookup = $db->prepare('SELECT lesson_id, student_id FROM lesson_enrollments WHERE enrollment_id = :id LIMIT 1');
+        $lookup->execute(['id' => $enrollmentId]);
+        $enrollment = $lookup->fetch(PDO::FETCH_ASSOC);
+        if (!$enrollment) enroll_error('Enrollment not found.');
         $stmt = $db->prepare('UPDATE lesson_enrollments SET fee_amount = :fee WHERE enrollment_id = :id');
         $stmt->execute(['fee' => round((float) $fee, 2), 'id' => $enrollmentId]);
+        sync_monthly_fee_amount($db, (int) $enrollment['lesson_id'], (int) $enrollment['student_id']);
         echo json_encode(['success' => true, 'data' => ['enrollment_id' => $enrollmentId]]);
         exit;
     }
@@ -91,6 +130,7 @@ try {
         }
         $stmt = $db->prepare('UPDATE lesson_enrollments SET fee_amount = :fee WHERE lesson_id = :id');
         $stmt->execute(['fee' => round((float) $fee, 2), 'id' => $lessonId]);
+        sync_monthly_fee_amount($db, $lessonId);
         echo json_encode(['success' => true, 'data' => ['lesson_id' => $lessonId]]);
         exit;
     }
