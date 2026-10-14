@@ -834,7 +834,8 @@ include __DIR__ . '/includes/header.php';
                         $commParts = explode('|', (string) array_key_first($gd['comm']), 2);
                         $commLabel = sched_comm_label($commParts[0] ?? '', $commParts[1] ?? '');
                     }
-                    $commissionSource = $hasCustomCommission ? 'Custom' : 'Default';
+                    $effectiveCommission = $lessonsManager->resolveCommission($teacherIdNow > 0 ? $teacherIdNow : null, $commParts[0] ?? null, $commParts[1] ?? null);
+                    $commissionSource = strtoupper((string) ($effectiveCommission[0] ?? 'PERCENT')) === 'FIXED' ? 'Fixed' : 'Percentage';
                     $payLabel = 'Unpaid';
                     $payCls = 'is-bad';
                     if ($gd['pay'] !== []) {
@@ -861,7 +862,7 @@ include __DIR__ . '/includes/header.php';
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-teacher="<?= e($g) ?>" data-teacher="<?= (int) $teacherIdNow ?>" data-ranges="<?= e($rangesJson) ?>"><?= e($teacherLabel) ?></button><?php else: ?><?= e($teacherLabel) ?><?php endif; ?></td>
                         <td>
                             <?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-commshow="<?= e($g) ?>" data-commission-type="<?= e($commParts[0] ?? '') ?>" data-commission-value="<?= e($commParts[1] ?? '') ?>" title="<?= e($commLabel) ?>">RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?></button><?php else: ?>RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?><?php endif; ?>
-                            <div class="sched-commission-source <?= $hasCustomCommission ? 'is-custom' : 'is-default' ?>"><?= e($commissionSource) ?></div>
+                            <div class="sched-commission-source <?= $commissionSource === 'Fixed' ? 'is-fixed' : 'is-percentage' ?>"><?= e($commissionSource) ?></div>
                         </td>
                         <td>
                             <?php if ($role === 'ADMIN'): ?>
