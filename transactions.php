@@ -744,6 +744,7 @@ include __DIR__ . '/includes/header.php';
         return fetch(url, { method: 'POST', body: fd }).then(function (r) { return r.json(); });
     }
     var apiEnroll = '<?= e(url_path('api/enrollments_save.php')) ?>';
+    var apiLessons = '<?= e(url_path('api/lessons_save.php')) ?>';
     var apiProofUp = '<?= e(url_path('api/proof_upload.php')) ?>';
     var apiMfee = '<?= e(url_path('api/monthly_fees_save.php')) ?>';
     var apiProofDel = '<?= e(url_path('api/proof_delete.php')) ?>';
