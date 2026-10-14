@@ -1527,8 +1527,28 @@ include __DIR__ . '/includes/header.php';
             if (!dlg.open) dlg.showModal();
         });
 
-        // Open only when the user arrived through an Edit/Create link.
-        // Clear the hash after opening so a manual refresh does not reopen the dialog.
+        // If this lesson is already loaded, clicking Edit only changes the URL hash
+        // and does not reload the page. Open the existing dialog directly in that case.
+        document.querySelectorAll('a[href*="#schedEditForm"]').forEach(function (link) {
+            link.addEventListener('click', function (ev) {
+                try {
+                    var target = new URL(link.href, window.location.href);
+                    var current = new URL(window.location.href);
+                    var targetLesson = target.searchParams.get('lesson_id');
+                    var currentLesson = current.searchParams.get('lesson_id');
+                    if (target.pathname === current.pathname && targetLesson && targetLesson === currentLesson) {
+                        ev.preventDefault();
+                        if (!dlg.open) dlg.showModal();
+                        history.replaceState(null, '', current.pathname + current.search);
+                    }
+                } catch (e) {
+                    // If URL parsing fails, preserve the link's normal navigation.
+                }
+            });
+        });
+
+        // Open on initial navigation through an Edit/Create link.
+        // Clear the hash after opening so refresh does not reopen the dialog.
         if (isEditing && window.location.hash === '#schedEditForm') {
             dlg.showModal();
             history.replaceState(null, '', window.location.pathname + window.location.search);
