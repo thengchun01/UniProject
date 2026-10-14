@@ -484,3 +484,10 @@
         min-width: 0 !important;
     }
 }
+
+
+/* Commission source indicator: universal default vs explicit lesson/series override. */
+.txn-commission-note.is-custom,
+.sched-commission-source.is-custom { color: var(--primary-color, #7c3aed); font-weight: 700; }
+.txn-commission-note.is-default,
+.sched-commission-source.is-default { color: var(--text-muted, #64748b); }
