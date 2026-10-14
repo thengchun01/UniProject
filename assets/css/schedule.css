@@ -1768,3 +1768,14 @@ table.sched-class-table {
 .sched-edit-head { display: flex; align-items: center; gap: 10px; }
 .sched-edit-head h2 { min-width: 0; }
 .sched-edit-head .sched-delete-top { margin-left: auto; }
+
+
+/* Compact commission source indicator beneath the commission amount. */
+.sched-commission-source {
+    margin-top: 2px;
+    font-size: 11px;
+    line-height: 1.3;
+    font-weight: 600;
+}
+.sched-commission-source.is-custom { color: var(--primary-color, #7c3aed); }
+.sched-commission-source.is-default { color: var(--text-muted, #64748b); }
