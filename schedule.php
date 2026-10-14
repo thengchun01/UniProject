@@ -2308,7 +2308,7 @@ include __DIR__ . '/includes/header.php';
                         var feeTd = document.createElement('td');
                         var fee = document.createElement('input');
                         fee.type = 'number'; fee.min = '0'; fee.step = '0.01';
-                        fee.className = 'fee-input'; fee.value = '0';
+                        fee.className = 'fee-input'; var selectedPreset = document.getElementById('schedClassPreset'); var presetOption = selectedPreset && selectedPreset.selectedIndex >= 0 ? selectedPreset.options[selectedPreset.selectedIndex] : null; var presetMinimum = presetOption ? Number(presetOption.getAttribute('data-min-fee') || 0) : 0; fee.value = presetMinimum.toFixed(2);
                         fee.setAttribute('aria-label', 'Fee in RM for ' + s.username);
                         feeTd.appendChild(fee);
                         var actTd = document.createElement('td');
