@@ -47,7 +47,8 @@ try {
         if (!is_string($path) || $path === '') {
             proof_del_error('No proof to delete.');
         }
-        $stmt = $db->prepare('UPDATE monthly_fees SET proof_path = NULL WHERE fee_id = :id');
+        // Removing the payment proof returns the monthly transaction to unpaid.
+        $stmt = $db->prepare("UPDATE monthly_fees SET proof_path = NULL, status = 'UNPAID' WHERE fee_id = :id");
         $stmt->execute(['id' => $feeId]);
     } elseif ($kind === 'FEE') {
         if ($enrollmentId <= 0) {
