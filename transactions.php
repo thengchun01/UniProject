@@ -260,8 +260,9 @@ if ($txAvailable && is_database_connected()) {
             // Orphan visibility is best-effort; enrollment combos already loaded.
         }
         // Calculate commission per lesson using each student's saved monthly fee,
-        // distributed across their lessons in that month according to each lesson fee.
-        // This keeps commission aligned with the amount editable in Transactions.
+        // regardless of whether the student's transaction is PAID or UNPAID.
+        // Commission due is separate from the student's payment status.
+        // Distribute the monthly amount across lessons according to each lesson fee.
         $commissionByMonthGroup = [];
         $commissionMonths = array_values(array_unique($months));
         if ($commissionMonths !== []) {
@@ -280,7 +281,6 @@ if ($txAvailable && is_database_connected()) {
                               INNER JOIN monthly_fees mf ON mf.student_id = e.student_id
                                   AND mf.month = SUBSTR(l.lesson_date, 1, 7)
                                   AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
-                                  AND mf.status = 'PAID'
                               WHERE SUBSTR(l.lesson_date, 1, 7) IN (" . implode(',', $commissionHolders) . ")";
             $commissionStmt = $db->prepare($commissionSql);
             $commissionStmt->execute($commissionParams);
