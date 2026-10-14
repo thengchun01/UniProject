@@ -817,12 +817,12 @@ include __DIR__ . '/includes/header.php';
                                 <span class="sched-empty">—</span>
                             <?php elseif ($role === 'ADMIN'): ?>
                                 <?php foreach ($studentList as $stSid => $stRow): ?>
-                                    <?php $mf = $monthFees[(int) $stSid] ?? null; ?>
+                                    <?php $mf = $monthFees[$g][(int) $stSid] ?? null; ?>
                                     <input type="number" class="fee-input" min="0" step="0.01" value="<?= e($mf !== null ? number_format((float) $mf['amount'], 2, '.', '') : '') ?>" placeholder="0.00" aria-label="Monthly fee in RM for <?= e($stRow['name']) ?>" data-mfee data-month="<?= e($month) ?>" data-group="<?= e($g) ?>" data-sid="<?= (int) $stSid ?>" data-status="<?= e($mf['status'] ?? 'UNPAID') ?>">
                                 <?php endforeach; ?>
                             <?php else: ?>
                                 <?php foreach ($studentList as $stSid => $stRow): ?>
-                                    <?php $mf = $monthFees[(int) $stSid] ?? null; ?>
+                                    <?php $mf = $monthFees[$g][(int) $stSid] ?? null; ?>
                                     <span class="stud-fee"><?= $mf !== null ? 'RM ' . e(number_format((float) $mf['amount'], 2)) . ' · ' . e($mf['status']) : '—' ?></span>
                                 <?php endforeach; ?>
                             <?php endif; ?>
