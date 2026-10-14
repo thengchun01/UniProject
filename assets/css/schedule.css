@@ -1754,3 +1754,13 @@ table.sched-class-table {
         max-width: none;
     }
 }
+
+
+/* Keep the lesson delete action at the top-right of the edit dialog. */
+.sched-edit-head .sched-delete-top {
+    margin-left: auto;
+    white-space: nowrap;
+}
+.sched-edit-head .sched-delete-top + .sched-x-btn {
+    flex: 0 0 auto;
+}
