@@ -27,15 +27,105 @@ if (!is_database_connected()) {
 
 $db = db();
 
-// A transaction delete needs only its ID; do not require month/fee fields.
+// Deleting a transaction also deletes its linked class schedule. For a recurring
+// class, the recurrence group is the shared identity across schedule + billing rows.
 if (trim($_POST['action'] ?? '') === 'delete') {
     $fid = (int) ($_POST['fee_id'] ?? 0);
     if ($fid <= 0) {
         monthly_fee_error('Invalid record.');
     }
-    $stmt = $db->prepare('DELETE FROM monthly_fees WHERE fee_id = :id');
-    $stmt->execute(['id' => $fid]);
-    echo json_encode(['success' => true, 'data' => ['deleted' => $stmt->rowCount()]]);
+
+    $lookup = $db->prepare('SELECT student_id, month, recurrence_group, proof_path FROM monthly_fees WHERE fee_id = :id LIMIT 1');
+    $lookup->execute(['id' => $fid]);
+    $feeRow = $lookup->fetch(PDO::FETCH_ASSOC);
+    if (!$feeRow) {
+        monthly_fee_error('Transaction not found.');
+    }
+
+    $studentId = (int) $feeRow['student_id'];
+    $month = (string) $feeRow['month'];
+    $group = trim((string) ($feeRow['recurrence_group'] ?? ''));
+    $proofPaths = [];
+    if (!empty($feeRow['proof_path'])) {
+        $proofPaths[] = (string) $feeRow['proof_path'];
+    }
+    $proofDir = realpath(__DIR__ . '/../uploads/proofs');
+    $db->beginTransaction();
+    try {
+        if ($group !== '') {
+            $lessonStmt = $db->prepare('SELECT lesson_id, commission_proof_path FROM lessons WHERE recurrence_group = :g');
+            $lessonStmt->execute(['g' => $group]);
+            $lessonRows = $lessonStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $lessonIds = [];
+            foreach ($lessonRows as $lessonRow) {
+                $lessonIds[] = (int) $lessonRow['lesson_id'];
+                if (!empty($lessonRow['commission_proof_path'])) {
+                    $proofPaths[] = (string) $lessonRow['commission_proof_path'];
+                }
+            }
+            if ($lessonIds !== []) {
+                $marks = implode(',', array_fill(0, count($lessonIds), '?'));
+                $enrollProofs = $db->prepare("SELECT proof_path FROM lesson_enrollments WHERE lesson_id IN ($marks)");
+                $enrollProofs->execute($lessonIds);
+                foreach ($enrollProofs->fetchAll(PDO::FETCH_COLUMN) as $path) {
+                    if (is_string($path) && $path !== '') $proofPaths[] = $path;
+                }
+                $deleteLessons = $db->prepare("DELETE FROM lessons WHERE lesson_id IN ($marks)");
+                $deleteLessons->execute($lessonIds);
+            }
+            $deleteFees = $db->prepare('DELETE FROM monthly_fees WHERE recurrence_group = :g');
+            $deleteFees->execute(['g' => $group]);
+        } else {
+            // Legacy/standalone monthly rows have no group key. Remove the
+            // student's scheduled lessons in this month and their related fee rows.
+            $lessonStmt = $db->prepare(
+                "SELECT DISTINCT l.lesson_id, l.commission_proof_path
+                 FROM lessons l
+                 INNER JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+                 WHERE e.student_id = :sid AND DATE_FORMAT(l.lesson_date, '%Y-%m') = :month
+                   AND (l.recurrence_group IS NULL OR l.recurrence_group = '')"
+            );
+            $lessonStmt->execute(['sid' => $studentId, 'month' => $month]);
+            $lessonRows = $lessonStmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+            $lessonIds = [];
+            foreach ($lessonRows as $lessonRow) {
+                $lessonIds[] = (int) $lessonRow['lesson_id'];
+                if (!empty($lessonRow['commission_proof_path'])) {
+                    $proofPaths[] = (string) $lessonRow['commission_proof_path'];
+                }
+            }
+            if ($lessonIds !== []) {
+                $marks = implode(',', array_fill(0, count($lessonIds), '?'));
+                $enrollProofs = $db->prepare("SELECT proof_path FROM lesson_enrollments WHERE lesson_id IN ($marks)");
+                $enrollProofs->execute($lessonIds);
+                foreach ($enrollProofs->fetchAll(PDO::FETCH_COLUMN) as $path) {
+                    if (is_string($path) && $path !== '') $proofPaths[] = $path;
+                }
+                $deleteLessons = $db->prepare("DELETE FROM lessons WHERE lesson_id IN ($marks)");
+                $deleteLessons->execute($lessonIds);
+            }
+            $deleteFee = $db->prepare(
+                "DELETE FROM monthly_fees WHERE student_id = :sid AND month = :month
+                 AND (recurrence_group IS NULL OR recurrence_group = '')"
+            );
+            $deleteFee->execute(['sid' => $studentId, 'month' => $month]);
+        }
+        $db->commit();
+    } catch (Throwable $e) {
+        if ($db->inTransaction()) $db->rollBack();
+        monthly_fee_error('Unable to delete the transaction and its linked class.', 500);
+    }
+
+    // Remove only proof files physically located in uploads/proofs.
+    if ($proofDir !== false) {
+        foreach (array_unique($proofPaths) as $path) {
+            $full = realpath(__DIR__ . '/../' . $path);
+            if ($full !== false && strpos($full, $proofDir) === 0 && is_file($full)) {
+                @unlink($full);
+            }
+        }
+    }
+    echo json_encode(['success' => true, 'data' => ['deleted' => $fid, 'class_deleted' => true]]);
     exit;
 }
 
