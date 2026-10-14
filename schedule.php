@@ -1486,6 +1486,8 @@ include __DIR__ . '/includes/header.php';
         dlg.appendChild(head);
         if (msg) dlg.appendChild(msg);
         dlg.appendChild(form);
+        var timeList = document.getElementById('schedTimeList');
+        if (timeList) dlg.appendChild(timeList);
         document.body.appendChild(dlg);
         if (side) side.hidden = true;
         dlg.addEventListener('click', function (ev) { if (ev.target === dlg) dlg.close(); });
@@ -1778,7 +1780,8 @@ include __DIR__ . '/includes/header.php';
     document.querySelectorAll('[data-series-students]').forEach(function (btn) {
         btn.addEventListener('click', function () {
             var cell = btn.closest('tr');
-            var name = cell ? cell.querySelector('strong').textContent : '';
+            var titleButton = cell ? cell.querySelector('[data-series-title]') : null;
+            var name = titleButton ? (titleButton.getAttribute('data-name') || titleButton.textContent) : 'Class';
             openStudentPicker(btn.getAttribute('data-series-students'), name);
         });
     });
