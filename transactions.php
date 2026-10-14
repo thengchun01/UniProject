@@ -248,6 +248,7 @@ if ($txAvailable && is_database_connected()) {
                     'teachers' => [], 'tids' => [], 'comm' => [],
                     'fee_id' => (int) $orow['fee_id'], 'amount' => (float) $orow['amount'],
                     'mstatus' => (string) $orow['status'], 'mproof' => $orow['proof_path'],
+                    'enrollment_id' => null, 'cproof' => null, 'proof_lesson_id' => null,
                 ];
             }
             }
