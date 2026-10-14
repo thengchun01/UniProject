@@ -205,6 +205,39 @@ try {
         exit;
     }
 
+    if ($action === 'set_time') {
+        $start = trim($_POST['start_time'] ?? '');
+        $end = trim($_POST['end_time'] ?? '');
+        $stmt = $db->prepare('SELECT lesson_id, lesson_date FROM lessons WHERE recurrence_group = :g ORDER BY lesson_date ASC');
+        $stmt->execute(['g' => $group]);
+        $occurrences = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+        if ($start === '' || $end === '' || $occurrences === []) {
+            series_error('Choose a valid start and end time.');
+        }
+        foreach ($occurrences as $occurrence) {
+            [$slotOk, $slotError] = $lessonsManager->checkSlot(
+                substr((string) $occurrence['lesson_date'], 0, 10),
+                $start,
+                $end
+            );
+            if (!$slotOk) {
+                series_error('Cannot apply this time to the entire class: ' . $slotError);
+            }
+        }
+        $db->beginTransaction();
+        try {
+            $updateTime = $db->prepare('UPDATE lessons SET start_time = :s, end_time = :e WHERE recurrence_group = :g');
+            $updateTime->execute(['s' => $start, 'e' => $end, 'g' => $group]);
+            $updated = $updateTime->rowCount();
+            $db->commit();
+        } catch (Throwable $e) {
+            if ($db->inTransaction()) $db->rollBack();
+            throw $e;
+        }
+        echo json_encode(['success' => true, 'data' => ['updated' => $updated]]);
+        exit;
+    }
+
     if ($action === 'rename_series') {
         $title = trim($_POST['title'] ?? '');
         if ($title === '' || mb_strlen($title) > 200) {
