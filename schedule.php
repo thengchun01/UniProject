@@ -2465,7 +2465,7 @@ include __DIR__ . '/includes/header.php';
                     var tr = document.createElement('tr');
                     tr.setAttribute('data-search', (s.username + ' ' + (s.email || '')).toLowerCase());
                     tr.innerHTML = '<td>#' + s.id + '</td><td><strong>' + seriesEsc(s.username) + '</strong>' +
-                        (s.email ? '<span class="sched-mini-email">' + seriesEsc(s.email) + '</span>');
+                        (s.email ? '<span class="sched-mini-email">' + seriesEsc(s.email) + '</span>' : '') + '</td>';
                     var actTd = document.createElement('td');
                     var addBtn = document.createElement('button');
                     addBtn.type = 'button'; addBtn.className = 'series-btn is-primary'; addBtn.textContent = 'Add';
