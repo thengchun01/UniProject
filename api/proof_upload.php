@@ -93,7 +93,8 @@ try {
     $relPath = 'uploads/proofs/' . $target;
 
     if ($kind === 'MONTHLY_FEE') {
-        $stmt = $db->prepare('UPDATE monthly_fees SET proof_path = :path WHERE fee_id = :id');
+        // A payment proof is the payment confirmation; reflect that in the status.
+        $stmt = $db->prepare("UPDATE monthly_fees SET proof_path = :path, status = 'PAID' WHERE fee_id = :id");
         $stmt->execute(['path' => $relPath, 'id' => $feeId]);
     } elseif ($kind === 'FEE') {
         $stmt = $db->prepare(
