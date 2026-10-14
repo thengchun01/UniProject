@@ -1356,7 +1356,7 @@ include __DIR__ . '/includes/header.php';
                 <form id="schedCreateForm">
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
-                        <div class="form-field"><label>Class preset<select id="schedClassPreset" name="course_id">
+                        <div class="form-field"><label>Course<select id="schedClassPreset" name="course_id">
                             <option value="">Custom…</option>
                             <?php foreach ($coursePresets as $course): ?>
                                 <option value="<?= (int)$course['course_id'] ?>" data-title="<?= e($course['course_name']) ?>" data-mode="<?= e($course['class_mode']) ?>" data-min-fee="<?= e(number_format((float)$course['minimum_fee'], 2, '.', '')) ?>" data-duration-options="<?= e($course['duration_options'] ?? '') ?>"><?= e($course['course_name']) ?></option>
@@ -2116,61 +2116,72 @@ include __DIR__ . '/includes/header.php';
         paint();
     });
 
-    // Course preset fills the title, shows the monthly fee, and enforces the
-    // first listed duration as the minimum. Example: "30 / 45 min" => 30 min.
+    // Course selection updates the title, fee hint and minimum duration immediately.
     (function () {
         var preset = document.getElementById('schedClassPreset');
         var titleInput = document.getElementById('schedTitle');
         var hint = document.getElementById('schedPresetHint');
         var startInput = document.getElementById('schedStart');
         var endInput = document.getElementById('schedEnd');
-        if (!preset || !titleInput) return;
+        if (!preset || !titleInput || !startInput || !endInput) return;
+
         function minDuration(opt) {
             var raw = opt ? (opt.getAttribute('data-duration-options') || '') : '';
-            var match = raw.match(/\\d+/);
+            var match = raw.match(/\d+/);
             return match ? parseInt(match[0], 10) : 0;
+        }
+        function timeToMinutes(value) {
+            var match = (value || '').match(/^(\d{1,2}):(\d{2})$/);
+            return match ? Number(match[1]) * 60 + Number(match[2]) : null;
+        }
+        function minutesToTime(value) {
+            return String(Math.floor(value / 60)).padStart(2, '0') + ':' + String(value % 60).padStart(2, '0');
         }
         function enforceMinimumDuration() {
             var opt = preset.options[preset.selectedIndex];
             var minimum = minDuration(opt);
-            if (!minimum || !startInput || !endInput) return;
-            var startMatch = (startInput.value || '').match(/^(\\d{1,2}):(\\d{2})$/);
-            var endMatch = (endInput.value || '').match(/^(\\d{1,2}):(\\d{2})$/);
-            if (!startMatch) return;
-            var startMinutes = Number(startMatch[1]) * 60 + Number(startMatch[2]);
-            var endMinutes = endMatch ? Number(endMatch[1]) * 60 + Number(endMatch[2]) : -1;
-            if (endMinutes - startMinutes < minimum) {
-                var next = startMinutes + minimum;
-                endInput.value = String(Math.floor(next / 60)).padStart(2, '0') + ':' + String(next % 60).padStart(2, '0');
+            if (!preset.value || !minimum) return;
+            var startMinutes = timeToMinutes(startInput.value);
+            var endMinutes = timeToMinutes(endInput.value);
+            if (startMinutes === null) return;
+            // Keep an existing longer duration; only extend when shorter than the course minimum.
+            if (endMinutes === null || endMinutes - startMinutes < minimum) {
+                endInput.value = minutesToTime(startMinutes + minimum);
+                endInput.dispatchEvent(new Event('input', { bubbles: true }));
+                endInput.dispatchEvent(new Event('change', { bubbles: true }));
             }
         }
-        function applyPreset() {
+        function applyCourse() {
             var opt = preset.options[preset.selectedIndex];
-            var mode = opt ? (opt.getAttribute('data-mode') || '') : '';
-            var courseTitle = opt ? (opt.getAttribute('data-title') || '') : '';
-            var minFee = opt ? (opt.getAttribute('data-min-fee') || '') : '';
-            var minimum = minDuration(opt);
-            if (preset.value !== '') {
-                titleInput.value = courseTitle || titleInput.value;
-                if (hint) hint.textContent = mode + (minFee !== '' ? ' · Minimum RM ' + Number(minFee).toFixed(2) + '/month' : '') + (minimum ? ' · Minimum lesson ' + minimum + ' min' : '');
-                var rows = document.querySelectorAll('#schedPickedStudents tr[data-sid]');
-                rows.forEach(function (row) {
-                    var feeInput = row.querySelector('.fee-input');
-                    var hiddenFee = row.querySelector('input[name^="fees["]');
-                    if (feeInput && hiddenFee && (feeInput.value === '' || Number(feeInput.value) === 0) && Number(minFee) > 0) {
-                        feeInput.value = minFee;
-                        hiddenFee.value = minFee;
-                    }
-                });
-                enforceMinimumDuration();
-            } else if (hint) {
-                hint.textContent = '';
+            if (!preset.value || !opt) {
+                if (hint) hint.textContent = '';
+                return;
             }
+            var mode = opt.getAttribute('data-mode') || '';
+            var courseTitle = opt.getAttribute('data-title') || '';
+            var minFee = opt.getAttribute('data-min-fee') || '';
+            var minimum = minDuration(opt);
+            titleInput.value = courseTitle;
+            if (hint) {
+                hint.textContent = mode
+                    + (minFee !== '' ? ' · Minimum RM ' + Number(minFee).toFixed(2) + '/month' : '')
+                    + (minimum ? ' · Minimum lesson ' + minimum + ' min' : '');
+            }
+            var rows = document.querySelectorAll('#schedPickedStudents tr[data-sid]');
+            rows.forEach(function (row) {
+                var feeInput = row.querySelector('.fee-input');
+                var hiddenFee = row.querySelector('input[name^="fees["]');
+                if (feeInput && hiddenFee && (feeInput.value === '' || Number(feeInput.value) === 0) && Number(minFee) > 0) {
+                    feeInput.value = minFee;
+                    hiddenFee.value = minFee;
+                }
+            });
+            enforceMinimumDuration();
         }
-        preset.addEventListener('change', applyPreset);
-        preset.addEventListener('input', applyPreset);
-        if (startInput) startInput.addEventListener('change', enforceMinimumDuration);
-        if (endInput) endInput.addEventListener('change', enforceMinimumDuration);
+        preset.addEventListener('change', applyCourse);
+        startInput.addEventListener('input', enforceMinimumDuration);
+        startInput.addEventListener('change', enforceMinimumDuration);
+        endInput.addEventListener('change', enforceMinimumDuration);
     })();
 
     // Issue 55: a form date outside the shown week moves the timetable to include it.
