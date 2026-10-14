@@ -564,20 +564,30 @@ if ($allGroupIds !== [] && $lessonsAvailable && $lessonsManager !== null && is_d
     try {
         $placeholders = implode(',', array_fill(0, count($allGroupIds), '?'));
         $stmt = db()->prepare(
-            "SELECT l.recurrence_group AS g, l.teacher_id, l.commission_type, l.commission_value,
-                    COALESCE(SUM(e.fee_amount), 0) AS total
-             FROM lessons l LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
-             WHERE l.recurrence_group IN ($placeholders) GROUP BY l.lesson_id"
+            "SELECT l.lesson_id, l.lesson_date, l.recurrence_group AS g, l.teacher_id,
+                    l.commission_type, l.commission_value,
+                    COALESCE(SUM(CASE WHEN mf.status = 'PAID' THEN e.fee_amount ELSE 0 END), 0) AS total
+             FROM lessons l
+             LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+             LEFT JOIN monthly_fees mf ON mf.student_id = e.student_id
+                 AND mf.month = SUBSTR(l.lesson_date, 1, 7)
+                 AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
+             WHERE l.recurrence_group IN ($placeholders)
+             GROUP BY l.lesson_id"
         );
         $stmt->execute($allGroupIds);
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $g = (string) $row['g'];
+            $collectedTotal = (float) $row['total'];
+            if ($collectedTotal <= 0) {
+                continue;
+            }
             [$ct, $cv] = $lessonsManager->resolveCommission(
                 $row['teacher_id'] !== null ? (int) $row['teacher_id'] : null,
                 $row['commission_type'],
                 $row['commission_value']
             );
-            $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout($ct, (float) $cv, (float) $row['total']);
+            $commDue[$g] = ($commDue[$g] ?? 0.0) + $lessonsManager->commissionPayout($ct, (float) $cv, $collectedTotal);
         }
     } catch (Throwable $e) {
         $commDue = [];
