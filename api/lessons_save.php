@@ -100,8 +100,19 @@ try {
         $stmt = $db->prepare('DELETE FROM lessons WHERE lesson_id = :id');
         $stmt->execute(['id' => $lessonId]);
 
-        // Monthly fees for a series are retained while other occurrences remain.
+        // Keep billing and schedule aligned by month: remove this month's
+        // series transaction when its last occurrence is deleted. If the entire
+        // series is gone, remove any remaining transactions for that series too.
         if ($seriesGroup !== '') {
+            $sameMonthStmt = $db->prepare(
+                "SELECT COUNT(*) FROM lessons
+                 WHERE recurrence_group = :g AND DATE_FORMAT(lesson_date, '%Y-%m') = :month"
+            );
+            $sameMonthStmt->execute(['g' => $seriesGroup, 'month' => $lessonMonth]);
+            if ((int) $sameMonthStmt->fetchColumn() === 0) {
+                $deleteMonthFees = $db->prepare('DELETE FROM monthly_fees WHERE recurrence_group = :g AND month = :month');
+                $deleteMonthFees->execute(['g' => $seriesGroup, 'month' => $lessonMonth]);
+            }
             $remainingStmt = $db->prepare('SELECT COUNT(*) FROM lessons WHERE recurrence_group = :g');
             $remainingStmt->execute(['g' => $seriesGroup]);
             if ((int) $remainingStmt->fetchColumn() === 0) {
