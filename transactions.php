@@ -157,8 +157,12 @@ if ($txAvailable && is_database_connected()) {
                 'end' => substr((string) $r['end_time'], 0, 5),
             ];
             if ($c['enrollment_id'] === null) $c['enrollment_id'] = (int) $r['enrollment_id'];
-            if ($c['proof_lesson_id'] === null) $c['proof_lesson_id'] = $lid;
-            if (empty($c['cproof']) && !empty($r['commission_proof_path'])) $c['cproof'] = (string) $r['commission_proof_path'];
+            if (!empty($r['commission_proof_path']) && empty($c['cproof'])) {
+                $c['cproof'] = (string) $r['commission_proof_path'];
+                $c['proof_lesson_id'] = $lid;
+            } elseif ($c['proof_lesson_id'] === null) {
+                $c['proof_lesson_id'] = $lid;
+            }
             $t = trim((string) ($r['title'] ?? ''));
             if ($t !== '') {
                 $c['titles'][$t] = ($c['titles'][$t] ?? 0) + 1;
