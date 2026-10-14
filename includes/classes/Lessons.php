@@ -148,7 +148,7 @@ class Lessons
             "SELECT l.*, tu.username AS teacher_name, c.course_name
              FROM lessons l
              LEFT JOIN users tu ON tu.user_id = l.teacher_id
-             LEFT JOIN courses c ON c.course_id = l.course_id
+             LEFT JOIN courses c ON (c.course_id = l.course_id OR (l.course_id IS NULL AND c.course_name = l.title))
              WHERE l.lesson_id = :id LIMIT 1"
         );
         $stmt->execute(['id' => $lessonId]);
@@ -228,7 +228,7 @@ class Lessons
                        (SELECT COALESCE(SUM(fee_amount),0) FROM lesson_enrollments WHERE lesson_id = l.lesson_id) AS total_fee
                 FROM lessons l
                 LEFT JOIN users tu ON tu.user_id = l.teacher_id
-                LEFT JOIN courses c ON c.course_id = l.course_id "
+                LEFT JOIN courses c ON (c.course_id = l.course_id OR (l.course_id IS NULL AND c.course_name = l.title)) "
             . ($joinEnrollment ? "INNER JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id " : "")
             . "$whereSql ORDER BY $orderBy LIMIT :limit OFFSET :offset";
         $stmt = $this->db->prepare($sql);
