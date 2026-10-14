@@ -259,8 +259,9 @@ if ($txAvailable && is_database_connected()) {
         } catch (Throwable $e) {
             // Orphan visibility is best-effort; enrollment combos already loaded.
         }
-        // Calculate commission consistently per lesson, using only fees from students
-        // whose monthly transaction is marked PAID. Fixed commission is per lesson.
+        // Calculate commission per lesson using each student's saved monthly fee,
+        // distributed across their lessons in that month according to each lesson fee.
+        // This keeps commission aligned with the amount editable in Transactions.
         $commissionByMonthGroup = [];
         $commissionMonths = array_values(array_unique($months));
         if ($commissionMonths !== []) {
@@ -272,19 +273,49 @@ if ($txAvailable && is_database_connected()) {
             }
             $commissionSql = "SELECT l.lesson_id, l.lesson_date, l.recurrence_group AS g, l.teacher_id,
                                      l.commission_type, l.commission_value,
-                                     COALESCE(SUM(CASE WHEN mf.status = 'PAID' THEN e.fee_amount ELSE 0 END), 0) AS paid_total
+                                     e.student_id, e.fee_amount,
+                                     mf.amount AS monthly_amount, mf.status AS monthly_status
                               FROM lessons l
-                              LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
-                              LEFT JOIN monthly_fees mf ON mf.student_id = e.student_id
+                              INNER JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+                              INNER JOIN monthly_fees mf ON mf.student_id = e.student_id
                                   AND mf.month = SUBSTR(l.lesson_date, 1, 7)
                                   AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
-                              WHERE SUBSTR(l.lesson_date, 1, 7) IN (" . implode(',', $commissionHolders) . ")
-                              GROUP BY l.lesson_id";
+                                  AND mf.status = 'PAID'
+                              WHERE SUBSTR(l.lesson_date, 1, 7) IN (" . implode(',', $commissionHolders) . ")";
             $commissionStmt = $db->prepare($commissionSql);
             $commissionStmt->execute($commissionParams);
-            foreach ($commissionStmt->fetchAll(PDO::FETCH_ASSOC) as $commissionRow) {
-                $paidTotal = (float) $commissionRow['paid_total'];
-                if ($paidTotal <= 0) continue;
+            $commissionRows = $commissionStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $studentFeeTotals = [];
+            $lessonCounts = [];
+            $commissionLessons = [];
+            foreach ($commissionRows as $commissionRow) {
+                $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
+                $commissionGroup = (string) ($commissionRow['g'] ?? '');
+                $groupKey = $commissionMonth . '|' . $commissionGroup;
+                $studentKey = $groupKey . '|' . (int) $commissionRow['student_id'];
+                $lessonKey = $groupKey . '|' . (int) $commissionRow['lesson_id'];
+                $studentFeeTotals[$studentKey] = ($studentFeeTotals[$studentKey] ?? 0.0) + max(0.0, (float) $commissionRow['fee_amount']);
+                $commissionLessons[$lessonKey] = $commissionRow;
+                $lessonCounts[$groupKey][$lessonKey] = true;
+            }
+            $lessonPaidBases = [];
+            foreach ($commissionRows as $commissionRow) {
+                $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
+                $commissionGroup = (string) ($commissionRow['g'] ?? '');
+                $groupKey = $commissionMonth . '|' . $commissionGroup;
+                $studentKey = $groupKey . '|' . (int) $commissionRow['student_id'];
+                $lessonKey = $groupKey . '|' . (int) $commissionRow['lesson_id'];
+                $studentBase = (float) ($studentFeeTotals[$studentKey] ?? 0.0);
+                $monthlyAmount = max(0.0, (float) $commissionRow['monthly_amount']);
+                $basis = $studentBase > 0
+                    ? $monthlyAmount * max(0.0, (float) $commissionRow['fee_amount']) / $studentBase
+                    : $monthlyAmount / max(1, count($lessonCounts[$groupKey] ?? []));
+                $lessonPaidBases[$lessonKey] = ($lessonPaidBases[$lessonKey] ?? 0.0) + $basis;
+            }
+            foreach ($commissionLessons as $lessonKey => $commissionRow) {
+                $paidBasis = (float) ($lessonPaidBases[$lessonKey] ?? 0.0);
+                if ($paidBasis <= 0) continue;
                 [$commissionType, $commissionValue] = $lessonsManager->resolveCommission(
                     $commissionRow['teacher_id'] !== null ? (int) $commissionRow['teacher_id'] : null,
                     $commissionRow['commission_type'],
@@ -292,9 +323,9 @@ if ($txAvailable && is_database_connected()) {
                 );
                 $commissionMonth = substr((string) $commissionRow['lesson_date'], 0, 7);
                 $commissionGroup = (string) ($commissionRow['g'] ?? '');
-                $commissionKey = $commissionMonth . '|' . $commissionGroup;
-                $commissionByMonthGroup[$commissionKey] = ($commissionByMonthGroup[$commissionKey] ?? 0.0)
-                    + $lessonsManager->commissionPayout($commissionType, (float) $commissionValue, $paidTotal);
+                $groupKey = $commissionMonth . '|' . $commissionGroup;
+                $commissionByMonthGroup[$groupKey] = ($commissionByMonthGroup[$groupKey] ?? 0.0)
+                    + $lessonsManager->commissionPayout($commissionType, (float) $commissionValue, $paidBasis);
             }
         }
 
@@ -641,7 +672,10 @@ include __DIR__ . '/includes/header.php';
                             <td><?= e($c['sname']) ?> <span style="color:#666;font-size:12px;">#<?= (int) $c['sid'] ?></span></td>
                             <td>
                                 <?php if ($role === 'ADMIN'): ?>
-                                    <input type="number" class="sched-fee-input" style="width:90px;" min="0" step="0.01" value="<?= e($c['fee_id'] !== null ? number_format((float) $c['amount'], 2, '.', '') : '') ?>" placeholder="0.00" aria-label="Monthly fee in RM" data-mfee-amount data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>">
+                                    <div class="txn-fee-editor">
+                                        <input type="number" class="sched-fee-input" style="width:90px;" min="0" step="0.01" value="<?= e($c['fee_id'] !== null ? number_format((float) $c['amount'], 2, '.', '') : '') ?>" placeholder="0.00" aria-label="Monthly fee in RM" data-mfee-amount data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>">
+                                        <button type="button" class="action-btn edit-btn" data-mfee-save data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>">Save</button>
+                                    </div>
                                 <?php else: ?>
                                     <?= $c['fee_id'] !== null ? 'RM ' . e(number_format((float) $c['amount'], 2)) : '—' ?>
                                 <?php endif; ?>
@@ -909,7 +943,7 @@ include __DIR__ . '/includes/header.php';
             fd.append('group', b.getAttribute('data-group') || '');
             fd.append('month', b.getAttribute('data-month') || '');
             fd.append('fees[' + b.getAttribute('data-sid') + ']', amt ? amt.value : '');
-            fd.append('status[' + b.getAttribute('data-sid') + ']', st ? st.value : 'UNPAID');
+            if (st) fd.append('status[' + b.getAttribute('data-sid') + ']', st.value);
             postForm(apiMfee, fd).then(function (d) {
                 if (d && d.success) {
                     PSMModal.toast('Monthly fee saved.', 'success');
