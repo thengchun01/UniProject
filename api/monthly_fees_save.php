@@ -188,10 +188,15 @@ if ($group !== '' && preg_match('/^[0-9a-fA-F]{1,64}$/', $group) !== 1) {
 
 try {
     $roleStmt = $db->prepare('SELECT role FROM users WHERE user_id = :id LIMIT 1');
-    $stmt = $db->prepare(
+    $stmtWithStatus = $db->prepare(
         'INSERT INTO monthly_fees (student_id, month, recurrence_group, amount, status)
          VALUES (:sid, :month, :grp, :amount, :status)
          ON DUPLICATE KEY UPDATE amount = VALUES(amount), status = VALUES(status)'
+    );
+    $stmtAmountOnly = $db->prepare(
+        "INSERT INTO monthly_fees (student_id, month, recurrence_group, amount, status)
+         VALUES (:sid, :month, :grp, :amount, 'UNPAID')
+         ON DUPLICATE KEY UPDATE amount = VALUES(amount)"
     );
     $saved = 0;
     foreach ($fees as $sidRaw => $amountRaw) {
@@ -209,17 +214,23 @@ try {
         if (!is_numeric($amountRaw) || (float) $amountRaw < 0) {
             monthly_fee_error('Fee must be 0 or more.');
         }
-        $st = strtoupper(trim((string) ($statuses[$sidRaw] ?? $statuses[(string) $sidRaw] ?? 'UNPAID')));
-        if (!in_array($st, ['UNPAID', 'PENDING', 'PAID'], true)) {
-            monthly_fee_error('Status must be UNPAID, PENDING or PAID.');
-        }
-        $stmt->execute([
+        $amountParams = [
             'sid' => $sid,
             'month' => $month,
             'grp' => $group,
             'amount' => round((float) $amountRaw, 2),
-            'status' => $st,
-        ]);
+        ];
+        $hasStatus = array_key_exists($sidRaw, $statuses) || array_key_exists((string) $sid, $statuses);
+        if ($hasStatus) {
+            $st = strtoupper(trim((string) ($statuses[$sidRaw] ?? $statuses[(string) $sid] ?? 'UNPAID')));
+            if (!in_array($st, ['UNPAID', 'PENDING', 'PAID'], true)) {
+                monthly_fee_error('Status must be UNPAID, PENDING or PAID.');
+            }
+            $stmtWithStatus->execute($amountParams + ['status' => $st]);
+        } else {
+            // Editing the amount alone must not accidentally reset a paid transaction.
+            $stmtAmountOnly->execute($amountParams);
+        }
         $saved++;
     }
     echo json_encode(['success' => true, 'data' => ['month' => $month, 'saved' => $saved]]);
