@@ -7,7 +7,7 @@
 --   lessons              one row per scheduled lesson (1 teacher, N students)
 --   lesson_enrollments   per-student fee + payment status + proof path
 --   commission_settings  global default commission (single 'default' row)
---   teacher_commission   per-teacher commission override
+-- Existing databases may retain the legacy teacher_commission table; it is no longer used.
 --   proof_logs           audit log for every proof UPLOAD / DELETE (date kept)
 
 CREATE TABLE IF NOT EXISTS `lessons` (
@@ -62,15 +62,6 @@ CREATE TABLE IF NOT EXISTS `commission_settings` (
 
 INSERT IGNORE INTO `commission_settings` (`setting_key`, `commission_type`, `commission_value`)
 VALUES ('default', 'PERCENT', 0.00);
-
-CREATE TABLE IF NOT EXISTS `teacher_commission` (
-  `teacher_id` int(11) NOT NULL,
-  `commission_type` enum('PERCENT','FIXED') NOT NULL DEFAULT 'PERCENT',
-  `commission_value` decimal(10,2) NOT NULL DEFAULT 0.00,
-  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
-  PRIMARY KEY (`teacher_id`),
-  CONSTRAINT `teacher_commission_ibfk_1` FOREIGN KEY (`teacher_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 CREATE TABLE IF NOT EXISTS `proof_logs` (
   `log_id` int(11) NOT NULL AUTO_INCREMENT,
