@@ -615,19 +615,6 @@ include __DIR__ . '/includes/header.php';
                                         <span class="txn-badge <?= $c['mstatus'] === 'PAID' ? 'is-paid' : ($c['mstatus'] === 'PENDING' ? 'is-pending' : '') ?>"><?= e($c['mstatus']) ?></span>
                                     <?php endif; ?>
                                     <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
-                                        <details class="txn-payment-editor">
-                                            <summary>Edit status</summary>
-                                            <div class="txn-payment-edit-controls">
-                                                <select data-mfee-status data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>" aria-label="Payment status">
-                                                    <?php foreach (['UNPAID', 'PENDING', 'PAID'] as $st): ?>
-                                                        <option value="<?= $st ?>" <?= ($c['mstatus'] ?? 'UNPAID') === $st ? 'selected' : '' ?>><?= $st ?></option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                                <button type="button" class="action-btn edit-btn" data-mfee-save data-group="<?= e($c['g']) ?>" data-sid="<?= (int) $c['sid'] ?>" data-month="<?= e($c['month']) ?>">Save</button>
-                                            </div>
-                                        </details>
-                                    <?php endif; ?>
-                                    <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
                                         <?php if (!empty($c['mproof'])): ?>
                                             <div class="txn-file-pill">
                                                 <a href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener" title="Open payment proof">Payment proof</a>
