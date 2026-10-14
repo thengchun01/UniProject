@@ -331,3 +331,72 @@
     padding: 6px 9px;
     font-size: 12px;
 }
+
+
+/* Transactions table alignment and Schedule-matching commission/fee controls. */
+.txn-wrap .modern-table th,
+.txn-wrap .modern-table td {
+    vertical-align: middle;
+}
+.txn-wrap .modern-table td:nth-child(4),
+.txn-wrap .modern-table td:nth-child(6),
+.txn-wrap .modern-table td:nth-child(7),
+.txn-wrap .modern-table td:nth-child(8),
+.txn-wrap .modern-table td:nth-child(9) {
+    min-width: 115px;
+}
+.txn-commission-value {
+    display: inline-block;
+    padding: 2px 0;
+    border: 0;
+    background: transparent;
+    color: var(--text-color, #0f172a);
+    font: inherit;
+    font-weight: 700;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.txn-commission-value:hover {
+    color: var(--primary-color, #7c3aed);
+    text-decoration: underline;
+}
+.txn-commission-note {
+    display: block;
+    margin-top: 3px;
+    color: var(--text-muted, #64748b);
+    font-size: 11px;
+    white-space: nowrap;
+}
+.txn-wrap .modern-table .fee-input,
+.txn-wrap .modern-table .sched-fee-input {
+    width: 84px !important;
+    box-sizing: border-box;
+    padding: 6px 7px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 6px;
+    background: var(--card-bg, #fff);
+    font-size: 13px;
+}
+.txn-log-table {
+    min-width: 650px !important;
+    table-layout: fixed;
+}
+.txn-log-table th:nth-child(1) { width: 150px; }
+.txn-log-table th:nth-child(2),
+.txn-log-table th:nth-child(3) { width: 90px; }
+.txn-log-table th:nth-child(5) { width: 100px; }
+.txn-log-table td { overflow-wrap: anywhere; }
+.txn-panel { min-width: 0; }
+.txn-panel .table-wrapper { max-width: 100%; overflow-x: auto; }
+.txn-comm-dialog .form-field { margin-bottom: 12px; }
+.txn-comm-dialog .form-field label { display: block; font-size: 13px; font-weight: 600; }
+.txn-comm-dialog .form-field input,
+.txn-comm-dialog .form-field select {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 10px;
+    background: #fff;
+}
