@@ -821,11 +821,20 @@ include __DIR__ . '/includes/header.php';
                     $rangesJson = json_encode($rangeList, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP);
                     $commLabel = 'Default';
                     $commParts = ['', ''];
+                    $hasCustomCommission = false;
+                    foreach (array_keys($gd['comm']) as $commissionKey) {
+                        $commissionParts = explode('|', (string) $commissionKey, 2);
+                        if (trim((string) ($commissionParts[0] ?? '')) !== '' && trim((string) ($commissionParts[1] ?? '')) !== '') {
+                            $hasCustomCommission = true;
+                            break;
+                        }
+                    }
                     if ($gd['comm'] !== []) {
                         arsort($gd['comm']);
                         $commParts = explode('|', (string) array_key_first($gd['comm']), 2);
                         $commLabel = sched_comm_label($commParts[0] ?? '', $commParts[1] ?? '');
                     }
+                    $commissionSource = $hasCustomCommission ? 'Custom' : 'Default';
                     $payLabel = 'Unpaid';
                     $payCls = 'is-bad';
                     if ($gd['pay'] !== []) {
@@ -850,7 +859,10 @@ include __DIR__ . '/includes/header.php';
                         <td><span class="sched-series-hash">#<?= e(substr($g, 0, 8)) ?></span></td>
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-title="<?= e($g) ?>" data-name="<?= e($seriesNames[$g] ?? '') ?>"><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></button><?php else: ?><strong><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></strong><?php endif; ?></td>
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-teacher="<?= e($g) ?>" data-teacher="<?= (int) $teacherIdNow ?>" data-ranges="<?= e($rangesJson) ?>"><?= e($teacherLabel) ?></button><?php else: ?><?= e($teacherLabel) ?><?php endif; ?></td>
-                        <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-commshow="<?= e($g) ?>" data-commission-type="<?= e($commParts[0] ?? '') ?>" data-commission-value="<?= e($commParts[1] ?? '') ?>" title="<?= e($commLabel) ?>">RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?></button><?php else: ?>RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?><?php endif; ?></td>
+                        <td>
+                            <?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-commshow="<?= e($g) ?>" data-commission-type="<?= e($commParts[0] ?? '') ?>" data-commission-value="<?= e($commParts[1] ?? '') ?>" title="<?= e($commLabel) ?>">RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?></button><?php else: ?>RM <?= e(number_format((float) ($commDue[$g] ?? 0), 2)) ?><?php endif; ?>
+                            <div class="sched-commission-source <?= $hasCustomCommission ? 'is-custom' : 'is-default' ?>"><?= e($commissionSource) ?></div>
+                        </td>
                         <td>
                             <?php if ($role === 'ADMIN'): ?>
                                 <button type="button" class="sched-cell-btn sched-cell-students" data-series-students="<?= e($g) ?>" aria-label="Edit students for <?= e($seriesNames[$g] ?? 'class') ?>">
