@@ -26,6 +26,8 @@ $scheduleSummary = [
     'upcoming' => 0,
     'unpaid_total' => 0.0,
     'unpaid_rows' => 0,
+    'commission_total' => 0.0,
+    'commission_rows' => 0,
 ];
 $accountError = null;
 
@@ -279,7 +281,7 @@ if ($user && is_database_connected()) {
         }
         unset($act);
 
-        // Primary account elements: upcoming schedule + unpaid transactions (role-scoped).
+        // Primary account elements: upcoming schedule + role-specific transaction summary.
         if ($lessonsManager !== null) {
             try {
                 $profileRole = normalize_role($userInfo['role'] ?? $user['role']);
@@ -290,19 +292,48 @@ if ($user && is_database_connected()) {
                     $schedFilters['student_id'] = $profileUserId;
                 }
                 $scheduleSummary['upcoming'] = count($lessonsManager->listLessons($schedFilters, 'lesson_date', 'ASC', 200, 0));
+
                 if ($profileRole === 'ADMIN') {
                     $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee_amount), 0) AS t FROM lesson_enrollments WHERE payment_status <> 'PAID'");
                     $unpaidStmt->execute();
+                    $unpaidRow = $unpaidStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $scheduleSummary['unpaid_rows'] = (int) ($unpaidRow['n'] ?? 0);
+                    $scheduleSummary['unpaid_total'] = (float) ($unpaidRow['t'] ?? 0);
                 } elseif ($profileRole === 'TEACHER') {
-                    $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(e.fee_amount), 0) AS t FROM lesson_enrollments e INNER JOIN lessons l ON l.lesson_id = e.lesson_id WHERE l.teacher_id = :me AND e.payment_status <> 'PAID'");
-                    $unpaidStmt->execute(['me' => $profileUserId]);
+                    // Calculate this teacher's commission from their lessons, not students' fees.
+                    $commissionStmt = $db->prepare(
+                        "SELECT l.lesson_id, l.teacher_id, l.commission_type, l.commission_value,
+                                l.commission_status, COALESCE(SUM(e.fee_amount), 0) AS lesson_fees
+                         FROM lessons l
+                         LEFT JOIN lesson_enrollments e ON e.lesson_id = l.lesson_id
+                         WHERE l.teacher_id = :me
+                         GROUP BY l.lesson_id, l.teacher_id, l.commission_type, l.commission_value, l.commission_status"
+                    );
+                    $commissionStmt->execute(['me' => $profileUserId]);
+                    foreach ($commissionStmt->fetchAll(PDO::FETCH_ASSOC) as $commissionRow) {
+                        [$commissionType, $commissionValue] = $lessonsManager->resolveCommission(
+                            $profileUserId,
+                            $commissionRow['commission_type'] ?? null,
+                            $commissionRow['commission_value'] ?? null
+                        );
+                        $scheduleSummary['commission_total'] += $lessonsManager->commissionPayout(
+                            $commissionType,
+                            (float) $commissionValue,
+                            (float) $commissionRow['lesson_fees']
+                        );
+                        $scheduleSummary['commission_rows']++;
+                    }
                 } else {
-                    $unpaidStmt = $db->prepare("SELECT COUNT(*) AS n, COALESCE(SUM(fee_amount), 0) AS t FROM lesson_enrollments WHERE student_id = :me AND payment_status <> 'PAID'");
+                    // Match the student transaction page: only monthly fee records still outstanding.
+                    $unpaidStmt = $db->prepare(
+                        "SELECT COUNT(*) AS n, COALESCE(SUM(amount), 0) AS t
+                         FROM monthly_fees WHERE student_id = :me AND UPPER(status) <> 'PAID'"
+                    );
                     $unpaidStmt->execute(['me' => $profileUserId]);
+                    $unpaidRow = $unpaidStmt->fetch(PDO::FETCH_ASSOC) ?: [];
+                    $scheduleSummary['unpaid_rows'] = (int) ($unpaidRow['n'] ?? 0);
+                    $scheduleSummary['unpaid_total'] = (float) ($unpaidRow['t'] ?? 0);
                 }
-                $unpaidRow = $unpaidStmt->fetch(PDO::FETCH_ASSOC) ?: [];
-                $scheduleSummary['unpaid_rows'] = (int) ($unpaidRow['n'] ?? 0);
-                $scheduleSummary['unpaid_total'] = (float) ($unpaidRow['t'] ?? 0);
             } catch (Throwable $ignored) {
             }
         }
@@ -506,8 +537,16 @@ include __DIR__ . '/includes/header.php';
 
         <div class="card">
             <h3>Transactions</h3>
-            <strong>RM <?php echo e(number_format($scheduleSummary['unpaid_total'], 2)); ?></strong>
-            <p><?php echo e($scheduleSummary['unpaid_rows']); ?> unpaid rows</p>
+            <?php if (normalize_role($userInfo['role'] ?? $user['role']) === 'TEACHER'): ?>
+                <strong>RM <?php echo e(number_format($scheduleSummary['commission_total'], 2)); ?></strong>
+                <p>Commission amount · <?php echo e($scheduleSummary['commission_rows']); ?> lessons</p>
+            <?php elseif (normalize_role($userInfo['role'] ?? $user['role']) === 'STUDENT'): ?>
+                <strong>RM <?php echo e(number_format($scheduleSummary['unpaid_total'], 2)); ?></strong>
+                <p>Outstanding fee · <?php echo e($scheduleSummary['unpaid_rows']); ?> records</p>
+            <?php else: ?>
+                <strong>RM <?php echo e(number_format($scheduleSummary['unpaid_total'], 2)); ?></strong>
+                <p><?php echo e($scheduleSummary['unpaid_rows']); ?> unpaid rows</p>
+            <?php endif; ?>
             <a href="<?= e(url_path('transactions.php')); ?>">
                 <button type="button">Open Transactions</button>
             </a>
