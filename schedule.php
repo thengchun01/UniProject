@@ -1306,7 +1306,7 @@ include __DIR__ . '/includes/header.php';
                                         }
                                     }
                                     ?>
-                                    <td class="sched-cell" data-date="<?= e($day['ymd']) ?>" data-slot="<?= e($slotLabel) ?>">
+                                    <td class="sched-cell<?= $day['ymd'] === $todayYmd ? ' sched-today-cell' : '' ?>" data-date="<?= e($day['ymd']) ?>" data-slot="<?= e($slotLabel) ?>">
                                         <?php if ($isSunday || $isSatLate): ?>
                                             <span class="sched-empty">Closed</span>
                                         <?php elseif (empty($cellLessons)): ?>
