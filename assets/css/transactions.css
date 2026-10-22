@@ -84,8 +84,11 @@
 }
 
 .txn-month.is-selected {
-    outline: 2px solid var(--primary-color, #7c3aed);
-    outline-offset: 1px;
+    outline: 3px solid var(--primary-color, #7c3aed);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px var(--surface-color, #fff), 0 0 0 4px color-mix(in srgb, var(--primary-color, #7c3aed) 22%, transparent);
+    position: relative;
+    z-index: 1;
     font-weight: 800;
 }
 
