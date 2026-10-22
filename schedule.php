@@ -1335,6 +1335,7 @@ include __DIR__ . '/includes/header.php';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
                                                 <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-class-group="<?= e((string) ($l['recurrence_group'] ?? '')) ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
+                                                    <span class="sched-chip-time"><?= e(substr((string) $l['start_time'], 0, 5)) ?>–<?= e(substr((string) $l['end_time'], 0, 5)) ?></span>
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
                                                     <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
@@ -1657,21 +1658,25 @@ include __DIR__ . '/includes/header.php';
         }
         $copySourceDefault = date('Y-m', strtotime($month . '-01 -1 month'));
         ?>
-        <div class="form-field">
-            <label for="schedCopySourceMonth">Copy from month</label>
-            <select id="schedCopySourceMonth" name="source_month" required>
-                <?php foreach ($copyMonthOptions as $optionValue => $optionLabel): ?>
-                    <option value="<?= e($optionValue) ?>" <?= $optionValue === $copySourceDefault ? 'selected' : '' ?>><?= e($optionLabel) ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <div class="form-field">
-            <label for="schedCopyTargetMonth">Copy to month</label>
-            <select id="schedCopyTargetMonth" name="target_month" required>
-                <?php foreach ($copyMonthOptions as $optionValue => $optionLabel): ?>
-                    <option value="<?= e($optionValue) ?>" <?= $optionValue === $month ? 'selected' : '' ?>><?= e($optionLabel) ?></option>
-                <?php endforeach; ?>
-            </select>
+        <div class="sched-copy-months">
+            <div class="form-field sched-copy-month-field">
+                <label for="schedCopySourceMonth">Copy from</label>
+                <select id="schedCopySourceMonth" name="source_month" size="5" required aria-label="Scroll to choose the month to copy from">
+                    <?php foreach ($copyMonthOptions as $optionValue => $optionLabel): ?>
+                        <option value="<?= e($optionValue) ?>" <?= $optionValue === $copySourceDefault ? 'selected' : '' ?>><?= e($optionLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <small>Scroll up for earlier months, down for later months.</small>
+            </div>
+            <div class="sched-copy-month-field">
+                <label for="schedCopyTargetMonth">Copy to</label>
+                <select id="schedCopyTargetMonth" name="target_month" size="5" required aria-label="Scroll to choose the destination month">
+                    <?php foreach ($copyMonthOptions as $optionValue => $optionLabel): ?>
+                        <option value="<?= e($optionValue) ?>" <?= $optionValue === $month ? 'selected' : '' ?>><?= e($optionLabel) ?></option>
+                    <?php endforeach; ?>
+                </select>
+                <small>Choose the destination month.</small>
+            </div>
         </div>
         <p id="schedCopyClassesMsg" class="alert" style="display:none;"></p>
         <div class="sched-dialog-actions">
