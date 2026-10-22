@@ -1171,6 +1171,12 @@ include __DIR__ . '/includes/header.php';
                 <button type="button" class="sched-view-btn" id="schedViewBtnV" data-view="vertical">
                     <span>⇅</span> Vertical Grid
                 </button>
+                <button type="button" class="sched-view-btn" id="schedFitBtn" aria-pressed="false" title="Fit the full timetable into the available width">
+                    <span>⤢</span> Fit all
+                </button>
+                <button type="button" class="sched-view-btn" id="schedTodayNextBtn" title="Jump to the next class on today's row">
+                    Next class today <span aria-hidden="true">→</span>
+                </button>
             </div>
         </div>
 
@@ -1195,7 +1201,7 @@ include __DIR__ . '/includes/header.php';
                             <?php foreach ($slotRows as $slotMin): ?>
                                 <?php $slotLabel = sprintf('%02d:%02d', (int) ($slotMin / 60), $slotMin % 60); ?>
                                 <?php $isHour = ($slotMin % 60 === 0); ?>
-                                <th class="sched-h-time-head<?= $isHour ? ' is-hour' : '' ?>"><?= $isHour ? e($slotLabel) : '' ?></th>
+                                <th class="sched-h-time-head<?= $isHour ? ' is-hour' : '' ?>" data-slot-min="<?= (int) $slotMin ?>"><?= $isHour ? e($slotLabel) : '' ?></th>
                             <?php endforeach; ?>
                         </tr>
                     </thead>
@@ -1248,7 +1254,7 @@ include __DIR__ . '/includes/header.php';
                                                 $chipSubtitle = ($courseLabel !== '' && $lessonTitle !== '' && $lessonTitle !== $courseLabel) ? $lessonTitle : '';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
-                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
+                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
                                                     <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
@@ -1320,7 +1326,7 @@ include __DIR__ . '/includes/header.php';
                                                 $chipSubtitle = ($courseLabel !== '' && $lessonTitle !== '' && $lessonTitle !== $courseLabel) ? $lessonTitle : '';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
-                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
+                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
                                                     <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
@@ -2011,6 +2017,70 @@ include __DIR__ . '/includes/header.php';
             });
         });
     })();
+
+    // Timetable helpers: fit-to-width and next class on today's row.
+    var fitBtn = document.getElementById('schedFitBtn');
+    var todayNextBtn = document.getElementById('schedTodayNextBtn');
+    var mainStage = document.getElementById('schedGrid');
+    var fitEnabled = false;
+    if (fitBtn && mainStage) {
+        fitBtn.addEventListener('click', function () {
+            fitEnabled = !fitEnabled;
+            mainStage.classList.toggle('sched-fit-all', fitEnabled);
+            fitBtn.classList.toggle('active', fitEnabled);
+            fitBtn.setAttribute('aria-pressed', fitEnabled ? 'true' : 'false');
+            fitBtn.innerHTML = fitEnabled ? '<span>⤢</span> Normal size' : '<span>⤢</span> Fit all';
+            var activeScroll = document.querySelector('#schedViewHorizontal:not([style*="display: none"]) .sched-h-scroll, #schedViewVertical:not([style*="display: none"]) .sched-v-scroll');
+            if (activeScroll) { activeScroll.scrollLeft = 0; activeScroll.scrollTop = 0; }
+        });
+    }
+    function updateTodayNextButton() {
+        if (!todayNextBtn) return;
+        var todayRow = document.getElementById('schedTodayRow');
+        var now = new Date();
+        var nowMin = now.getHours() * 60 + now.getMinutes();
+        var candidates = [];
+        if (todayRow) {
+            var chips = todayRow.querySelectorAll('.sched-chip[data-start-min][data-end-min]');
+            var seen = {};
+            chips.forEach(function (chip) {
+                var id = chip.getAttribute('data-lesson-id');
+                if (!id || seen[id]) return;
+                seen[id] = true;
+                var start = parseInt(chip.getAttribute('data-start-min'), 10);
+                var end = parseInt(chip.getAttribute('data-end-min'), 10);
+                if (!Number.isFinite(start) || !Number.isFinite(end) || end <= nowMin) return;
+                candidates.push({ id: id, start: start, end: end });
+            });
+        }
+        candidates.sort(function (a, b) { return a.start - b.start; });
+        var current = candidates.find(function (item) { return item.start <= nowMin && item.end > nowMin; });
+        var next = current || candidates.find(function (item) { return item.start > nowMin; });
+        if (next) {
+            todayNextBtn.disabled = false;
+            todayNextBtn.innerHTML = (current ? 'Current class ' : 'Next class today ') + '<span aria-hidden="true">→</span>';
+            todayNextBtn.title = current ? 'Jump to the class currently in progress' : 'Jump to the next upcoming class today';
+            todayNextBtn.onclick = function () {
+                var row = document.getElementById('schedTodayRow');
+                var scroll = document.querySelector('#schedViewHorizontal .sched-h-scroll');
+                var head = document.querySelector('.sched-h-time-head[data-slot-min="' + Math.floor(next.start / 15) * 15 + '"]');
+                if (scroll && head) {
+                    scroll.scrollTo({ left: Math.max(0, head.offsetLeft - 130), behavior: 'smooth' });
+                }
+                var target = row && row.querySelector('.sched-chip[data-lesson-id="' + next.id + '"]');
+                if (target) {
+                    target.classList.add('sched-next-target');
+                    window.setTimeout(function () { target.classList.remove('sched-next-target'); }, 1800);
+                }
+            };
+        } else {
+            todayNextBtn.disabled = true;
+            todayNextBtn.textContent = 'End of today ✓';
+            todayNextBtn.title = 'There are no more classes scheduled for today';
+            todayNextBtn.onclick = null;
+        }
+    }
+    updateTodayNextButton();
 
     // Timetable View Switcher (Horizontal Timeline vs Vertical Grid)
     var viewBtnH = document.getElementById('schedViewBtnH');
