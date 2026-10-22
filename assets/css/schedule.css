@@ -2573,13 +2573,17 @@ table.sched-class-table {
 
 
 /* Weekday labels stay readable for teacher and student roles as well as admins. */
-.sched-weekday-label {
+.sched-freq .sched-weekday-label {
     display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
+    width: auto;
+    height: auto;
     min-width: 31px;
     margin: 2px;
     padding: 4px 5px;
+    border: 0;
     border-radius: 7px;
     background: #f1f5f9;
     color: #64748b;
@@ -2587,15 +2591,15 @@ table.sched-class-table {
     font-weight: 750;
     line-height: 1.1;
 }
-.sched-weekday-label.is-on {
+.sched-freq .sched-weekday-label.is-on {
     background: #dcfce7;
     color: #166534;
 }
-.sched-weekday-label.is-clash {
+.sched-freq .sched-weekday-label.is-clash {
     background: #fee2e2;
     color: #991b1b;
 }
-.sched-weekday-label.is-closed {
+.sched-freq .sched-weekday-label.is-closed {
     opacity: .55;
 }
 .sched-class-table tr.sched-class-target > td {
