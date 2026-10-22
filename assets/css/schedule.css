@@ -2511,3 +2511,62 @@ table.sched-class-table {
         width: 100%;
     }
 }
+
+
+/* Cleaner timetable headers: the day, date and lesson count read as separate lines. */
+.sched-v-scroll .sched-table thead th:not(:first-child) {
+    min-width: 94px;
+    padding: 10px 8px;
+    text-align: center;
+    vertical-align: middle;
+    white-space: normal;
+    line-height: 1.25;
+    background: #f8fafc;
+    color: #334155;
+    border-bottom: 2px solid var(--border-color, #cbd5e1);
+}
+.sched-v-scroll .sched-table thead th.sched-today {
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 12%, #ffffff);
+    color: var(--primary-color, #5b21b6);
+    border-bottom-color: var(--primary-color, #7c3aed);
+}
+.sched-v-scroll .sched-table thead th.is-sun {
+    color: #64748b;
+    background: #f1f5f9;
+}
+.sched-v-scroll .sched-table thead th .sched-h-day,
+.sched-v-scroll .sched-table thead th .sched-h-date,
+.sched-v-scroll .sched-table thead th .sched-day-count {
+    display: block;
+    margin: 0;
+}
+.sched-v-scroll .sched-table thead th .sched-h-day {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: #64748b;
+}
+.sched-v-scroll .sched-table thead th .sched-h-date {
+    margin-top: 3px;
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f172a;
+}
+.sched-v-scroll .sched-table thead th .sched-day-count {
+    margin-top: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #64748b;
+}
+.sched-v-scroll .sched-table thead th.sched-today .sched-h-day,
+.sched-v-scroll .sched-table thead th.sched-today .sched-h-date,
+.sched-v-scroll .sched-table thead th.sched-today .sched-day-count {
+    color: var(--primary-color, #5b21b6);
+}
+@media (max-width: 700px) {
+    .sched-v-scroll .sched-table thead th:not(:first-child) {
+        min-width: 82px;
+        padding: 8px 5px;
+    }
+}
