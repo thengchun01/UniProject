@@ -798,6 +798,14 @@ include __DIR__ . '/includes/header.php';
                 <h2 id="schedNextTitle"><?= $nextClass !== null ? e(trim((string) ($nextClass['course_name'] ?? '')) !== '' ? (string) $nextClass['course_name'] : (string) ($nextClass['title'] ?? 'Lesson')) : 'No upcoming class' ?></h2>
             </div>
             <?php if ($nextClass !== null): ?>
+                <?php
+                $nextDateTime = substr((string) $nextClass['lesson_date'], 0, 10) . ' ' . substr((string) ($nextClassState === 'in-progress' ? $nextClass['end_time'] : $nextClass['start_time']), 0, 8);
+                $nextTimestamp = strtotime($nextDateTime);
+                ?>
+                <div class="sched-next-countdown<?= $nextClassState === 'in-progress' ? ' is-live' : '' ?>" id="schedNextCountdown" data-target-timestamp="<?= (int) $nextTimestamp ?>" data-countdown-mode="<?= $nextClassState === 'in-progress' ? 'ends' : 'starts' ?>">
+                    <span class="sched-countdown-label"><?= $nextClassState === 'in-progress' ? 'Time remaining' : 'Starts in' ?></span>
+                    <strong class="sched-countdown-value" aria-live="off">Calculating…</strong>
+                </div>
                 <p class="sched-next-time">
                     <span aria-hidden="true">◷</span>
                     <?= e(date('D, j M Y', strtotime(substr((string) $nextClass['lesson_date'], 0, 10) . 'T12:00:00'))) ?>
@@ -3568,4 +3576,36 @@ include __DIR__ . '/includes/header.php';
 })();
 </script>
 
+<script>
+(function () {
+    const countdown = document.getElementById('schedNextCountdown');
+    if (!countdown) return;
+    const targetSeconds = Number(countdown.dataset.targetTimestamp || 0);
+    const mode = countdown.dataset.countdownMode || 'starts';
+    const output = countdown.querySelector('.sched-countdown-value');
+    const label = countdown.querySelector('.sched-countdown-label');
+    if (!targetSeconds || !output || !label) return;
+    function updateCountdown() {
+        const remaining = Math.max(0, targetSeconds - Math.floor(Date.now() / 1000));
+        const days = Math.floor(remaining / 86400);
+        const hours = Math.floor((remaining % 86400) / 3600);
+        const minutes = Math.floor((remaining % 3600) / 60);
+        const seconds = remaining % 60;
+        const pad = n => String(n).padStart(2, '0');
+        if (remaining === 0 && mode === 'starts') {
+            label.textContent = 'Starting now';
+            output.textContent = '00:00:00';
+        } else if (remaining === 0 && mode === 'ends') {
+            label.textContent = 'Class ending';
+            output.textContent = '00:00:00';
+        } else {
+            output.textContent = days > 0
+                ? days + 'd ' + pad(hours) + ':' + pad(minutes) + ':' + pad(seconds)
+                : pad(hours) + ':' + pad(minutes) + ':' + pad(seconds);
+        }
+    }
+    updateCountdown();
+    window.setInterval(updateCountdown, 1000);
+})();
+</script>
 <?php include __DIR__ . '/includes/footer.php'; ?>
