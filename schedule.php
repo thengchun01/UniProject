@@ -2212,7 +2212,7 @@ include __DIR__ . '/includes/header.php';
             if (activeScroll) { activeScroll.scrollLeft = 0; activeScroll.scrollTop = 0; }
         });
     }
-    function showTodayClass(index) {
+    function showTodayClass(index, navigateToLesson) {
         if (!todaySlides.length) return;
         todayIndex = Math.max(0, Math.min(index, todaySlides.length - 1));
         todaySlides.forEach(function (slide, i) { slide.hidden = i !== todayIndex; });
@@ -2230,7 +2230,7 @@ include __DIR__ . '/includes/header.php';
             d.setDate(d.getDate() - offset);
             return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
         })() : '';
-        if (lessonDate && monday && (lessonDate < schedWeekStart || lessonDate > schedWeekEnd)) {
+        if (navigateToLesson && lessonDate && monday && (lessonDate < schedWeekStart || lessonDate > schedWeekEnd)) {
             var params = new URLSearchParams(window.location.search);
             params.set('month', lessonDate.slice(0, 7));
             params.set('week', monday);
@@ -2257,8 +2257,8 @@ include __DIR__ . '/includes/header.php';
             }
         }, 80);
     }
-    if (todayPrevBtn) todayPrevBtn.addEventListener('click', function () { showTodayClass(todayIndex - 1); });
-    if (todayNextBtn) todayNextBtn.addEventListener('click', function () { showTodayClass(todayIndex + 1); });
+    if (todayPrevBtn) todayPrevBtn.addEventListener('click', function () { showTodayClass(todayIndex - 1, true); });
+    if (todayNextBtn) todayNextBtn.addEventListener('click', function () { showTodayClass(todayIndex + 1, true); });
     showTodayClass(0);
 
     // Timetable View Switcher (Horizontal Timeline vs Vertical Grid)
