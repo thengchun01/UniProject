@@ -1610,6 +1610,58 @@ dialog.sched-create-dialog .sched-group {
     outline-offset: 2px;
     box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.2);
 }
+
+/* Copy-month dialog: two independent, chronological scroll lists. */
+.sched-copy-months {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+    margin: 14px 0;
+}
+.sched-copy-month-field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    min-width: 0;
+}
+.sched-copy-month-field label {
+    font-weight: 750;
+}
+.sched-copy-month-field select {
+    width: 100%;
+    min-height: 142px;
+    padding: 6px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 10px;
+    background: var(--surface-color, #fff);
+    color: var(--text-color, #0f172a);
+}
+.sched-copy-month-field select option {
+    padding: 7px 8px;
+    border-radius: 5px;
+}
+.sched-copy-month-field select option:checked {
+    color: #fff;
+    background: var(--primary-color, #6d28d9);
+}
+.sched-copy-month-field small {
+    color: var(--text-muted, #64748b);
+    font-size: 11px;
+    line-height: 1.4;
+}
+.sched-chip-time {
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    line-height: 1.2;
+    font-weight: 800;
+    letter-spacing: .01em;
+}
+@media (max-width: 520px) {
+    .sched-copy-months { gap: 8px; }
+    .sched-copy-month-field select { min-height: 126px; font-size: 12px; }
+}
+
 .sched-dialog-help {
     margin: 0 0 16px;
     color: var(--text-muted, #64748b);
