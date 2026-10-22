@@ -1999,3 +1999,132 @@ table.sched-class-table {
         font-size: 15px;
     }
 }
+
+
+/* Today's timetable lane stays visible at a glance in both layouts. */
+.sched-h-day-row.is-today-row > td {
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 7%, #ffffff);
+    border-top: 1px solid color-mix(in srgb, var(--primary-color, #7c3aed) 28%, #ffffff);
+    border-bottom: 1px solid color-mix(in srgb, var(--primary-color, #7c3aed) 28%, #ffffff);
+}
+
+.sched-h-day-row.is-today-row > td:hover {
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 12%, #ffffff);
+}
+
+.sched-h-day-row.is-today-row .sched-h-day-head {
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 13%, #ffffff);
+    border-left-color: var(--primary-color, #7c3aed);
+}
+
+.sched-today-cell {
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 7%, #ffffff) !important;
+    box-shadow: inset 1px 0 color-mix(in srgb, var(--primary-color, #7c3aed) 18%, #ffffff), inset -1px 0 color-mix(in srgb, var(--primary-color, #7c3aed) 18%, #ffffff);
+}
+
+.sched-today-cell:hover {
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 12%, #ffffff) !important;
+}
+
+/* Theme-colored course titles, while retaining contrast for the supporting text. */
+.sched-chip .sched-chip-title {
+    color: var(--primary-color, #7c3aed);
+}
+
+.sched-chip.sched-next-target {
+    outline: 2px solid var(--primary-color, #7c3aed);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary-color, #7c3aed) 16%, transparent);
+}
+
+/* Fit-all mode compresses the grid to the available width; Fit all toggles it. */
+.sched-main-stage.sched-fit-all .sched-h-scroll,
+.sched-main-stage.sched-fit-all .sched-v-scroll {
+    overflow: auto;
+    max-height: 78vh;
+}
+
+.sched-main-stage.sched-fit-all .sched-h-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.sched-main-stage.sched-fit-all .sched-h-corner,
+.sched-main-stage.sched-fit-all .sched-h-day-head {
+    width: 82px;
+    min-width: 82px;
+    padding: 5px 4px;
+}
+
+.sched-main-stage.sched-fit-all .sched-h-time-head,
+.sched-main-stage.sched-fit-all .sched-h-cell {
+    width: auto;
+    min-width: 0;
+    padding: 3px 1px;
+    font-size: 8px;
+    overflow-wrap: anywhere;
+}
+
+.sched-main-stage.sched-fit-all .sched-h-time-head {
+    font-size: 8px;
+    letter-spacing: 0;
+}
+
+.sched-main-stage.sched-fit-all .sched-chip {
+    padding: 3px 2px;
+    margin: 1px 0;
+    border-radius: 4px;
+}
+
+.sched-main-stage.sched-fit-all .sched-chip .sched-chip-title {
+    font-size: 8px;
+    line-height: 1.15;
+}
+
+.sched-main-stage.sched-fit-all .sched-chip .sched-chip-subtitle,
+.sched-main-stage.sched-fit-all .sched-chip .sched-chip-students,
+.sched-main-stage.sched-fit-all .sched-chip .sched-chip-teacher {
+    font-size: 7px;
+    line-height: 1.15;
+    margin-top: 2px;
+    padding-top: 2px;
+}
+
+.sched-main-stage.sched-fit-all .sched-h-day,
+.sched-main-stage.sched-fit-all .sched-h-date,
+.sched-main-stage.sched-fit-all .sched-day-count {
+    font-size: 9px;
+}
+
+.sched-main-stage.sched-fit-all .sched-v-scroll .sched-table {
+    width: 100%;
+    min-width: 0;
+    table-layout: fixed;
+}
+
+.sched-main-stage.sched-fit-all .sched-v-scroll .sched-table th,
+.sched-main-stage.sched-fit-all .sched-v-scroll .sched-table td {
+    padding: 3px 2px;
+    font-size: 9px;
+    overflow-wrap: anywhere;
+}
+
+.sched-main-stage.sched-fit-all .sched-v-scroll .sched-table .sched-chip .sched-chip-title {
+    font-size: 8px;
+}
+
+#schedTodayNextBtn:disabled {
+    opacity: .62;
+    cursor: default;
+}
+
+@media (max-width: 720px) {
+    .sched-view-switcher {
+        flex-wrap: wrap;
+    }
+    .sched-view-btn {
+        padding: 6px 9px;
+        font-size: 12px;
+    }
+}
