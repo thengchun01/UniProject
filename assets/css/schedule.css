@@ -1591,14 +1591,18 @@ dialog.sched-create-dialog .sched-group {
     cursor: pointer;
     user-select: none;
 }
+.sched-class-table th.sortable::after {
+    content: " ↕";
+    opacity: .55;
+}
 .sched-class-table th.sortable:hover,
 .sched-class-table th.sortable:focus-visible {
     background: #1e293b;
     outline: 2px solid var(--primary-color, #7c3aed);
     outline-offset: -2px;
 }
-.sched-class-table th.sortable[data-dir="asc"]::after { content: " ↑"; }
-.sched-class-table th.sortable[data-dir="desc"]::after { content: " ↓"; }
+.sched-class-table th.sortable[data-dir="asc"]::after { content: " ↑"; opacity: 1; }
+.sched-class-table th.sortable[data-dir="desc"]::after { content: " ↓"; opacity: 1; }
 .sched-class-table tbody tr[hidden] { display: none; }
 .sched-chip.is-today-target {
     z-index: 5;
