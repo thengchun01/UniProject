@@ -733,6 +733,7 @@ if ($lessonsAvailable && $lessonsManager !== null && is_database_connected()) {
         }
     } catch (Throwable $e) {
         $nextClass = null;
+        $nextClassState = 'upcoming';
         $nextClassStudents = [];
     }
 }
@@ -793,9 +794,6 @@ include __DIR__ . '/includes/header.php';
                         <span><strong>Students</strong> <?= $nextClassStudents !== [] ? e(implode(', ', $nextClassStudents)) : 'No students enrolled' ?></span>
                     <?php endif; ?>
                     <?php if ($role !== 'TEACHER'): ?>
-                        <span><strong>Teacher</strong> <?= !empty($nextClass['teacher_name']) ? e($nextClass['teacher_name']) : 'Not assigned' ?></span>
-                    <?php endif; ?>
-                    <?php if ($role === 'STUDENT'): ?>
                         <span><strong>Teacher</strong> <?= !empty($nextClass['teacher_name']) ? e($nextClass['teacher_name']) : 'Not assigned' ?></span>
                     <?php endif; ?>
                     <?php if ($role === 'ADMIN'): ?>
