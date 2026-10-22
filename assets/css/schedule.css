@@ -76,10 +76,10 @@
     box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25);
 }
 
-/* Top Controls Deck: Calendar + Filter Panel */
+/* Month calendar */
 .sched-controls-deck {
     display: grid;
-    grid-template-columns: minmax(320px, 400px) 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     align-items: stretch;
 }
@@ -1520,6 +1520,100 @@ dialog.sched-create-dialog .sched-group {
 .mfee-table input {
     -moz-appearance: textfield;
     appearance: textfield;
+}
+
+
+/* Class-table search and compact filters */
+.sched-series-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+.sched-class-tools {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 12px;
+    margin-top: 16px;
+    padding: 12px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 12px;
+    background: var(--surface-muted, #f8fafc);
+}
+.sched-class-search {
+    display: flex;
+    flex: 1 1 220px;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 180px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted, #64748b);
+}
+.sched-class-search input,
+.sched-class-filter-form select {
+    min-height: 38px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 8px;
+    padding: 8px 10px;
+    background: var(--surface-color, #fff);
+    color: var(--text-color, #0f172a);
+    font: inherit;
+}
+.sched-class-filter-form {
+    display: flex;
+    flex: 3 1 560px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+}
+.sched-class-filter-form > label {
+    display: flex;
+    flex: 1 1 130px;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 120px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted, #64748b);
+}
+.sched-class-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 1px;
+}
+.sched-class-table th.sortable {
+    cursor: pointer;
+    user-select: none;
+}
+.sched-class-table th.sortable:hover,
+.sched-class-table th.sortable:focus-visible {
+    background: #1e293b;
+    outline: 2px solid var(--primary-color, #7c3aed);
+    outline-offset: -2px;
+}
+.sched-class-table th.sortable[data-dir="asc"]::after { content: " ↑"; }
+.sched-class-table th.sortable[data-dir="desc"]::after { content: " ↓"; }
+.sched-class-table tbody tr[hidden] { display: none; }
+.sched-chip.is-today-target {
+    z-index: 5;
+    outline: 3px solid #f59e0b;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.2);
+}
+.sched-dialog-help {
+    margin: 0 0 16px;
+    color: var(--text-muted, #64748b);
+    font-size: 13px;
+    line-height: 1.55;
+}
+#schedCopyClassesDialog {
+    width: min(520px, calc(100vw - 28px));
 }
 
 /* Class table (issue 90.4): ID, title, teacher, commission, students, frequency, payment */
