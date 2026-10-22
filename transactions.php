@@ -273,6 +273,15 @@ if ($txAvailable && is_database_connected()) {
         } catch (Throwable $e) {
             // Orphan visibility is best-effort; enrollment combos already loaded.
         }
+        // Students only see monthly payment records that are still outstanding.
+        if ($role === 'STUDENT') {
+            foreach ($combos as $comboKey => $combo) {
+                if (strtoupper((string) ($combo['mstatus'] ?? 'UNPAID')) === 'PAID') {
+                    unset($combos[$comboKey]);
+                }
+            }
+        }
+
         // Calculate commission per lesson using each student's saved monthly fee,
         // regardless of whether the student's transaction is PAID or UNPAID.
         // Commission due is separate from the student's payment status.
@@ -296,6 +305,10 @@ if ($txAvailable && is_database_connected()) {
                                   AND mf.month = SUBSTR(l.lesson_date, 1, 7)
                                   AND COALESCE(mf.recurrence_group, '') = COALESCE(l.recurrence_group, '')
                               WHERE SUBSTR(l.lesson_date, 1, 7) IN (" . implode(',', $commissionHolders) . ")";
+            if ($role === 'TEACHER') {
+                $commissionSql .= ' AND l.teacher_id = :commission_teacher';
+                $commissionParams['commission_teacher'] = (int) $user['user_id'];
+            }
             $commissionStmt = $db->prepare($commissionSql);
             $commissionStmt->execute($commissionParams);
             $commissionRows = $commissionStmt->fetchAll(PDO::FETCH_ASSOC);
@@ -585,7 +598,7 @@ include __DIR__ . '/includes/header.php';
             <p style="color:var(--text-muted,#666);margin:6px 0 0;">
                 <?php if ($role === 'ADMIN'): ?>Per-student-per-lesson rows with lesson totals. Proofs are admin-uploaded; every upload/delete is date-logged below.<?php endif; ?>
                 <?php if ($role === 'TEACHER'): ?>Rows for your lessons only.<?php endif; ?>
-                <?php if ($role === 'STUDENT'): ?>Your lesson fees and payment status. Contact admin for receipts.<?php endif; ?>
+                <?php if ($role === 'STUDENT'): ?>Only your outstanding payments are shown. This page is view-only.<?php endif; ?>
             </p>
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
@@ -612,7 +625,11 @@ include __DIR__ . '/includes/header.php';
                 $mkey = sprintf('%04d-%02d', (int) $stripYear, $mm);
                 $msel = in_array($mkey, $months, true);
                 $mst = $monthStats[$mkey] ?? null;
-                $bad = $mst !== null && ((float) $mst['unpaid'] > 0 || (int) $mst['paid_noproof'] > 0 || (int) $mst['comm_open'] > 0);
+                $bad = $mst !== null && ($role === 'STUDENT'
+            ? (float) $mst['unpaid'] > 0
+            : ($role === 'TEACHER'
+                ? (int) $mst['comm_open'] > 0
+                : ((float) $mst['unpaid'] > 0 || (int) $mst['paid_noproof'] > 0 || (int) $mst['comm_open'] > 0)));
                 $mcls = $mkey >= $curYm ? 'is-grey' : ($bad ? 'is-red' : 'is-green');
                 ?>
                 <a class="txn-month<?= $msel ? ' is-selected' : '' ?><?= $mkey === $curYm ? ' is-now' : '' ?> <?= $mcls ?>" href="<?= e(url_path('transactions.php?' . txn_qs_months($mkey))) ?>"><?= e(date('M', mktime(0, 0, 0, $mm, 1))) ?></a>
@@ -620,17 +637,43 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div>
 
+    <?php
+    $teacherPendingGroups = [];
+    $studentDueGroups = [];
+    foreach ($combos as $metricCombo) {
+        $metricGroupKey = $metricCombo['month'] . '|' . $metricCombo['g'];
+        if ($role === 'TEACHER' && empty($metricCombo['series_paid'])) {
+            $teacherPendingGroups[$metricGroupKey] = true;
+        }
+        if ($role === 'STUDENT' && strtoupper((string) ($metricCombo['mstatus'] ?? 'UNPAID')) !== 'PAID') {
+            $studentDueGroups[$metricGroupKey] = true;
+        }
+    }
+    ?>
     <div class="txn-totals">
-        <div class="txn-total-card"><strong>RM <?= e(number_format($totals['paid'], 2)) ?></strong><span>of RM <?= e(number_format($totals['fee'], 2)) ?> fees received</span></div>
-        <div class="txn-total-card"><strong>RM <?= e(number_format($totals['comm_paid'], 2)) ?></strong><span>of RM <?= e(number_format($totals['comm_due'], 2)) ?> commission paid</span></div>
-        <div class="txn-total-card"><strong><?= (int) $totals['lessons'] ?></strong><span>Classes in filter</span></div>
-        <div class="txn-total-card"><strong><?= count($incompleteLessons) ?></strong><span>Incomplete classes</span></div>
+        <?php if ($role === 'ADMIN'): ?>
+            <div class="txn-total-card"><strong>RM <?= e(number_format($totals['paid'], 2)) ?></strong><span>of RM <?= e(number_format($totals['fee'], 2)) ?> fees received</span></div>
+            <div class="txn-total-card"><strong>RM <?= e(number_format($totals['comm_paid'], 2)) ?></strong><span>of RM <?= e(number_format($totals['comm_due'], 2)) ?> commission paid</span></div>
+            <div class="txn-total-card"><strong><?= (int) $totals['lessons'] ?></strong><span>Classes in filter</span></div>
+            <div class="txn-total-card"><strong><?= count($incompleteLessons) ?></strong><span>Incomplete classes</span></div>
+        <?php elseif ($role === 'TEACHER'): ?>
+            <div class="txn-total-card"><strong>RM <?= e(number_format($totals['comm_due'], 2)) ?></strong><span>Commission for your lessons</span></div>
+            <div class="txn-total-card"><strong>RM <?= e(number_format($totals['comm_paid'], 2)) ?></strong><span>Commission marked paid</span></div>
+            <div class="txn-total-card"><strong><?= (int) $totals['lessons'] ?></strong><span>Your classes in filter</span></div>
+            <div class="txn-total-card"><strong><?= count($teacherPendingGroups) ?></strong><span>Classes with commission pending</span></div>
+        <?php else: ?>
+            <div class="txn-total-card"><strong>RM <?= e(number_format(max(0, $totals['fee'] - $totals['paid']), 2)) ?></strong><span>Payment amount due</span></div>
+            <div class="txn-total-card"><strong><?= count($combos) ?></strong><span>Outstanding payment records</span></div>
+            <div class="txn-total-card"><strong><?= count($studentDueGroups) ?></strong><span>Classes with payment due</span></div>
+            <div class="txn-total-card"><strong>Unpaid</strong><span>Only outstanding payments shown</span></div>
+        <?php endif; ?>
     </div>
 
     <form class="txn-filters" method="get" action="<?= e(url_path('transactions.php')); ?>">
         <?php foreach ($months as $m): ?>
             <input type="hidden" name="months[]" value="<?= e($m) ?>">
         <?php endforeach; ?>
+        <?php if ($role !== 'STUDENT'): ?>
         <label>Lesson status
             <select name="lesson_status">
                 <option value="">All</option>
@@ -647,6 +690,7 @@ include __DIR__ . '/includes/header.php';
                 <option value="PAID" <?= $payStatus === 'PAID' ? 'selected' : '' ?>>Paid</option>
             </select>
         </label>
+        <?php endif; ?>
         <?php if ($role === 'ADMIN'): ?>
         <label>Teacher
             <select name="teacher_id">
@@ -729,11 +773,11 @@ include __DIR__ . '/includes/header.php';
                             </td>
                             <td>
                                 <div class="txn-proof-cell">
-                                <?php if ($role === 'ADMIN' && !empty($c['proof_lesson_id'])): ?>
+                                <?php if (in_array($role, ['ADMIN', 'TEACHER'], true) && !empty($c['proof_lesson_id'])): ?>
                                     <?php if (!empty($c['cproof'])): ?>
                                         <div class="txn-file-pill">
                                             <a href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener" title="Open commission proof">Commission</a>
-                                            <button type="button" data-txn-delproof="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" aria-label="Remove commission proof" title="Remove proof">×</button>
+                                            <?php if ($role === 'ADMIN'): ?><button type="button" data-txn-delproof="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" aria-label="Remove commission proof" title="Remove proof">×</button><?php endif; ?>
                                         </div>
                                     <?php else: ?>
                                         <label class="txn-upload-button">Upload file<input type="file" hidden data-txn-upload="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
@@ -767,8 +811,12 @@ include __DIR__ . '/includes/header.php';
                                         <?php else: ?>
                                             <label class="txn-upload-button">Upload file<input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
                                         <?php endif; ?>
+                                    <?php elseif ($role === 'STUDENT'): ?>
+                                        <span class="txn-badge <?= strtoupper((string) ($c['mstatus'] ?? 'UNPAID')) === 'PENDING' ? 'is-pending' : 'is-cancelled' ?>"><?= e(strtoupper((string) ($c['mstatus'] ?? 'UNPAID'))) ?></span>
                                     <?php elseif (!empty($c['mproof'])): ?>
                                         <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener">Payment</a>
+                                    <?php else: ?>
+                                        <span style="color:#999;font-size:12px;">—</span>
                                     <?php endif; ?>
                                 </div>
                             </td>
