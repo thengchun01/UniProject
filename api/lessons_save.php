@@ -319,6 +319,17 @@ try {
             'cvalue' => $cvalue,
             'id' => $lessonId,
         ]);
+        // A recurring group represents one configured class, so its course
+        // identity/title must stay consistent across every occurrence.
+        $seriesGroup = trim((string) ($existing['recurrence_group'] ?? ''));
+        if ($seriesGroup !== '') {
+            $seriesCourseStmt = $db->prepare('UPDATE lessons SET title = :title, course_id = :course_id WHERE recurrence_group = :group_id');
+            $seriesCourseStmt->execute([
+                'title' => (string) $courseRow['course_name'],
+                'course_id' => $courseId,
+                'group_id' => $seriesGroup,
+            ]);
+        }
         echo json_encode(['success' => true, 'data' => ['lesson_id' => $lessonId]]);
         exit;
     }
