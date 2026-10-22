@@ -840,7 +840,7 @@ include __DIR__ . '/includes/header.php';
         <?php endif; ?>
     </section>
 
-    <!-- Controls Deck: Mini-Calendar & Filters -->
+    <!-- Month calendar; class filtering is kept with the class table below. -->
     <div class="sched-controls-deck">
         <div class="sched-panel sched-cal-panel">
             <div class="sched-cal-head">
@@ -874,70 +874,93 @@ include __DIR__ . '/includes/header.php';
             <p class="sched-empty" style="margin:8px 0 0;font-size:11.5px;">Click a week row to view timetable</p>
         </div>
 
-        <div class="sched-panel sched-filter-panel">
-            <div>
-                <h2 style="margin:0 0 10px;font-size:1.05rem;">Filter Schedule</h2>
-                <form class="sched-filter-form" method="get" action="<?= e(url_path('schedule.php')); ?>">
-                    <input type="hidden" name="month" value="<?= e($month) ?>">
-                    <input type="hidden" name="week" value="<?= e($weekMonday) ?>">
-                    <div class="sched-filter-grid">
-                        <label>Status
-                            <select name="status">
-                                <option value="">All statuses</option>
-                                <option value="SCHEDULED" <?= $statusFilter === 'SCHEDULED' ? 'selected' : '' ?>>Scheduled</option>
-                                <option value="COMPLETED" <?= $statusFilter === 'COMPLETED' ? 'selected' : '' ?>>Completed</option>
-                                <option value="CANCELLED" <?= $statusFilter === 'CANCELLED' ? 'selected' : '' ?>>Cancelled</option>
-                            </select>
-                        </label>
-                        <?php if ($role === 'ADMIN'): ?>
-                        <label>Teacher
-                            <select name="teacher_id">
-                                <option value="">All teachers</option>
-                                <?php foreach ($teachers as $t): ?>
-                                    <option value="<?= (int) $t['user_id'] ?>" <?= $teacherFilter === (int) $t['user_id'] ? 'selected' : '' ?>><?= e($t['username']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <label>Student
-                            <select name="student_id">
-                                <option value="">All students</option>
-                                <?php foreach ($students as $s): ?>
-                                    <option value="<?= (int) $s['user_id'] ?>" <?= $studentFilter === (int) $s['user_id'] ? 'selected' : '' ?>><?= e($s['username']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <?php elseif ($role === 'TEACHER'): ?>
-                        <label>Student
-                            <select name="student_id">
-                                <option value="">All my students</option>
-                                <?php foreach ($teacherStudents as $s): ?>
-                                    <option value="<?= (int) $s['user_id'] ?>" <?= $studentFilter === (int) $s['user_id'] ? 'selected' : '' ?>><?= e($s['username']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </label>
-                        <?php endif; ?>
-                    </div>
-                    <div class="sched-filter-actions">
-                        <button type="submit" class="primary-btn">Apply Filter</button>
-                        <a href="<?= e(url_path('schedule.php?month=' . $month . '&week=' . $weekMonday)) ?>" class="btn secondary-btn" style="padding:7px 14px;font-size:13px;">Clear</a>
-                    </div>
-                </form>
-            </div>
-        </div>
     </div><!-- /.sched-controls-deck -->
 
-    <!-- Classes this month: ID, title, teacher, commission, students, frequency, payment -->
+    <!-- Classes this month -->
     <div class="sched-panel sched-series-panel">
         <div class="sched-series-head">
             <h2>Classes · <?= e($monthLabel) ?></h2>
-            <button type="button" class="btn secondary-btn" id="schedOpenCreateDialog">＋ New class</button>
+            <div class="sched-series-actions">
+                <?php if ($role === 'ADMIN'): ?>
+                    <button type="button" class="btn secondary-btn" id="schedOpenCopyDialog">Copy classes</button>
+                    <button type="button" class="btn secondary-btn" id="schedOpenCreateDialog">＋ New class</button>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="sched-class-tools">
+            <label class="sched-class-search">Search classes
+                <input type="search" id="schedClassSearch" placeholder="Search title, teacher, student…" autocomplete="off">
+            </label>
+            <form class="sched-filter-form sched-class-filter-form" method="get" action="<?= e(url_path('schedule.php')); ?>">
+                <input type="hidden" name="month" value="<?= e($month) ?>">
+                <input type="hidden" name="week" value="<?= e($weekMonday) ?>">
+                <label>Status
+                    <select name="status">
+                        <option value="">All statuses</option>
+                        <option value="SCHEDULED" <?= $statusFilter === 'SCHEDULED' ? 'selected' : '' ?>>Scheduled</option>
+                        <option value="COMPLETED" <?= $statusFilter === 'COMPLETED' ? 'selected' : '' ?>>Completed</option>
+                        <option value="CANCELLED" <?= $statusFilter === 'CANCELLED' ? 'selected' : '' ?>>Cancelled</option>
+                    </select>
+                </label>
+                <?php if ($role === 'ADMIN'): ?>
+                    <label>Teacher
+                        <select name="teacher_id">
+                            <option value="">All teachers</option>
+                            <?php foreach ($teachers as $t): ?>
+                                <option value="<?= (int) $t['user_id'] ?>" <?= $teacherFilter === (int) $t['user_id'] ? 'selected' : '' ?>><?= e($t['username']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <label>Student
+                        <select name="student_id">
+                            <option value="">All students</option>
+                            <?php foreach ($students as $s): ?>
+                                <option value="<?= (int) $s['user_id'] ?>" <?= $studentFilter === (int) $s['user_id'] ? 'selected' : '' ?>><?= e($s['username']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                    <?php if ($coursePresets !== []): ?>
+                        <label>Course
+                            <select name="course_id">
+                                <option value="">All courses</option>
+                                <?php foreach ($coursePresets as $course): ?>
+                                    <option value="<?= (int) $course['course_id'] ?>" <?= $courseFilter === (int) $course['course_id'] ? 'selected' : '' ?>><?= e($course['course_name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </label>
+                    <?php endif; ?>
+                <?php elseif ($role === 'TEACHER'): ?>
+                    <label>Student
+                        <select name="student_id">
+                            <option value="">All my students</option>
+                            <?php foreach ($teacherStudents as $s): ?>
+                                <option value="<?= (int) $s['user_id'] ?>" <?= $studentFilter === (int) $s['user_id'] ? 'selected' : '' ?>><?= e($s['username']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </label>
+                <?php endif; ?>
+                <div class="sched-class-filter-actions">
+                    <button type="submit" class="btn secondary-btn">Apply</button>
+                    <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['status' => '', 'teacher_id' => '', 'student_id' => '', 'course_id' => '']))) ?>">Clear</a>
+                </div>
+            </form>
         </div>
         <?php if ($monthGroupIds === []): ?>
             <p class="sched-empty" style="text-align:left;">No classes this month.</p>
         <?php else: ?>
             <div class="sched-table-scroll">
-            <table class="sched-class-table">
-                <thead><tr><th>Class</th><th>Title</th><th>Teacher</th><th>Commission</th><th>Students</th><th>Fee (RM/month)</th><th>Day</th><th>Time</th><th>Edit</th></tr></thead>
+            <table class="sched-class-table sched-sortable">
+                <thead><tr>
+                    <th class="sortable" data-sort-col="0" tabindex="0" role="button">Class ↕</th>
+                    <th class="sortable" data-sort-col="1" tabindex="0" role="button">Title ↕</th>
+                    <th class="sortable" data-sort-col="2" tabindex="0" role="button">Teacher ↕</th>
+                    <th class="sortable" data-sort-col="3" tabindex="0" role="button">Commission ↕</th>
+                    <th class="sortable" data-sort-col="4" tabindex="0" role="button">Students ↕</th>
+                    <th class="sortable" data-sort-col="5" tabindex="0" role="button">Fee (RM/month) ↕</th>
+                    <th class="sortable" data-sort-col="6" tabindex="0" role="button">Day ↕</th>
+                    <th class="sortable" data-sort-col="7" tabindex="0" role="button">Time ↕</th>
+                    <th>Edit</th>
+                </tr></thead>
                 <tbody>
                 <?php foreach ($monthGroupIds as $g): ?>
                     <?php
@@ -1240,7 +1263,7 @@ include __DIR__ . '/includes/header.php';
                         $todayItemStart = substr((string) ($todayItem['start_time'] ?? ''), 0, 5);
                         $todayItemEnd = substr((string) ($todayItem['end_time'] ?? ''), 0, 5);
                         ?>
-                        <article class="sched-today-slide<?= $todayItemStatus === 'COMPLETED' ? ' is-completed' : '' ?>" data-today-index="<?= (int) $todayIndex ?>"<?= $todayIndex > 0 ? ' hidden' : '' ?>>
+                        <article class="sched-today-slide<?= $todayItemStatus === 'COMPLETED' ? ' is-completed' : '' ?>" data-today-index="<?= (int) $todayIndex ?>" data-lesson-id="<?= $todayItemId ?>" data-lesson-date="<?= e(substr((string) $todayItem['lesson_date'], 0, 10)) ?>" data-start-time="<?= e($todayItemStart) ?>"<?= $todayIndex > 0 ? ' hidden' : '' ?>>
                             <div class="sched-today-slide-icon" aria-hidden="true"><?= $todayItemStatus === 'COMPLETED' ? '✓' : '♫' ?></div>
                             <div class="sched-today-slide-content">
                                 <div class="sched-today-slide-title-row">
@@ -1622,6 +1645,31 @@ include __DIR__ . '/includes/header.php';
         </div>
     </div><!-- /.sched-workspace-grid -->
 </div>
+
+<?php if ($role === 'ADMIN'): ?>
+<dialog class="sched-dialog" id="schedCopyClassesDialog" aria-labelledby="schedCopyClassesTitle">
+    <div class="sched-edit-head">
+        <h2 id="schedCopyClassesTitle">Copy class schedules</h2>
+        <button type="button" class="sched-x-btn" data-copy-classes-close aria-label="Close">×</button>
+    </div>
+    <p class="sched-dialog-help">Copy recurring class schedules, teachers, students, weekdays, and times into another month. Existing lessons are not duplicated. Payment statuses, proof files, monthly fee records, and transactions are not copied.</p>
+    <form id="schedCopyClassesForm">
+        <div class="form-field">
+            <label for="schedCopySourceMonth">Copy from month</label>
+            <input type="month" id="schedCopySourceMonth" name="source_month" required value="<?= e(date('Y-m', strtotime($month . '-01 -1 month'))) ?>">
+        </div>
+        <div class="form-field">
+            <label for="schedCopyTargetMonth">Copy to month</label>
+            <input type="month" id="schedCopyTargetMonth" name="target_month" required value="<?= e($month) ?>">
+        </div>
+        <p id="schedCopyClassesMsg" class="alert" style="display:none;"></p>
+        <div class="sched-dialog-actions">
+            <button type="button" class="secondary-btn" data-copy-classes-close>Cancel</button>
+            <button type="submit" class="primary-btn" id="schedCopyClassesSubmit">Copy schedules</button>
+        </div>
+    </form>
+</dialog>
+<?php endif; ?>
 
     <!-- Edit form student picker — table-based popup like create mode but no fee until added -->
 <?php if ($role === 'ADMIN' && $selectedLesson !== null): ?>
@@ -2091,6 +2139,59 @@ include __DIR__ . '/includes/header.php';
         });
     })();
 
+    // Copy class schedules into a selected month (admin only).
+    var copyClassesDialog = document.getElementById('schedCopyClassesDialog');
+    var copyClassesForm = document.getElementById('schedCopyClassesForm');
+    var copyClassesButton = document.getElementById('schedOpenCopyDialog');
+    if (copyClassesButton && copyClassesDialog) {
+        copyClassesButton.addEventListener('click', function () { copyClassesDialog.showModal(); });
+    }
+    document.querySelectorAll('[data-copy-classes-close]').forEach(function (button) {
+        button.addEventListener('click', function () { if (copyClassesDialog) copyClassesDialog.close(); });
+    });
+    if (copyClassesForm) {
+        copyClassesForm.addEventListener('submit', function (ev) {
+            ev.preventDefault();
+            var source = document.getElementById('schedCopySourceMonth').value;
+            var target = document.getElementById('schedCopyTargetMonth').value;
+            var msg = document.getElementById('schedCopyClassesMsg');
+            var submit = document.getElementById('schedCopyClassesSubmit');
+            if (!source || !target || source === target) {
+                msg.style.display = 'block';
+                msg.className = 'alert error';
+                msg.textContent = 'Choose two different months.';
+                return;
+            }
+            submit.disabled = true;
+            submit.textContent = 'Copying…';
+            var fd = new FormData(copyClassesForm);
+            fetch('<?= e(url_path('api/classes_copy.php')) ?>', {method: 'POST', body: fd})
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (!data.success) throw new Error(data.error || 'Copy failed.');
+                    var created = (data.data && data.data.created) || 0;
+                    var skipped = (data.data && data.data.skipped) || 0;
+                    msg.style.display = 'block';
+                    msg.className = 'alert success';
+                    msg.textContent = 'Created ' + created + ' lesson(s).' + (skipped ? ' Skipped ' + skipped + ' existing or unavailable lesson slot(s).' : '');
+                    var params = new URLSearchParams(window.location.search);
+                    params.set('month', target);
+                    params.set('week', '');
+                    params.delete('lesson_id');
+                    window.setTimeout(function () {
+                        window.location.href = window.location.pathname + '?' + params.toString() + '#schedGrid';
+                    }, 900);
+                })
+                .catch(function (error) {
+                    msg.style.display = 'block';
+                    msg.className = 'alert error';
+                    msg.textContent = error.message || 'Unable to copy class schedules.';
+                    submit.disabled = false;
+                    submit.textContent = 'Copy schedules';
+                });
+        });
+    }
+
     // Timetable helpers: fit-to-width and browse today's role-scoped classes.
     var fitBtn = document.getElementById('schedFitBtn');
     var todayPrevBtn = document.getElementById('schedTodayPrev');
@@ -2114,12 +2215,47 @@ include __DIR__ . '/includes/header.php';
     function showTodayClass(index) {
         if (!todaySlides.length) return;
         todayIndex = Math.max(0, Math.min(index, todaySlides.length - 1));
-        todaySlides.forEach(function (slide, i) {
-            slide.hidden = i !== todayIndex;
-        });
+        todaySlides.forEach(function (slide, i) { slide.hidden = i !== todayIndex; });
         if (todayPosition) todayPosition.textContent = (todayIndex + 1) + ' / ' + todaySlides.length;
         if (todayPrevBtn) todayPrevBtn.disabled = todayIndex <= 0;
         if (todayNextBtn) todayNextBtn.disabled = todayIndex >= todaySlides.length - 1;
+        var activeSlide = todaySlides[todayIndex];
+        if (!activeSlide) return;
+        var lessonDate = activeSlide.getAttribute('data-lesson-date') || '';
+        var lessonId = activeSlide.getAttribute('data-lesson-id') || '';
+        var lessonStart = activeSlide.getAttribute('data-start-time') || '09:00';
+        var monday = lessonDate ? (function () {
+            var d = new Date(lessonDate + 'T12:00:00');
+            var offset = (d.getDay() + 6) % 7;
+            d.setDate(d.getDate() - offset);
+            return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+        })() : '';
+        if (lessonDate && monday && (lessonDate < schedWeekStart || lessonDate > schedWeekEnd)) {
+            var params = new URLSearchParams(window.location.search);
+            params.set('month', lessonDate.slice(0, 7));
+            params.set('week', monday);
+            params.set('lesson_id', lessonId);
+            window.location.href = window.location.pathname + '?' + params.toString() + '#schedGrid';
+            return;
+        }
+        window.setTimeout(function () {
+            var chip = document.querySelector('.sched-chip[data-lesson-id="' + lessonId + '"]');
+            if (!chip) return;
+            document.querySelectorAll('.sched-chip.is-today-target').forEach(function (el) { el.classList.remove('is-today-target'); });
+            chip.classList.add('is-today-target');
+            chip.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
+            var hScroll = document.querySelector('#schedViewHorizontal:not([style*="display: none"]) .sched-h-scroll');
+            var vScroll = document.querySelector('#schedViewVertical:not([style*="display: none"]) .sched-v-scroll');
+            var slotMin = toMin(lessonStart);
+            if (hScroll) {
+                var slot = document.querySelector('#schedViewHorizontal .sched-h-time-head[data-slot-min="' + (Math.floor(slotMin / 15) * 15) + '"]');
+                if (slot) hScroll.scrollTo({left: Math.max(0, slot.offsetLeft - 80), behavior: 'smooth'});
+            }
+            if (vScroll) {
+                var vSlot = document.querySelector('#schedViewVertical [data-slot-min="' + (Math.floor(slotMin / 15) * 15) + '"]');
+                if (vSlot) vScroll.scrollTo({top: Math.max(0, vSlot.offsetTop - 100), behavior: 'smooth'});
+            }
+        }, 80);
     }
     if (todayPrevBtn) todayPrevBtn.addEventListener('click', function () { showTodayClass(todayIndex - 1); });
     if (todayNextBtn) todayNextBtn.addEventListener('click', function () { showTodayClass(todayIndex + 1); });
@@ -2809,28 +2945,53 @@ include __DIR__ . '/includes/header.php';
     });
     refreshTeacherTable();
 
-    // Generic click-to-sort for .sched-sortable tables (issue 36).
+    // Sort class table columns by their visible cell values.
     document.querySelectorAll('table.sched-sortable').forEach(function (table) {
         var heads = table.querySelectorAll('thead th.sortable');
+        function sortByHeader(th) {
+            var col = parseInt(th.getAttribute('data-sort-col'), 10);
+            if (!Number.isFinite(col)) return;
+            var dir = th.getAttribute('data-dir') === 'asc' ? 'desc' : 'asc';
+            heads.forEach(function (h) { h.removeAttribute('data-dir'); h.setAttribute('aria-sort', 'none'); });
+            th.setAttribute('data-dir', dir);
+            th.setAttribute('aria-sort', dir === 'asc' ? 'ascending' : 'descending');
+            var tbody = table.querySelector('tbody');
+            if (!tbody) return;
+            var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+            function value(row) {
+                var cell = row.cells[col];
+                if (!cell) return '';
+                var inputs = Array.prototype.slice.call(cell.querySelectorAll('input[type="number"]'));
+                if (inputs.length) return inputs.reduce(function (sum, input) { var n = parseFloat(input.value); return sum + (Number.isFinite(n) ? n : 0); }, 0);
+                return (cell.innerText || cell.textContent || '').replace(/\s+/g, ' ').trim();
+            }
+            rows.sort(function (a, b) {
+                var va = value(a), vb = value(b);
+                var na = typeof va === 'number' ? va : parseFloat(String(va).replace(/[^0-9.\-]/g, ''));
+                var nb = typeof vb === 'number' ? vb : parseFloat(String(vb).replace(/[^0-9.\-]/g, ''));
+                var numeric = va !== '' && vb !== '' && Number.isFinite(na) && Number.isFinite(nb)
+                    && col !== 1 && col !== 2 && col !== 4 && col !== 6 && col !== 7;
+                var cmp = numeric ? na - nb : String(va).localeCompare(String(vb), undefined, {numeric: true, sensitivity: 'base'});
+                return dir === 'asc' ? cmp : -cmp;
+            });
+            rows.forEach(function (row) { tbody.appendChild(row); });
+        }
         heads.forEach(function (th) {
-            th.addEventListener('click', function () {
-                var key = th.getAttribute('data-sortkey');
-                var dir = th.getAttribute('data-dir') === 'asc' ? 'desc' : 'asc';
-                heads.forEach(function (h) { h.removeAttribute('data-dir'); });
-                th.setAttribute('data-dir', dir);
-                var tbody = table.querySelector('tbody');
-                var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
-                rows.sort(function (a, b) {
-                    var va = a.getAttribute('data-' + key) || '';
-                    var vb = b.getAttribute('data-' + key) || '';
-                    var na = parseFloat(va), nb = parseFloat(vb);
-                    var cmp = (key !== 'name' && !isNaN(na) && !isNaN(nb)) ? (na - nb) : String(va).localeCompare(String(vb));
-                    return dir === 'asc' ? cmp : -cmp;
-                });
-                rows.forEach(function (r) { tbody.appendChild(r); });
+            th.addEventListener('click', function () { sortByHeader(th); });
+            th.addEventListener('keydown', function (ev) {
+                if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); sortByHeader(th); }
             });
         });
     });
+    var classSearch = document.getElementById('schedClassSearch');
+    if (classSearch) {
+        classSearch.addEventListener('input', function () {
+            var q = classSearch.value.trim().toLowerCase();
+            document.querySelectorAll('.sched-class-table tbody tr').forEach(function (row) {
+                row.hidden = (row.innerText || row.textContent || '').toLowerCase().indexOf(q) === -1;
+            });
+        });
+    }
 
     // Calendar week rows are links (issue 34).
     document.querySelectorAll('.sched-cal-week[data-href]').forEach(function (row) {
