@@ -2238,6 +2238,7 @@ include __DIR__ . '/includes/header.php';
             window.location.href = window.location.pathname + '?' + params.toString() + '#schedGrid';
             return;
         }
+        if (!navigateToLesson) return;
         window.setTimeout(function () {
             var chip = document.querySelector('.sched-chip[data-lesson-id="' + lessonId + '"]');
             if (!chip) return;
@@ -2259,7 +2260,13 @@ include __DIR__ . '/includes/header.php';
     }
     if (todayPrevBtn) todayPrevBtn.addEventListener('click', function () { showTodayClass(todayIndex - 1, true); });
     if (todayNextBtn) todayNextBtn.addEventListener('click', function () { showTodayClass(todayIndex + 1, true); });
-    showTodayClass(0);
+    var initialTodayIndex = -1;
+    if (window.location.hash === '#schedGrid' && selectedLessonId > 0) {
+        initialTodayIndex = todaySlides.findIndex(function (slide) {
+            return slide.getAttribute('data-lesson-id') === String(selectedLessonId);
+        });
+    }
+    showTodayClass(initialTodayIndex >= 0 ? initialTodayIndex : 0, initialTodayIndex >= 0);
 
     // Timetable View Switcher (Horizontal Timeline vs Vertical Grid)
     var viewBtnH = document.getElementById('schedViewBtnH');
@@ -2970,7 +2977,7 @@ include __DIR__ . '/includes/header.php';
                 var na = typeof va === 'number' ? va : parseFloat(String(va).replace(/[^0-9.\-]/g, ''));
                 var nb = typeof vb === 'number' ? vb : parseFloat(String(vb).replace(/[^0-9.\-]/g, ''));
                 var numeric = va !== '' && vb !== '' && Number.isFinite(na) && Number.isFinite(nb)
-                    && col !== 1 && col !== 2 && col !== 4 && col !== 6 && col !== 7;
+                    && col !== 0 && col !== 1 && col !== 2 && col !== 4 && col !== 6 && col !== 7;
                 var cmp = numeric ? na - nb : String(va).localeCompare(String(vb), undefined, {numeric: true, sensitivity: 'base'});
                 return dir === 'asc' ? cmp : -cmp;
             });
