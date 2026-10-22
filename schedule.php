@@ -1041,7 +1041,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </td>
-                        <td data-sort-value="<?= e(implode(',', array_keys($freqMap[$g] ?? []))) ?>">
+                        <td data-sort-value="<?= (int) (!empty($freqMap[$g]) ? min(array_map('intval', array_keys($freqMap[$g]))) : 8) ?>">
                             <span class="sched-freq" aria-label="Class weekdays">
                             <?php foreach ([1, 2, 3, 4, 5, 6, 7] as $fdow): ?>
                                 <?php
