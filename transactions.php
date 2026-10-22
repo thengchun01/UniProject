@@ -628,7 +628,7 @@ include __DIR__ . '/includes/header.php';
                         <a class="txn-month<?= $msel ? ' is-selected' : '' ?><?= $mkey === $curYm ? ' is-now' : '' ?> <?= $mcls ?>" href="<?= e(url_path('transactions.php?' . txn_qs_months($mkey))) ?>"><?= e(date('M', mktime(0, 0, 0, $mm, 1))) ?></a>
                     <?php endforeach; ?>
                 </div>
-                <a class="txn-multi-toggle<?= $multiMonthMode ? ' is-active' : '' ?>" href="<?= e(url_path('transactions.php?' . txn_qs(['multi_months' => $multiMonthMode ? '' : '1']))) ?>" aria-pressed="<?= $multiMonthMode ? 'true' : 'false' ?>"><?= $multiMonthMode ? 'Single month' : 'Select multiple months' ?></a>
+                <a class="txn-multi-toggle<?= $multiMonthMode ? ' is-active' : '' ?>" href="<?= e(url_path('transactions.php?' . txn_qs($multiMonthMode ? ['multi_months' => '', 'months' => [in_array($curYm, $months, true) ? $curYm : ($months[0] ?? $curYm)]] : ['multi_months' => '1']))) ?>" aria-pressed="<?= $multiMonthMode ? 'true' : 'false' ?>"><?= $multiMonthMode ? 'Single month' : 'Select multiple months' ?></a>
             </div>
         </div>
     </div>
