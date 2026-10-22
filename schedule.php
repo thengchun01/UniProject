@@ -836,7 +836,7 @@ include __DIR__ . '/includes/header.php';
             <?php endif; ?>
         </div>
         <?php if ($nextClass !== null): ?>
-            <a class="sched-next-open" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => (int) $nextClass['lesson_id'], 'month' => substr((string) $nextClass['lesson_date'], 0, 7), 'week' => date('Y-m-d', strtotime(substr((string) $nextClass['lesson_date'], 0, 10) . ' -' . ((int) date('N', strtotime(substr((string) $nextClass['lesson_date'], 0, 10))) - 1) . ' days'))])) ?>#schedGrid">View class <span aria-hidden="true">→</span></a>
+            <a class="sched-next-open" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => (int) $nextClass['lesson_id'], 'month' => substr((string) $nextClass['lesson_date'], 0, 7), 'week' => date('Y-m-d', strtotime(substr((string) $nextClass['lesson_date'], 0, 10) . ' -' . ((int) date('N', strtotime(substr((string) $nextClass['lesson_date'], 0, 10))) - 1) . ' days'))]))) ?>#schedGrid">View class <span aria-hidden="true">→</span></a>
         <?php endif; ?>
     </section>
 
