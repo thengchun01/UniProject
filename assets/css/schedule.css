@@ -2128,3 +2128,178 @@ table.sched-class-table {
         font-size: 12px;
     }
 }
+
+
+/* Compact today's-class navigator replacing the low-value weekly summary strip. */
+.sched-today-strip {
+    margin: 12px 0 16px;
+    padding: 14px 18px;
+    border: 1px solid color-mix(in srgb, var(--primary-color, #7c3aed) 22%, #e2e8f0);
+    border-radius: 14px;
+    background: linear-gradient(110deg, color-mix(in srgb, var(--primary-color, #7c3aed) 7%, #fff), #fff 68%);
+}
+.sched-today-strip-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.sched-today-eyebrow {
+    margin: 0 0 2px;
+    color: var(--primary-color, #7c3aed);
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .09em;
+}
+.sched-today-count {
+    color: var(--text-muted, #64748b);
+    font-size: 12px;
+}
+.sched-today-count strong {
+    color: var(--text-color, #0f172a);
+    font-size: 20px;
+    line-height: 1.2;
+}
+.sched-today-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-muted, #64748b);
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+}
+.sched-today-arrow {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 9px;
+    background: var(--card-bg, #fff);
+    color: var(--primary-color, #7c3aed);
+    font-size: 19px;
+    font-weight: 800;
+    cursor: pointer;
+}
+.sched-today-arrow:hover:not(:disabled) {
+    border-color: var(--primary-color, #7c3aed);
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 8%, #fff);
+}
+.sched-today-arrow:disabled {
+    opacity: .35;
+    cursor: default;
+}
+.sched-today-slide {
+    display: grid;
+    grid-template-columns: 42px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 12px;
+    border: 1px solid var(--border-color, #e2e8f0);
+    border-radius: 11px;
+    background: var(--card-bg, #fff);
+}
+.sched-today-slide[hidden] { display: none; }
+.sched-today-slide-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 12%, #fff);
+    color: var(--primary-color, #7c3aed);
+    font-size: 20px;
+    font-weight: 850;
+}
+.sched-today-slide.is-completed .sched-today-slide-icon {
+    background: #dcfce7;
+    color: #15803d;
+}
+.sched-today-slide-content { min-width: 0; }
+.sched-today-slide-title-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+}
+.sched-today-slide-title-row > strong {
+    color: var(--primary-color, #7c3aed);
+    font-size: 15px;
+    font-weight: 850;
+    overflow-wrap: anywhere;
+}
+.sched-today-status {
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 10px;
+    font-weight: 750;
+}
+.sched-today-slide.is-completed .sched-today-status {
+    background: #dcfce7;
+    color: #166534;
+}
+.sched-today-slide-time {
+    display: block;
+    margin-top: 4px;
+    color: var(--text-color, #334155);
+    font-size: 13px;
+    font-weight: 750;
+}
+.sched-today-slide-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px 16px;
+    margin-top: 5px;
+    color: var(--text-muted, #64748b);
+    font-size: 11px;
+    overflow-wrap: anywhere;
+}
+.sched-today-slide-meta b { color: var(--text-color, #334155); }
+.sched-today-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 11px;
+    border: 1px solid color-mix(in srgb, var(--primary-color, #7c3aed) 25%, #e2e8f0);
+    border-radius: 9px;
+    color: var(--primary-color, #7c3aed);
+    background: var(--card-bg, #fff);
+    font-size: 11px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+}
+.sched-today-open:hover {
+    background: color-mix(in srgb, var(--primary-color, #7c3aed) 7%, #fff);
+}
+.sched-today-slide.is-empty {
+    grid-template-columns: 42px minmax(0, 1fr);
+}
+.sched-today-slide.is-empty .sched-today-slide-content strong,
+.sched-today-slide.is-empty .sched-today-slide-content span {
+    display: block;
+}
+.sched-today-slide.is-empty .sched-today-slide-content strong {
+    color: var(--text-color, #0f172a);
+    font-size: 14px;
+}
+.sched-today-slide.is-empty .sched-today-slide-content span {
+    margin-top: 3px;
+    color: var(--text-muted, #64748b);
+    font-size: 12px;
+}
+@media (max-width: 640px) {
+    .sched-today-strip { padding: 12px; }
+    .sched-today-slide { grid-template-columns: 34px minmax(0, 1fr); gap: 9px; padding: 9px; }
+    .sched-today-slide-icon { width: 34px; height: 34px; border-radius: 10px; }
+    .sched-today-open { grid-column: 2; justify-self: start; }
+    .sched-today-slide-title-row > strong { font-size: 13px; }
+}
