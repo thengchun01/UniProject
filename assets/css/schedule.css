@@ -2734,3 +2734,29 @@ table.sched-class-table {
         max-height: calc((72vh - 42px) / 52);
     }
 }
+
+
+.sched-next-countdown {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    margin-top: 10px;
+    padding: 7px 11px;
+    border: 1px solid #ddd6fe;
+    border-radius: 10px;
+    background: #f5f3ff;
+    color: #5b21b6;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+}
+.sched-countdown-label { font-weight: 750; }
+.sched-countdown-value {
+    font-size: 14px;
+    letter-spacing: .03em;
+    white-space: nowrap;
+}
+.sched-next-countdown.is-live {
+    border-color: #86efac;
+    background: #f0fdf4;
+    color: #166534;
+}
