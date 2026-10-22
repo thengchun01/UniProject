@@ -677,6 +677,8 @@ function sched_qs(array $overrides): string
 $nextClass = null;
 $nextClassState = 'upcoming';
 $nextClassStudents = [];
+$todayClasses = [];
+$todayClassStudents = [];
 if ($lessonsAvailable && $lessonsManager !== null && is_database_connected()) {
     try {
         $nextFilters = [
@@ -689,6 +691,35 @@ if ($lessonsAvailable && $lessonsManager !== null && is_database_connected()) {
             $nextFilters['student_id'] = (int) $user['user_id'];
         }
         $nextCandidates = $lessonsManager->listLessons($nextFilters, 'lesson_date', 'ASC', 1000, 0);
+
+        // Today's class navigator is role-scoped but independent of the selected timetable week.
+        foreach ($nextCandidates as $todayCandidate) {
+            $candidateDate = substr((string) ($todayCandidate['lesson_date'] ?? ''), 0, 10);
+            $candidateStatus = strtoupper((string) ($todayCandidate['status'] ?? ''));
+            if ($candidateDate === $todayYmd && $candidateStatus !== 'CANCELLED') {
+                $todayClasses[] = $todayCandidate;
+            }
+        }
+        usort($todayClasses, function ($a, $b) {
+            return strcmp(substr((string) ($a['start_time'] ?? ''), 0, 5), substr((string) ($b['start_time'] ?? ''), 0, 5));
+        });
+        if ($todayClasses !== []) {
+            $todayLessonIds = array_values(array_unique(array_map(function ($item) {
+                return (int) $item['lesson_id'];
+            }, $todayClasses)));
+            $todayPlaceholders = implode(',', array_fill(0, count($todayLessonIds), '?'));
+            $todayStudentStmt = db()->prepare(
+                'SELECT e.lesson_id, su.username FROM lesson_enrollments e
+                 INNER JOIN users su ON su.user_id = e.student_id
+                 WHERE e.lesson_id IN (' . $todayPlaceholders . ')
+                 ORDER BY su.username ASC'
+            );
+            $todayStudentStmt->execute($todayLessonIds);
+            foreach ($todayStudentStmt->fetchAll(PDO::FETCH_ASSOC) as $todayStudent) {
+                $todayClassStudents[(int) $todayStudent['lesson_id']][] = $todayStudent['username'];
+            }
+        }
+
         $nowTs = time();
         $currentCandidates = [];
         $upcomingCandidates = [];
@@ -1174,22 +1205,64 @@ include __DIR__ . '/includes/header.php';
                 <button type="button" class="sched-view-btn" id="schedFitBtn" aria-pressed="false" title="Fit the full timetable into the available width">
                     <span>⤢</span> Fit all
                 </button>
-                <button type="button" class="sched-view-btn" id="schedTodayNextBtn" title="Jump to the next class on today's row">
-                    Next class today <span aria-hidden="true">→</span>
-                </button>
+
             </div>
         </div>
 
-        <?php
-        $weekHours = $weekStats['minutes'] > 0 ? rtrim(rtrim(number_format($weekStats['minutes'] / 60, 1), '0'), '.') : '0';
-        $weekDonePct = $weekStats['lessons'] > 0 ? (int) round($weekStats['done'] / $weekStats['lessons'] * 100) . '%' : '—';
-        ?>
-        <div class="sched-week-strip" aria-label="This week at a glance">
-            <span><strong><?= (int) $weekStats['lessons'] ?></strong> lessons</span>
-            <span><strong><?= e($weekHours) ?></strong> hrs</span>
-            <span><strong><?= count($weekGroupIds) ?></strong> series</span>
-            <span><strong><?= e($weekDonePct) ?></strong> done</span>
-        </div>
+        <section class="sched-today-strip" aria-label="Today's classes">
+            <div class="sched-today-strip-heading">
+                <div>
+                    <p class="sched-today-eyebrow">TODAY'S CLASSES</p>
+                    <div class="sched-today-count"><strong><?= count($todayClasses) ?></strong> <?= count($todayClasses) === 1 ? 'class' : 'classes' ?> today</div>
+                </div>
+                <div class="sched-today-nav">
+                    <button type="button" class="sched-today-arrow" id="schedTodayPrev" aria-label="Previous class" title="Previous class" <?= count($todayClasses) <= 1 ? 'disabled' : '' ?>>←</button>
+                    <span id="schedTodayPosition" aria-live="polite"><?= $todayClasses !== [] ? '1 / ' . count($todayClasses) : '0 / 0' ?></span>
+                    <button type="button" class="sched-today-arrow" id="schedTodayNext" aria-label="Next class" title="Next class" <?= count($todayClasses) <= 1 ? 'disabled' : '' ?>>→</button>
+                </div>
+            </div>
+            <?php if ($todayClasses === []): ?>
+                <div class="sched-today-slide is-empty">
+                    <div class="sched-today-slide-icon" aria-hidden="true">♫</div>
+                    <div class="sched-today-slide-content">
+                        <strong>No classes scheduled today</strong>
+                        <span>You're all clear for today.</span>
+                    </div>
+                </div>
+            <?php else: ?>
+                <div class="sched-today-slides" id="schedTodaySlides">
+                    <?php foreach ($todayClasses as $todayIndex => $todayItem): ?>
+                        <?php
+                        $todayItemId = (int) $todayItem['lesson_id'];
+                        $todayItemTitle = trim((string) ($todayItem['course_name'] ?? ''));
+                        if ($todayItemTitle === '') $todayItemTitle = trim((string) ($todayItem['title'] ?? 'Lesson'));
+                        $todayItemStatus = strtoupper((string) ($todayItem['status'] ?? 'SCHEDULED'));
+                        $todayItemStart = substr((string) ($todayItem['start_time'] ?? ''), 0, 5);
+                        $todayItemEnd = substr((string) ($todayItem['end_time'] ?? ''), 0, 5);
+                        ?>
+                        <article class="sched-today-slide<?= $todayItemStatus === 'COMPLETED' ? ' is-completed' : '' ?>" data-today-index="<?= (int) $todayIndex ?>"<?= $todayIndex > 0 ? ' hidden' : '' ?>>
+                            <div class="sched-today-slide-icon" aria-hidden="true"><?= $todayItemStatus === 'COMPLETED' ? '✓' : '♫' ?></div>
+                            <div class="sched-today-slide-content">
+                                <div class="sched-today-slide-title-row">
+                                    <strong><?= e($todayItemTitle) ?></strong>
+                                    <span class="sched-today-status"><?= e($todayItemStatus === 'COMPLETED' ? 'Completed' : 'Scheduled') ?></span>
+                                </div>
+                                <span class="sched-today-slide-time"><?= e(date('g:i A', strtotime($todayItemStart))) ?>–<?= e(date('g:i A', strtotime($todayItemEnd))) ?></span>
+                                <div class="sched-today-slide-meta">
+                                    <?php if ($role !== 'STUDENT'): ?>
+                                        <span><b>Students:</b> <?= !empty($todayClassStudents[$todayItemId]) ? e(implode(', ', $todayClassStudents[$todayItemId])) : 'None enrolled' ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($role !== 'TEACHER'): ?>
+                                        <span><b>Teacher:</b> <?= !empty($todayItem['teacher_name']) ? e($todayItem['teacher_name']) : 'Not assigned' ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <a class="sched-today-open" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => $todayItemId]))) ?>">View class</a>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
 
         <!-- HORIZONTAL TIMELINE VIEW (Days as rows, Time as columns) -->
         <div class="sched-view-horizontal" id="schedViewHorizontal">
@@ -2018,9 +2091,13 @@ include __DIR__ . '/includes/header.php';
         });
     })();
 
-    // Timetable helpers: fit-to-width and next class on today's row.
+    // Timetable helpers: fit-to-width and browse today's role-scoped classes.
     var fitBtn = document.getElementById('schedFitBtn');
-    var todayNextBtn = document.getElementById('schedTodayNextBtn');
+    var todayPrevBtn = document.getElementById('schedTodayPrev');
+    var todayNextBtn = document.getElementById('schedTodayNext');
+    var todaySlides = Array.prototype.slice.call(document.querySelectorAll('#schedTodaySlides .sched-today-slide'));
+    var todayPosition = document.getElementById('schedTodayPosition');
+    var todayIndex = 0;
     var mainStage = document.getElementById('schedGrid');
     var fitEnabled = false;
     if (fitBtn && mainStage) {
@@ -2034,54 +2111,19 @@ include __DIR__ . '/includes/header.php';
             if (activeScroll) { activeScroll.scrollLeft = 0; activeScroll.scrollTop = 0; }
         });
     }
-    function updateTodayNextButton() {
-        if (!todayNextBtn) return;
-        var todayRow = document.getElementById('schedTodayRow');
-        var now = new Date();
-        var nowMin = now.getHours() * 60 + now.getMinutes();
-        var candidates = [];
-        if (todayRow) {
-            var chips = todayRow.querySelectorAll('.sched-chip[data-start-min][data-end-min]');
-            var seen = {};
-            chips.forEach(function (chip) {
-                var id = chip.getAttribute('data-lesson-id');
-                if (!id || seen[id] || chip.classList.contains('is-cancelled')) return;
-                seen[id] = true;
-                var start = parseInt(chip.getAttribute('data-start-min'), 10);
-                var end = parseInt(chip.getAttribute('data-end-min'), 10);
-                if (!Number.isFinite(start) || !Number.isFinite(end) || end <= nowMin) return;
-                candidates.push({ id: id, start: start, end: end });
-            });
-        }
-        candidates.sort(function (a, b) { return a.start - b.start; });
-        var current = candidates.find(function (item) { return item.start <= nowMin && item.end > nowMin; });
-        var next = current || candidates.find(function (item) { return item.start > nowMin; });
-        if (next) {
-            todayNextBtn.disabled = false;
-            todayNextBtn.innerHTML = (current ? 'Current class ' : 'Next class today ') + '<span aria-hidden="true">→</span>';
-            todayNextBtn.title = current ? 'Jump to the class currently in progress' : 'Jump to the next upcoming class today';
-            todayNextBtn.onclick = function () {
-                if (typeof applyViewMode === 'function') applyViewMode('horizontal');
-                var row = document.getElementById('schedTodayRow');
-                var scroll = document.querySelector('#schedViewHorizontal .sched-h-scroll');
-                var head = document.querySelector('.sched-h-time-head[data-slot-min="' + Math.floor(next.start / 15) * 15 + '"]');
-                if (scroll && head) {
-                    scroll.scrollTo({ left: Math.max(0, head.offsetLeft - 130), behavior: 'smooth' });
-                }
-                var target = row && row.querySelector('.sched-chip[data-lesson-id="' + next.id + '"]');
-                if (target) {
-                    target.classList.add('sched-next-target');
-                    window.setTimeout(function () { target.classList.remove('sched-next-target'); }, 1800);
-                }
-            };
-        } else {
-            todayNextBtn.disabled = true;
-            todayNextBtn.textContent = 'End of today ✓';
-            todayNextBtn.title = 'There are no more classes scheduled for today';
-            todayNextBtn.onclick = null;
-        }
+    function showTodayClass(index) {
+        if (!todaySlides.length) return;
+        todayIndex = Math.max(0, Math.min(index, todaySlides.length - 1));
+        todaySlides.forEach(function (slide, i) {
+            slide.hidden = i !== todayIndex;
+        });
+        if (todayPosition) todayPosition.textContent = (todayIndex + 1) + ' / ' + todaySlides.length;
+        if (todayPrevBtn) todayPrevBtn.disabled = todayIndex <= 0;
+        if (todayNextBtn) todayNextBtn.disabled = todayIndex >= todaySlides.length - 1;
     }
-    updateTodayNextButton();
+    if (todayPrevBtn) todayPrevBtn.addEventListener('click', function () { showTodayClass(todayIndex - 1); });
+    if (todayNextBtn) todayNextBtn.addEventListener('click', function () { showTodayClass(todayIndex + 1); });
+    showTodayClass(0);
 
     // Timetable View Switcher (Horizontal Timeline vs Vertical Grid)
     var viewBtnH = document.getElementById('schedViewBtnH');
@@ -2135,6 +2177,36 @@ include __DIR__ . '/includes/header.php';
     }
     function fmtMin(mins) {
         return String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
+    }
+    function timeInputsFor(isEdit) {
+        return {
+            date: document.getElementById(isEdit ? 'schedEditDate' : 'schedDate'),
+            start: document.getElementById(isEdit ? 'schedEditStart' : 'schedStart'),
+            end: document.getElementById(isEdit ? 'schedEditEnd' : 'schedEnd')
+        };
+    }
+    function ensureEndAfterStart(t) {
+        if (!t || !t.start || !t.end) return true;
+        var startText = t.start.value.trim(), endText = t.end.value.trim();
+        if (!/^\d{2}:\d{2}$/.test(startText) || !/^\d{2}:\d{2}$/.test(endText)) {
+            t.end.setCustomValidity('');
+            return true;
+        }
+        var startMin = toMin(startText), endMin = toMin(endText);
+        if (endMin > startMin) {
+            t.end.setCustomValidity('');
+            return true;
+        }
+        // Move the end to a later quarter-hour slot when it is not after the start.
+        var correctedEnd = Math.ceil((startMin + 1) / 15) * 15;
+        if (correctedEnd <= startMin) correctedEnd = startMin + 15;
+        if (correctedEnd <= 23 * 60 + 59) {
+            t.end.value = fmtMin(correctedEnd);
+            t.end.setCustomValidity('');
+            return true;
+        }
+        t.end.setCustomValidity('End time must be later than start time.');
+        return false;
     }
     function fillTimeInputs(date, fromSlot, toSlot) {
         var t = activeTimeInputs();
@@ -2214,9 +2286,33 @@ include __DIR__ . '/includes/header.php';
     ['schedDate', 'schedStart', 'schedEnd', 'schedEditDate', 'schedEditStart', 'schedEditEnd'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) {
-            el.addEventListener('input', function () { schedTouched = true; syncGridSelection(); });
-            el.addEventListener('change', function () { schedTouched = true; syncGridSelection(); });
+            el.addEventListener('input', function () {
+                schedTouched = true;
+                if (id === 'schedStart' || id === 'schedEnd' || id === 'schedEditStart' || id === 'schedEditEnd') {
+                    ensureEndAfterStart(timeInputsFor(id.indexOf('schedEdit') === 0));
+                }
+                syncGridSelection();
+            });
+            el.addEventListener('change', function () {
+                schedTouched = true;
+                if (id === 'schedStart' || id === 'schedEnd' || id === 'schedEditStart' || id === 'schedEditEnd') {
+                    ensureEndAfterStart(timeInputsFor(id.indexOf('schedEdit') === 0));
+                }
+                syncGridSelection();
+            });
         }
+    });
+    [
+        { form: document.getElementById('schedCreateForm'), edit: false },
+        { form: document.getElementById('schedEditForm'), edit: true }
+    ].forEach(function (item) {
+        if (item.form) item.form.addEventListener('submit', function (event) {
+            if (!ensureEndAfterStart(timeInputsFor(item.edit))) {
+                event.preventDefault();
+                var times = timeInputsFor(item.edit);
+                if (times.end) times.end.reportValidity();
+            }
+        });
     });
 
     // Issue 54: show the weekday next to form dates.
