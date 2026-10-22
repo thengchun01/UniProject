@@ -554,3 +554,52 @@ dialog.sched-dialog.txn-comm-dialog .sched-x-btn {
     flex: 0 0 32px;
     margin: 0;
 }
+
+
+/* Compact transaction title and month navigation in one header row. */
+.txn-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px 24px;
+    flex-wrap: wrap;
+}
+.txn-page-title { flex: 0 0 auto; }
+.txn-months-header {
+    margin-left: auto;
+    min-width: 0;
+    max-width: 850px;
+    flex: 1 1 580px;
+}
+.txn-months-header .txn-months-now { margin-bottom: 6px; }
+.txn-month-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+.txn-month-controls .txn-month-row { flex: 1 1 auto; }
+.txn-multi-toggle {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 7px 10px;
+    border: 1px solid var(--border-color, #cbd5e1);
+    border-radius: 10px;
+    background: var(--surface-color, #fff);
+    color: var(--text-color, #0f172a);
+    font-size: 12px;
+    font-weight: 750;
+    white-space: nowrap;
+    text-decoration: none;
+}
+.txn-multi-toggle.is-active {
+    border-color: var(--primary-color, #7c3aed);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color, #7c3aed) 18%, transparent);
+    color: var(--primary-color, #6d28d9);
+}
+@media (max-width: 760px) {
+    .txn-months-header { flex-basis: 100%; max-width: none; }
+    .txn-month-controls { align-items: flex-start; flex-wrap: wrap; }
+}
