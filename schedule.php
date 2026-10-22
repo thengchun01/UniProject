@@ -951,14 +951,14 @@ include __DIR__ . '/includes/header.php';
             <div class="sched-table-scroll">
             <table class="sched-class-table sched-sortable">
                 <thead><tr>
-                    <th class="sortable" data-sort-col="0" tabindex="0" role="button">Class ↕</th>
-                    <th class="sortable" data-sort-col="1" tabindex="0" role="button">Title ↕</th>
-                    <th class="sortable" data-sort-col="2" tabindex="0" role="button">Teacher ↕</th>
-                    <th class="sortable" data-sort-col="3" tabindex="0" role="button">Commission ↕</th>
-                    <th class="sortable" data-sort-col="4" tabindex="0" role="button">Students ↕</th>
-                    <th class="sortable" data-sort-col="5" tabindex="0" role="button">Fee (RM/month) ↕</th>
-                    <th class="sortable" data-sort-col="6" tabindex="0" role="button">Day ↕</th>
-                    <th class="sortable" data-sort-col="7" tabindex="0" role="button">Time ↕</th>
+                    <th class="sortable" data-sort-col="0" tabindex="0" role="button">Class</th>
+                    <th class="sortable" data-sort-col="1" tabindex="0" role="button">Title</th>
+                    <th class="sortable" data-sort-col="2" tabindex="0" role="button">Teacher</th>
+                    <th class="sortable" data-sort-col="3" tabindex="0" role="button">Commission</th>
+                    <th class="sortable" data-sort-col="4" tabindex="0" role="button">Students</th>
+                    <th class="sortable" data-sort-col="5" tabindex="0" role="button">Fee (RM/month)</th>
+                    <th class="sortable" data-sort-col="6" tabindex="0" role="button">Day</th>
+                    <th class="sortable" data-sort-col="7" tabindex="0" role="button">Time</th>
                     <th>Edit</th>
                 </tr></thead>
                 <tbody>
