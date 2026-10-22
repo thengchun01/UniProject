@@ -2462,3 +2462,52 @@ table.sched-class-table {
         min-width: 0;
     }
 }
+
+
+/* Refined overview: calendar + next class share a row; Classes and timetable
+   each receive their own full-width row underneath. */
+@media (min-width: 1101px) {
+    .sched-wrap {
+        grid-template-columns: minmax(250px, 0.78fr) minmax(0, 2fr);
+        grid-template-rows: auto auto auto auto auto;
+        align-items: start;
+    }
+
+    .sched-header-bar {
+        grid-column: 1 / -1;
+        grid-row: 1;
+    }
+
+    .sched-controls-deck {
+        grid-column: 1;
+        grid-row: 2;
+        align-self: stretch;
+    }
+
+    .sched-next-card {
+        grid-column: 2;
+        grid-row: 2;
+        align-self: stretch;
+        min-width: 0;
+        height: 100%;
+        box-sizing: border-box;
+    }
+
+    .sched-series-panel {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        width: 100%;
+    }
+
+    .sched-main-stage {
+        grid-column: 1 / -1;
+        grid-row: 4;
+        width: 100%;
+    }
+
+    .sched-workspace-grid {
+        grid-column: 1 / -1;
+        grid-row: 5;
+        width: 100%;
+    }
+}
