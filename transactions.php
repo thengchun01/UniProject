@@ -736,9 +736,11 @@ include __DIR__ . '/includes/header.php';
                     <th>ID</th>
                     <th>Class</th>
                     <th>Teacher</th>
+                    <?php if ($role !== 'STUDENT'): ?>
                     <th>Commission (RM)</th>
                     <th>Commission</th>
                     <th>Student</th>
+                    <?php endif; ?>
                     <th>Fee (RM)</th>
                     <th>Payment</th>
                     <?php if ($role === 'ADMIN'): ?><th>Actions</th><?php endif; ?>
@@ -746,7 +748,7 @@ include __DIR__ . '/includes/header.php';
             </thead>
             <tbody>
                 <?php if (empty($combos)): ?>
-                    <tr><td colspan="<?= $role === 'ADMIN' ? 9 : 8 ?>">No transactions match this filter.</td></tr>
+                    <tr><td colspan="<?= $role === 'ADMIN' ? 9 : ($role === 'STUDENT' ? 5 : 8) ?>">No transactions match this filter.</td></tr>
                 <?php else: ?>
                     <?php foreach ($combos as $ckey => $c): ?>
                         <?php
@@ -757,6 +759,7 @@ include __DIR__ . '/includes/header.php';
                             <td><?= $c['fee_id'] !== null ? (int) $c['fee_id'] : '—' ?></td>
                             <td><strong><?= e($clsName) ?></strong><?php if (!empty($c['lesson_title'])): ?><br><span style="color:#64748b;font-size:12px;">Title: <?= e($c['lesson_title']) ?></span><?php endif; ?><br><span style="color:#666;font-size:12px;"><?= e($clsLabel) ?> · <?= e($c['month']) ?> · <?= count($c['lessons']) ?> lesson<?= count($c['lessons']) === 1 ? '' : 's' ?></span></td>
                             <td><?= e($c['tname']) ?><?= $c['tid'] > 0 ? ' <span style="color:#666;font-size:12px;">#' . (int) $c['tid'] . '</span>' : '' ?></td>
+                            <?php if ($role !== 'STUDENT'): ?>
                             <td>
                                 <?php if ($role === 'ADMIN' && $c['g'] !== ''): ?>
                                     <button type="button" class="txn-commission-value"
@@ -790,6 +793,7 @@ include __DIR__ . '/includes/header.php';
                                 </div>
                             </td>
                             <td><?= e($c['sname']) ?> <span style="color:#666;font-size:12px;">#<?= (int) $c['sid'] ?></span></td>
+                            <?php endif; ?>
                             <td>
                                 <?php if ($role === 'ADMIN'): ?>
                                     <div class="txn-fee-editor">
