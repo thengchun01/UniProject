@@ -780,19 +780,28 @@ include __DIR__ . '/includes/header.php';
                             </td>
                             <td>
                                 <div class="txn-proof-cell">
-                                <?php if (in_array($role, ['ADMIN', 'TEACHER'], true) && !empty($c['proof_lesson_id'])): ?>
-                                    <?php if (!empty($c['cproof'])): ?>
-                                        <div class="txn-file-pill">
-                                            <a href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener" title="Open commission proof">Commission</a>
-                                            <?php if ($role === 'ADMIN'): ?><button type="button" data-txn-delproof="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" aria-label="Remove commission proof" title="Remove proof">×</button><?php endif; ?>
+                                <?php
+                                $commissionProofStatus = 'UNPAID';
+                                if (!empty($c['proof_lesson_id']) && isset($c['lessons'][$c['proof_lesson_id']])) {
+                                    $commissionProofStatus = strtoupper((string) ($c['lessons'][$c['proof_lesson_id']]['cstatus'] ?? 'UNPAID'));
+                                }
+                                ?>
+                                <?php if (!empty($c['cproof'])): ?>
+                                    <div class="txn-file-pill">
+                                        <a href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener" title="Open commission proof">Commission proof</a>
+                                    </div>
+                                <?php endif; ?>
+                                <?php if ($role === 'ADMIN' && !empty($c['proof_lesson_id']) && (empty($c['cproof']) || $commissionProofStatus === 'UNPAID')): ?>
+                                    <label class="txn-upload-button"><?= !empty($c['cproof']) ? 'Replace proof' : 'Upload proof' ?><input type="file" hidden data-txn-upload="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
+                                <?php endif; ?>
+                                <?php if (!empty($c['proof_lesson_id'])): ?>
+                                    <span class="txn-badge <?= $commissionProofStatus === 'PAID' ? 'is-paid' : ($commissionProofStatus === 'PENDING' ? 'is-pending' : 'is-cancelled') ?>"><?= e($commissionProofStatus === 'PENDING' ? 'PENDING APPROVAL' : $commissionProofStatus) ?></span>
+                                    <?php if ($role === 'TEACHER' && $commissionProofStatus === 'PENDING' && !empty($c['cproof'])): ?>
+                                        <div class="txn-proof-review">
+                                            <button type="button" class="action-btn view-btn" data-proof-review="APPROVE" data-kind="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>">Approve</button>
+                                            <button type="button" class="action-btn delete-btn" data-proof-review="REJECT" data-kind="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>">Reject</button>
                                         </div>
-                                    <?php else: ?>
-                                        <label class="txn-upload-button">Upload file<input type="file" hidden data-txn-upload="COMMISSION" data-lesson="<?= (int) $c['proof_lesson_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
                                     <?php endif; ?>
-                                <?php elseif (!empty($c['cproof'])): ?>
-                                    <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['cproof'])) ?>" target="_blank" rel="noopener">Commission</a>
-                                <?php else: ?>
-                                    <span style="color:#999;font-size:12px;">—</span>
                                 <?php endif; ?>
                                 </div>
                             </td>
@@ -810,21 +819,23 @@ include __DIR__ . '/includes/header.php';
                             </td>
                             <td>
                                 <div class="txn-payment-cell">
-                                    <?php if ($role === 'ADMIN' && $c['fee_id'] !== null): ?>
-                                        <?php if (!empty($c['mproof'])): ?>
-                                            <div class="txn-file-pill">
-                                                <a href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener" title="Open payment proof">Payment</a>
-                                                <button type="button" data-mproof-del data-feeid="<?= (int) $c['fee_id'] ?>" aria-label="Remove payment proof" title="Remove proof">×</button>
-                                            </div>
-                                        <?php else: ?>
-                                            <label class="txn-upload-button">Upload file<input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
+                                    <?php $paymentState = strtoupper((string) ($c['mstatus'] ?? 'UNPAID')); ?>
+                                    <?php if (!empty($c['mproof'])): ?>
+                                        <div class="txn-file-pill">
+                                            <a href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener" title="Open payment proof">Payment proof</a>
+                                        </div>
+                                    <?php endif; ?>
+                                    <?php if ($c['fee_id'] !== null && in_array($role, ['ADMIN', 'STUDENT'], true) && ($role !== 'STUDENT' || $paymentState !== 'PAID')): ?>
+                                        <?php if (empty($c['mproof']) || $paymentState === 'UNPAID'): ?>
+                                            <label class="txn-upload-button"><?= !empty($c['mproof']) ? 'Replace proof' : 'Upload proof' ?><input type="file" hidden data-mproof-upload data-feeid="<?= (int) $c['fee_id'] ?>" accept=".jpg,.jpeg,.png,.webp,.pdf, image/jpeg,image/png,image/webp,application/pdf"></label>
                                         <?php endif; ?>
-                                    <?php elseif ($role === 'STUDENT'): ?>
-                                        <span class="txn-badge <?= strtoupper((string) ($c['mstatus'] ?? 'UNPAID')) === 'PENDING' ? 'is-pending' : 'is-cancelled' ?>"><?= e(strtoupper((string) ($c['mstatus'] ?? 'UNPAID'))) ?></span>
-                                    <?php elseif (!empty($c['mproof'])): ?>
-                                        <a class="txn-file-pill txn-file-readonly" href="<?= e(url_path($c['mproof'])) ?>" target="_blank" rel="noopener">Payment</a>
-                                    <?php else: ?>
-                                        <span style="color:#999;font-size:12px;">—</span>
+                                    <?php endif; ?>
+                                    <span class="txn-badge <?= $paymentState === 'PAID' ? 'is-paid' : ($paymentState === 'PENDING' ? 'is-pending' : 'is-cancelled') ?>"><?= e($paymentState === 'PENDING' ? 'PENDING APPROVAL' : $paymentState) ?></span>
+                                    <?php if ($role === 'ADMIN' && $c['fee_id'] !== null && $paymentState === 'PENDING' && !empty($c['mproof'])): ?>
+                                        <div class="txn-proof-review">
+                                            <button type="button" class="action-btn view-btn" data-proof-review="APPROVE" data-kind="MONTHLY_FEE" data-feeid="<?= (int) $c['fee_id'] ?>">Approve</button>
+                                            <button type="button" class="action-btn delete-btn" data-proof-review="REJECT" data-kind="MONTHLY_FEE" data-feeid="<?= (int) $c['fee_id'] ?>">Reject</button>
+                                        </div>
                                     <?php endif; ?>
                                 </div>
                             </td>
@@ -1036,6 +1047,42 @@ include __DIR__ . '/includes/header.php';
             }).catch(function (err) {
                 PSMModal.toast('Upload error: ' + err.message, 'error');
                 input.disabled = false;
+            });
+        });
+    });
+
+    document.querySelectorAll('[data-proof-review]').forEach(function (b) {
+        b.addEventListener('click', function () {
+            var action = b.getAttribute('data-proof-review');
+            var kind = b.getAttribute('data-kind');
+            var message = action === 'APPROVE'
+                ? 'Approve this proof and mark the transaction as paid?'
+                : 'Reject this proof? The transaction will return to unpaid and the proof must be uploaded again.';
+            PSMModal.confirm({
+                title: action === 'APPROVE' ? 'Approve proof?' : 'Reject proof?',
+                message: message,
+                danger: action === 'REJECT',
+                confirmText: action === 'APPROVE' ? 'Approve proof' : 'Reject proof'
+            }).then(function (yes) {
+                if (!yes) return;
+                var fd = new FormData();
+                fd.append('action', action);
+                fd.append('kind', kind);
+                if (kind === 'MONTHLY_FEE') fd.append('fee_id', b.getAttribute('data-feeid'));
+                if (kind === 'COMMISSION') fd.append('lesson_id', b.getAttribute('data-lesson'));
+                b.disabled = true;
+                postForm('<?= e(url_path('api/proof_review.php')) ?>', fd).then(function (d) {
+                    if (d && d.success) {
+                        PSMModal.toast(action === 'APPROVE' ? 'Proof approved.' : 'Proof rejected.', 'success');
+                        setTimeout(function () { window.location.reload(); }, 400);
+                    } else {
+                        PSMModal.toast((d && d.error) || 'Unable to review proof.', 'error');
+                        b.disabled = false;
+                    }
+                }).catch(function (err) {
+                    PSMModal.toast('Network error: ' + err.message, 'error');
+                    b.disabled = false;
+                });
             });
         });
     });
