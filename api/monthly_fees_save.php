@@ -226,6 +226,9 @@ try {
             if (!in_array($st, ['UNPAID', 'PENDING', 'PAID'], true)) {
                 monthly_fee_error('Status must be UNPAID, PENDING or PAID.');
             }
+            if ($st === 'PAID') {
+                monthly_fee_error('A monthly payment can be marked PAID only after an admin approves its uploaded proof.');
+            }
             $stmtWithStatus->execute($amountParams + ['status' => $st]);
         } else {
             // Editing the amount alone must not accidentally reset a paid transaction.
