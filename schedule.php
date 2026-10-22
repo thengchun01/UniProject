@@ -1003,7 +1003,7 @@ include __DIR__ . '/includes/header.php';
                         $studUnpaid += (int) $stRow['unpaid'];
                     }
                     ?>
-                    <tr>
+                    <tr id="schedClassRow-<?= e(substr(hash('sha256', $g), 0, 16)) ?>" data-class-group="<?= e($g) ?>">
                         <td><span class="sched-series-hash">#<?= e(substr($g, 0, 8)) ?></span></td>
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-title="<?= e($g) ?>" data-name="<?= e($seriesNames[$g] ?? '') ?>"><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></button><?php else: ?><strong><?= e($seriesNames[$g] ?? ('#' . substr($g, 0, 8))) ?></strong><?php endif; ?></td>
                         <td><?php if ($role === 'ADMIN'): ?><button type="button" class="sched-cell-btn" data-series-teacher="<?= e($g) ?>" data-teacher="<?= (int) $teacherIdNow ?>" data-ranges="<?= e($rangesJson) ?>"><?= e($teacherLabel) ?></button><?php else: ?><?= e($teacherLabel) ?><?php endif; ?></td>
@@ -1041,7 +1041,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </td>
-                        <td>
+                        <td data-sort-value="<?= e(implode(',', array_keys($freqMap[$g] ?? []))) ?>">
                             <span class="sched-freq" aria-label="Class weekdays">
                             <?php foreach ([1, 2, 3, 4, 5, 6, 7] as $fdow): ?>
                                 <?php
@@ -1056,7 +1056,7 @@ include __DIR__ . '/includes/header.php';
                                 <?php if ($role === 'ADMIN' && $fdow < 7): ?>
                                     <button type="button" class="sched-freq-day <?= $fcls ?>" data-series-weekday="<?= e($g) ?>" data-target-dow="<?= $fdow ?>" title="Move this class to <?= e($weekdayNames[$fdow]) ?><?= $fcell !== null ? ' · ' . e($fcell['start'] . '–' . $fcell['end']) : '' ?>" aria-label="Move class to <?= e($weekdayNames[$fdow]) ?>"><?= e(substr($weekdayNames[$fdow], 0, 1)) ?></button>
                                 <?php else: ?>
-                                    <span class="<?= $fcls ?><?= $fdow === 7 ? ' is-closed' : '' ?>" title="<?= e($ftitle) ?>"></span>
+                                    <span class="sched-weekday-label <?= $fcls ?><?= $fdow === 7 ? ' is-closed' : '' ?>" title="<?= e($ftitle) ?>"><?= e(substr($weekdayNames[$fdow], 0, 3)) ?></span>
                                 <?php endif; ?>
                             <?php endforeach; ?>
                             </span>
@@ -1334,7 +1334,7 @@ include __DIR__ . '/includes/header.php';
                                                 $chipSubtitle = ($courseLabel !== '' && $lessonTitle !== '' && $lessonTitle !== $courseLabel) ? $lessonTitle : '';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
-                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
+                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-class-group="<?= e((string) ($l['recurrence_group'] ?? '')) ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
                                                     <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
@@ -1369,7 +1369,7 @@ include __DIR__ . '/includes/header.php';
                         <?php foreach ($slotRows as $slotMin): ?>
                             <?php
                             $slotLabel = sprintf('%02d:%02d', (int) ($slotMin / 60), $slotMin % 60);
-                            $slotEnd = $slotMin + 30;
+                            $slotEnd = $slotMin + 15;
                             ?>
                             <tr data-slot-min="<?= (int) $slotMin ?>">
                                 <td class="sched-slot"><?= e($slotLabel) ?></td>
@@ -1406,7 +1406,7 @@ include __DIR__ . '/includes/header.php';
                                                 $chipSubtitle = ($courseLabel !== '' && $lessonTitle !== '' && $lessonTitle !== $courseLabel) ? $lessonTitle : '';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
-                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
+                                                <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-class-group="<?= e((string) ($l['recurrence_group'] ?? '')) ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
                                                     <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
@@ -1443,7 +1443,13 @@ include __DIR__ . '/includes/header.php';
                     <input type="hidden" name="lesson_id" value="<?= (int) $selectedLesson['lesson_id'] ?>">
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
-                        <div class="form-field"><label>Title (optional)<input type="text" name="title" maxlength="200" value="<?= e($selectedLesson['title'] ?? '') ?>"></label></div>
+                        <div class="form-field"><label>Course<select name="course_id" id="schedEditClassPreset" required>
+                            <option value="">Select a configured course…</option>
+                            <?php foreach ($coursePresets as $course): ?>
+                                <option value="<?= (int) $course['course_id'] ?>" <?= (int) ($selectedLesson['course_id'] ?? 0) === (int) $course['course_id'] ? 'selected' : '' ?>><?= e($course['course_name']) ?></option>
+                            <?php endforeach; ?>
+                        </select></label></div>
+                        <input type="hidden" name="title" value="<?= e($selectedLesson['course_name'] ?? '') ?>">
                         <div class="form-field"><label>Class weekday</label><input type="hidden" name="lesson_date" id="schedEditDate" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>">
                             <div class="sched-day-pick" data-daypick-for="schedEditDate" role="group" aria-label="Pick class weekday">
                                 <button type="button" class="sched-day-sq" data-dow="1" aria-pressed="false" title="Monday">M</button>
@@ -1517,7 +1523,8 @@ include __DIR__ . '/includes/header.php';
                         <input type="hidden" name="skip_base" value="1">
                         <input type="hidden" name="join_group" value="<?= e($selectedLesson['recurrence_group'] ?? '') ?>">
                         <input type="hidden" name="base_lesson_id" value="<?= (int) $selectedLesson['lesson_id'] ?>">
-                        <input type="hidden" name="title" value="<?= e($selectedLesson['title'] ?? '') ?>">
+                        <input type="hidden" name="title" value="<?= e($selectedLesson['course_name'] ?? '') ?>">
+                        <input type="hidden" name="course_id" value="<?= (int) ($selectedLesson['course_id'] ?? 0) ?>">
                         <input type="hidden" name="lesson_date" value="<?= e(substr((string) $selectedLesson['lesson_date'], 0, 10)) ?>">
                         <input type="hidden" name="start_time" value="<?= e(substr((string) $selectedLesson['start_time'], 0, 5)) ?>">
                         <input type="hidden" name="end_time" value="<?= e(substr((string) $selectedLesson['end_time'], 0, 5)) ?>">
@@ -1534,18 +1541,21 @@ include __DIR__ . '/includes/header.php';
                 </fieldset>
                 <?php endif; ?>
                 <?php else: ?>
-                <h2>Create Lesson</h2>
+                <h2>Create Class Schedule</h2>
+                <?php if ($coursePresets === []): ?>
+                    <p class="alert error">No active courses are configured. Create a course in <a href="<?= e(url_path('courses.php')) ?>">Courses</a> before scheduling a class.</p>
+                <?php endif; ?>
                 <div id="schedCreateMsg" class="alert" style="display:none;"></div>
                 <form id="schedCreateForm">
                     <fieldset class="sched-group">
                         <legend>Time &amp; Schedule</legend>
-                        <div class="form-field"><label>Course<select id="schedClassPreset" name="course_id">
-                            <option value="">Custom…</option>
+                        <div class="form-field"><label>Course<select id="schedClassPreset" name="course_id" required>
+                            <option value="">Select a configured course…</option>
                             <?php foreach ($coursePresets as $course): ?>
                                 <option value="<?= (int)$course['course_id'] ?>" data-title="<?= e($course['course_name']) ?>" data-mode="<?= e($course['class_mode']) ?>" data-min-fee="<?= e(number_format((float)$course['minimum_fee'], 2, '.', '')) ?>" data-duration-options="<?= e($course['duration_options'] ?? '') ?>"><?= e($course['course_name']) ?></option>
                             <?php endforeach; ?>
                         </select></label><div class="sched-date-day" id="schedPresetHint"></div></div>
-                        <div class="form-field"><label>Title (optional)<input type="text" name="title" id="schedTitle" maxlength="200" placeholder="e.g. Beginner piano"></label></div>
+                        <input type="hidden" name="title" id="schedTitle" value="">
                         <div class="form-field"><label>Class weekday</label><input type="hidden" name="lesson_date" id="schedDate" value="<?= e($defaultDate) ?>">
                             <div class="sched-day-pick" data-daypick-for="schedDate" role="group" aria-label="Pick class weekday">
                                 <?php foreach ([1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday', 6 => 'Saturday'] as $dn => $dl): ?>
@@ -1638,13 +1648,30 @@ include __DIR__ . '/includes/header.php';
     </div>
     <p class="sched-dialog-help">Copy recurring class schedules, teachers, students, weekdays, and times into another month. Existing lessons are not duplicated. Payment statuses, proof files, monthly fee records, and transactions are not copied.</p>
     <form id="schedCopyClassesForm">
+        <?php
+        $copyMonthOptions = [];
+        $copyBaseTs = strtotime($month . '-01');
+        for ($offset = -12; $offset <= 18; $offset++) {
+            $optionValue = date('Y-m', strtotime(($offset >= 0 ? '+' : '') . $offset . ' months', $copyBaseTs));
+            $copyMonthOptions[$optionValue] = date('F Y', strtotime($optionValue . '-01'));
+        }
+        $copySourceDefault = date('Y-m', strtotime($month . '-01 -1 month'));
+        ?>
         <div class="form-field">
             <label for="schedCopySourceMonth">Copy from month</label>
-            <input type="month" id="schedCopySourceMonth" name="source_month" required value="<?= e(date('Y-m', strtotime($month . '-01 -1 month'))) ?>">
+            <select id="schedCopySourceMonth" name="source_month" required>
+                <?php foreach ($copyMonthOptions as $optionValue => $optionLabel): ?>
+                    <option value="<?= e($optionValue) ?>" <?= $optionValue === $copySourceDefault ? 'selected' : '' ?>><?= e($optionLabel) ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
         <div class="form-field">
             <label for="schedCopyTargetMonth">Copy to month</label>
-            <input type="month" id="schedCopyTargetMonth" name="target_month" required value="<?= e($month) ?>">
+            <select id="schedCopyTargetMonth" name="target_month" required>
+                <?php foreach ($copyMonthOptions as $optionValue => $optionLabel): ?>
+                    <option value="<?= e($optionValue) ?>" <?= $optionValue === $month ? 'selected' : '' ?>><?= e($optionLabel) ?></option>
+                <?php endforeach; ?>
+            </select>
         </div>
         <p id="schedCopyClassesMsg" class="alert" style="display:none;"></p>
         <div class="sched-dialog-actions">
@@ -2962,14 +2989,16 @@ include __DIR__ . '/includes/header.php';
                 if (!cell) return '';
                 var inputs = Array.prototype.slice.call(cell.querySelectorAll('input[type="number"]'));
                 if (inputs.length) return inputs.reduce(function (sum, input) { var n = parseFloat(input.value); return sum + (Number.isFinite(n) ? n : 0); }, 0);
+                if (col === 6 && cell.hasAttribute('data-sort-value')) return cell.getAttribute('data-sort-value').split(',').map(Number).filter(Number.isFinite)[0] || 8;
+                if (col === 7) return (cell.innerText || cell.textContent || '').replace(/\s+/g, ' ').trim();
                 return (cell.innerText || cell.textContent || '').replace(/\s+/g, ' ').trim();
             }
             rows.sort(function (a, b) {
                 var va = value(a), vb = value(b);
                 var na = typeof va === 'number' ? va : parseFloat(String(va).replace(/[^0-9.\-]/g, ''));
                 var nb = typeof vb === 'number' ? vb : parseFloat(String(vb).replace(/[^0-9.\-]/g, ''));
-                var numeric = va !== '' && vb !== '' && Number.isFinite(na) && Number.isFinite(nb)
-                    && col !== 0 && col !== 1 && col !== 2 && col !== 4 && col !== 6 && col !== 7;
+                var numeric = (col === 6 || (va !== '' && vb !== '' && Number.isFinite(na) && Number.isFinite(nb)
+                    && col !== 0 && col !== 1 && col !== 2 && col !== 4 && col !== 7));
                 var cmp = numeric ? na - nb : String(va).localeCompare(String(vb), undefined, {numeric: true, sensitivity: 'base'});
                 return dir === 'asc' ? cmp : -cmp;
             });
@@ -3357,6 +3386,34 @@ include __DIR__ . '/includes/header.php';
                 var fd = new FormData(); fd.append('action', 'set_fee'); fd.append('enrollment_id', b.getAttribute('data-enroll-fee')); fd.append('fee_amount', v);
                 postForm('<?= e(url_path('api/enrollments_save.php')) ?>', fd);
             });
+        });
+    });
+
+    // Clicking a timetable lesson jumps to its class row in-place (no page refresh).
+    document.querySelectorAll('.sched-chip[data-lesson-id]').forEach(function (chip) {
+        chip.addEventListener('click', function (ev) {
+            var group = chip.getAttribute('data-class-group') || '';
+            if (!group) {
+                ev.preventDefault();
+                var panel = document.querySelector('.sched-series-panel');
+                if (panel) panel.scrollIntoView({behavior: 'smooth', block: 'start'});
+                return;
+            }
+            var row = Array.prototype.slice.call(document.querySelectorAll('tr[data-class-group]')).find(function (candidate) {
+                return candidate.getAttribute('data-class-group') === group;
+            });
+            if (!row) {
+                ev.preventDefault();
+                var classPanel = document.querySelector('.sched-series-panel');
+                if (classPanel) classPanel.scrollIntoView({behavior: 'smooth', block: 'start'});
+                return;
+            }
+            ev.preventDefault();
+            document.querySelectorAll('tr.sched-class-target').forEach(function (el) { el.classList.remove('sched-class-target'); });
+            row.classList.add('sched-class-target');
+            row.scrollIntoView({behavior: 'smooth', block: 'center'});
+            row.setAttribute('tabindex', '-1');
+            try { row.focus({preventScroll: true}); } catch (e) { row.focus(); }
         });
     });
 
