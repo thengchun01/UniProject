@@ -1780,3 +1780,222 @@ table.sched-class-table {
 }
 .sched-commission-source.is-fixed { color: var(--primary-color, #7c3aed); font-weight: 700; }
 .sched-commission-source.is-percentage { color: var(--text-muted, #64748b); font-weight: 700; }
+
+
+/* Timetable lesson hierarchy: course first, lesson detail second, people third. */
+.sched-chip .sched-chip-title {
+    display: block;
+    margin: 0;
+    color: #1e1b4b;
+    font-size: 12px;
+    font-weight: 850;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+}
+
+.sched-chip .sched-chip-subtitle {
+    display: block;
+    margin-top: 2px;
+    color: #64748b;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.sched-chip .sched-chip-students {
+    display: block;
+    margin: 5px 0 0;
+    padding-top: 4px;
+    border-top: 1px solid #eef2f7;
+    color: #334155;
+    font-size: 10px;
+    font-weight: 650;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+.sched-chip .sched-chip-teacher {
+    display: block;
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 9px;
+    font-weight: 500;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+}
+
+.sched-chip.is-empty .sched-chip-students {
+    color: #b91c1c;
+    border-top-color: #fecaca;
+}
+
+/* Next/current lesson card at the top of Schedule. */
+.sched-next-card {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    border: 1px solid #ddd6fe;
+    border-radius: var(--radius-lg, 16px);
+    background: linear-gradient(115deg, #faf5ff 0%, #ffffff 65%);
+    box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.04));
+    min-width: 0;
+}
+
+.sched-next-card.is-live {
+    border-color: #86efac;
+    background: linear-gradient(115deg, #f0fdf4 0%, #ffffff 65%);
+}
+
+.sched-next-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    background: #ede9fe;
+    color: #6d28d9;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.sched-next-card.is-live .sched-next-icon {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.sched-next-content {
+    min-width: 0;
+}
+
+.sched-next-heading {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+}
+
+.sched-next-eyebrow {
+    margin: 0;
+    color: #7c3aed;
+    font-size: 10px;
+    font-weight: 850;
+    letter-spacing: .09em;
+    line-height: 1.4;
+    text-transform: uppercase;
+}
+
+.sched-next-card.is-live .sched-next-eyebrow {
+    color: #15803d;
+}
+
+.sched-next-heading h2 {
+    margin: 0;
+    color: var(--text-color, #0f172a);
+    font-size: 17px;
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.sched-next-time {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 7px 0 0;
+    color: #475569;
+    font-size: 13px;
+    font-weight: 650;
+}
+
+.sched-next-time > span:first-child {
+    color: #7c3aed;
+    font-size: 15px;
+}
+
+.sched-next-time-divider {
+    color: #94a3b8;
+}
+
+.sched-next-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 18px;
+    margin-top: 8px;
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
+}
+
+.sched-next-meta strong {
+    margin-right: 4px;
+    color: #334155;
+    font-weight: 800;
+}
+
+.sched-next-empty {
+    margin: 7px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.sched-next-open {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 9px 13px;
+    border: 1px solid #ddd6fe;
+    border-radius: 10px;
+    background: #fff;
+    color: #6d28d9;
+    font-size: 12px;
+    font-weight: 800;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.sched-next-open:hover {
+    border-color: #a78bfa;
+    background: #f5f3ff;
+    transform: translateY(-1px);
+}
+
+.sched-next-card.is-live .sched-next-open {
+    border-color: #bbf7d0;
+    color: #15803d;
+}
+
+.sched-next-card.is-live .sched-next-open:hover {
+    background: #f0fdf4;
+}
+
+@media (max-width: 720px) {
+    .sched-next-card {
+        grid-template-columns: 40px minmax(0, 1fr);
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .sched-next-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+    }
+
+    .sched-next-open {
+        grid-column: 2;
+        justify-self: start;
+    }
+
+    .sched-next-heading h2 {
+        font-size: 15px;
+    }
+}
