@@ -671,6 +671,72 @@ function sched_qs(array $overrides): string
     return http_build_query($q);
 }
 
+// Next/current class card. This query deliberately ignores the timetable filters:
+// admins see the next class across the whole school, while teacher/student queries
+// are restricted to the signed-in user's own lessons.
+$nextClass = null;
+$nextClassState = 'upcoming';
+$nextClassStudents = [];
+if ($lessonsAvailable && $lessonsManager !== null && is_database_connected()) {
+    try {
+        $nextFilters = [
+            'from' => $todayYmd,
+            'to' => date('Y-m-d', strtotime($todayYmd . ' +60 days')),
+        ];
+        if ($role === 'TEACHER') {
+            $nextFilters['teacher_id'] = (int) $user['user_id'];
+        } elseif ($role === 'STUDENT') {
+            $nextFilters['student_id'] = (int) $user['user_id'];
+        }
+        $nextCandidates = $lessonsManager->listLessons($nextFilters, 'lesson_date', 'ASC', 1000, 0);
+        $nowTs = time();
+        $currentCandidates = [];
+        $upcomingCandidates = [];
+        foreach ($nextCandidates as $candidate) {
+            if (strtoupper((string) ($candidate['status'] ?? '')) !== 'SCHEDULED') {
+                continue;
+            }
+            $candidateDate = substr((string) ($candidate['lesson_date'] ?? ''), 0, 10);
+            $startTs = strtotime($candidateDate . ' ' . substr((string) ($candidate['start_time'] ?? ''), 0, 8));
+            $endTs = strtotime($candidateDate . ' ' . substr((string) ($candidate['end_time'] ?? ''), 0, 8));
+            if ($startTs === false || $endTs === false || $endTs <= $nowTs) {
+                continue;
+            }
+            $candidate['_start_ts'] = $startTs;
+            $candidate['_end_ts'] = $endTs;
+            if ($startTs <= $nowTs) {
+                $currentCandidates[] = $candidate;
+            } else {
+                $upcomingCandidates[] = $candidate;
+            }
+        }
+        if ($currentCandidates !== []) {
+            usort($currentCandidates, function ($a, $b) {
+                return $a['_end_ts'] <=> $b['_end_ts'];
+            });
+            $nextClass = $currentCandidates[0];
+            $nextClassState = 'in-progress';
+        } elseif ($upcomingCandidates !== []) {
+            usort($upcomingCandidates, function ($a, $b) {
+                return $a['_start_ts'] <=> $b['_start_ts'];
+            });
+            $nextClass = $upcomingCandidates[0];
+        }
+        if ($nextClass !== null) {
+            $studentStmt = db()->prepare(
+                'SELECT su.username FROM lesson_enrollments e
+                 INNER JOIN users su ON su.user_id = e.student_id
+                 WHERE e.lesson_id = :lesson_id ORDER BY su.username ASC'
+            );
+            $studentStmt->execute(['lesson_id' => (int) $nextClass['lesson_id']]);
+            $nextClassStudents = $studentStmt->fetchAll(PDO::FETCH_COLUMN) ?: [];
+        }
+    } catch (Throwable $e) {
+        $nextClass = null;
+        $nextClassStudents = [];
+    }
+}
+
 include __DIR__ . '/includes/header.php';
 ?>
 <link rel="stylesheet" href="<?= e(BASE_URL . 'assets/css/admin.css?v=' . filemtime(__DIR__ . '/assets/css/admin.css')); ?>">
@@ -706,6 +772,44 @@ include __DIR__ . '/includes/header.php';
     <?php if ($loadError): ?>
         <div class="alert error"><?= e($loadError) ?></div>
     <?php endif; ?>
+
+    <!-- Next/current class: role-scoped independently from the calendar filters. -->
+    <section class="sched-next-card<?= $nextClassState === 'in-progress' ? ' is-live' : '' ?>" aria-labelledby="schedNextTitle">
+        <div class="sched-next-icon" aria-hidden="true"><?= $nextClassState === 'in-progress' ? '▶' : '♫' ?></div>
+        <div class="sched-next-content">
+            <div class="sched-next-heading">
+                <p class="sched-next-eyebrow"><?= $nextClassState === 'in-progress' ? 'Happening now' : 'Coming up next' ?></p>
+                <h2 id="schedNextTitle"><?= $nextClass !== null ? e(trim((string) ($nextClass['course_name'] ?? '')) !== '' ? (string) $nextClass['course_name'] : (string) ($nextClass['title'] ?? 'Lesson')) : 'No upcoming class' ?></h2>
+            </div>
+            <?php if ($nextClass !== null): ?>
+                <p class="sched-next-time">
+                    <span aria-hidden="true">◷</span>
+                    <?= e(date('D, j M Y', strtotime(substr((string) $nextClass['lesson_date'], 0, 10) . 'T12:00:00'))) ?>
+                    <span class="sched-next-time-divider">·</span>
+                    <?= e(date('g:i A', strtotime(substr((string) $nextClass['start_time'], 0, 5)))) ?>–<?= e(date('g:i A', strtotime(substr((string) $nextClass['end_time'], 0, 5)))) ?>
+                </p>
+                <div class="sched-next-meta">
+                    <?php if ($role !== 'STUDENT'): ?>
+                        <span><strong>Students</strong> <?= $nextClassStudents !== [] ? e(implode(', ', $nextClassStudents)) : 'No students enrolled' ?></span>
+                    <?php endif; ?>
+                    <?php if ($role !== 'TEACHER'): ?>
+                        <span><strong>Teacher</strong> <?= !empty($nextClass['teacher_name']) ? e($nextClass['teacher_name']) : 'Not assigned' ?></span>
+                    <?php endif; ?>
+                    <?php if ($role === 'STUDENT'): ?>
+                        <span><strong>Teacher</strong> <?= !empty($nextClass['teacher_name']) ? e($nextClass['teacher_name']) : 'Not assigned' ?></span>
+                    <?php endif; ?>
+                    <?php if ($role === 'ADMIN'): ?>
+                        <span><strong>Enrolment</strong> <?= (int) ($nextClass['student_count'] ?? count($nextClassStudents)) ?> student<?= ((int) ($nextClass['student_count'] ?? count($nextClassStudents)) === 1) ? '' : 's' ?></span>
+                    <?php endif; ?>
+                </div>
+            <?php else: ?>
+                <p class="sched-next-empty">There are no scheduled classes in the next 60 days.</p>
+            <?php endif; ?>
+        </div>
+        <?php if ($nextClass !== null): ?>
+            <a class="sched-next-open" href="<?= e(url_path('schedule.php?' . sched_qs(['lesson_id' => (int) $nextClass['lesson_id'], 'month' => substr((string) $nextClass['lesson_date'], 0, 7), 'week' => date('Y-m-d', strtotime(substr((string) $nextClass['lesson_date'], 0, 10) . ' -' . ((int) date('N', strtotime(substr((string) $nextClass['lesson_date'], 0, 10))) - 1) . ' days'))])) ?>#schedGrid">View class <span aria-hidden="true">→</span></a>
+        <?php endif; ?>
+    </section>
 
     <!-- Controls Deck: Mini-Calendar & Filters -->
     <div class="sched-controls-deck">
