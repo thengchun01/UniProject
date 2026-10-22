@@ -1,6 +1,6 @@
 <?php
 // Student/admin payment proof upload and admin-only commission proof upload.
-// POST multipart: kind=FEE|COMMISSION, lesson_id, enrollment_id (FEE only), file field "proof".
+// POST multipart: kind=MONTHLY_FEE|FEE|COMMISSION, target IDs, file field "proof".
 // JSON shape: {success, data|error}.
 
 require_once __DIR__ . '/../includes/config.php';
@@ -109,7 +109,7 @@ try {
     $relPath = 'uploads/proofs/' . $target;
 
     if ($kind === 'MONTHLY_FEE') {
-        // A payment proof is the payment confirmation; reflect that in the status.
+        // Uploaded payment proof must be reviewed before the payment is marked PAID.
         $stmt = $db->prepare("UPDATE monthly_fees SET proof_path = :path, status = 'PENDING' WHERE fee_id = :id");
         $stmt->execute(['path' => $relPath, 'id' => $feeId]);
     } elseif ($kind === 'FEE') {
