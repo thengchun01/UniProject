@@ -1335,7 +1335,6 @@ include __DIR__ . '/includes/header.php';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
                                                 <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" data-lesson-id="<?= $lid ?>" data-class-group="<?= e((string) ($l['recurrence_group'] ?? '')) ?>" data-start-min="<?= sched_min((string) $l['start_time']) ?>" data-end-min="<?= sched_min((string) $l['end_time']) ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
-                                                    <span class="sched-chip-time"><?= e(substr((string) $l['start_time'], 0, 5)) ?>–<?= e(substr((string) $l['end_time'], 0, 5)) ?></span>
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
                                                     <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
@@ -1369,7 +1368,13 @@ include __DIR__ . '/includes/header.php';
                     <tbody>
                         <?php foreach ($slotRows as $slotMin): ?>
                             <?php
-                            $slotLabel = sprintf('%02d:%02d', (int) ($slotMin / 60), $slotMin % 60);
+                            $slotLabel = sprintf(
+                                '%02d:%02d–%02d:%02d',
+                                (int) ($slotMin / 60),
+                                $slotMin % 60,
+                                (int) (($slotMin + 15) / 60),
+                                ($slotMin + 15) % 60
+                            );
                             $slotEnd = $slotMin + 15;
                             ?>
                             <tr data-slot-min="<?= (int) $slotMin ?>">
