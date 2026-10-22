@@ -2401,3 +2401,64 @@ table.sched-class-table {
     .sched-today-open { grid-column: 2; justify-self: start; }
     .sched-today-slide-title-row > strong { font-size: 13px; }
 }
+
+
+/* Compact desktop overview: month picker and Classes sit side by side. */
+@media (min-width: 1101px) {
+    .sched-wrap {
+        display: grid;
+        grid-template-columns: minmax(250px, 0.72fr) minmax(0, 2fr);
+        align-items: start;
+        column-gap: 18px;
+        row-gap: 18px;
+    }
+
+    .sched-header-bar,
+    .sched-next-card,
+    .sched-main-stage,
+    .sched-workspace-grid {
+        grid-column: 1 / -1;
+        min-width: 0;
+    }
+
+    .sched-controls-deck {
+        grid-column: 1;
+        min-width: 0;
+        align-self: start;
+    }
+
+    .sched-cal-panel {
+        padding: 12px;
+    }
+
+    .sched-cal-day {
+        padding: 4px 1px;
+    }
+
+    .sched-series-panel {
+        grid-column: 2;
+        min-width: 0;
+        margin-top: 0;
+        max-width: 100%;
+    }
+
+    .sched-series-panel .sched-series-table-wrap,
+    .sched-series-panel .sched-series-table-scroll {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 1100px) {
+    .sched-wrap {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .sched-controls-deck,
+    .sched-series-panel,
+    .sched-main-stage,
+    .sched-workspace-grid {
+        width: 100%;
+        min-width: 0;
+    }
+}
