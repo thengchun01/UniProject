@@ -291,14 +291,26 @@ try {
             array_key_exists('commission_type', $_POST) ? $_POST['commission_type'] : $existing['commission_type'],
             array_key_exists('commission_value', $_POST) ? $_POST['commission_value'] : $existing['commission_value']
         );
+        $courseRaw = trim((string) ($_POST['course_id'] ?? ($existing['course_id'] ?? '')));
+        $courseId = $courseRaw === '' ? 0 : (int) $courseRaw;
+        if ($courseId <= 0) {
+            lessons_error('Choose a configured course. Create a course in Courses first if it is missing.');
+        }
+        $courseStmt = $db->prepare('SELECT course_name, is_active FROM courses WHERE course_id = :id LIMIT 1');
+        $courseStmt->execute(['id' => $courseId]);
+        $courseRow = $courseStmt->fetch(PDO::FETCH_ASSOC);
+        if (!$courseRow || (int) $courseRow['is_active'] !== 1) {
+            lessons_error('Choose an active configured course.');
+        }
         $stmt = $db->prepare(
-            'UPDATE lessons SET teacher_id = :teacher_id, title = :title, lesson_date = :lesson_date,
+            'UPDATE lessons SET teacher_id = :teacher_id, title = :title, course_id = :course_id, lesson_date = :lesson_date,
               start_time = :start_time, end_time = :end_time, status = :status,
               commission_type = :ctype, commission_value = :cvalue WHERE lesson_id = :id'
         );
         $stmt->execute([
             'teacher_id' => $teacherId,
-            'title' => trim($_POST['title'] ?? ($existing['title'] ?? '')) ?: null,
+            'title' => (string) $courseRow['course_name'],
+            'course_id' => $courseId,
             'lesson_date' => $date,
             'start_time' => $start,
             'end_time' => $end,
@@ -391,18 +403,18 @@ try {
         $cleanStudents[$sid] = $fee;
     }
 
-    $title = trim($_POST['title'] ?? '') ?: null;
-    $courseRaw = trim((string)($_POST['course_id'] ?? ''));
-    $courseId = $courseRaw === '' ? null : (int)$courseRaw;
-    $minimumFee = 0.0;
-    if ($courseId !== null) {
-        $courseStmt = $db->prepare('SELECT course_name, minimum_fee, duration_options, is_active FROM courses WHERE course_id = :id LIMIT 1');
-        $courseStmt->execute(['id' => $courseId]);
-        $courseRow = $courseStmt->fetch(PDO::FETCH_ASSOC);
-        if (!$courseRow || (int)$courseRow['is_active'] !== 1) lessons_error('Choose an active course preset.');
-        $minimumFee = (float)$courseRow['minimum_fee'];
-        if ($title === null) $title = (string)$courseRow['course_name'];
+    $courseRaw = trim((string) ($_POST['course_id'] ?? ''));
+    $courseId = $courseRaw === '' ? 0 : (int) $courseRaw;
+    if ($courseId <= 0) {
+        lessons_error('Choose a configured course. Create a course in Courses before scheduling a class.');
     }
+    $courseStmt = $db->prepare('SELECT course_name, minimum_fee, duration_options, is_active FROM courses WHERE course_id = :id LIMIT 1');
+    $courseStmt->execute(['id' => $courseId]);
+    $courseRow = $courseStmt->fetch(PDO::FETCH_ASSOC);
+    if (!$courseRow || (int) $courseRow['is_active'] !== 1) lessons_error('Choose an active configured course.');
+    $minimumFee = (float) $courseRow['minimum_fee'];
+    // Course configuration is the sole source of the class title.
+    $title = (string) $courseRow['course_name'];
 
     // Enforce the first listed duration as the course minimum (e.g. "30 / 45 min" => 30).
     // If the submitted end time is too early, extend it from the selected start time.
