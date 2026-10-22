@@ -603,3 +603,18 @@ dialog.sched-dialog.txn-comm-dialog .sched-x-btn {
     .txn-months-header { flex-basis: 100%; max-width: none; }
     .txn-month-controls { align-items: flex-start; flex-wrap: wrap; }
 }
+
+
+/* Proof approval controls */
+.txn-proof-review {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 2px;
+}
+.txn-proof-review .action-btn {
+    padding: 5px 8px;
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+}
