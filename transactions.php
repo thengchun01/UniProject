@@ -47,6 +47,11 @@ if (!in_array($lessonStatus, ['SCHEDULED', 'COMPLETED', 'CANCELLED'], true)) {
 if (!in_array($payStatus, ['UNPAID', 'PENDING', 'PAID'], true)) {
     $payStatus = '';
 }
+// Students always see every outstanding status (UNPAID and PENDING), never paid rows.
+if ($role === 'STUDENT') {
+    $payStatus = '';
+    $lessonStatus = '';
+}
 
 $rows = [];
 $combos = [];
