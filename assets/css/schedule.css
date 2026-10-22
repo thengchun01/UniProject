@@ -528,10 +528,10 @@
 }
 
 /* Narrow 15-min cells: let chip text wrap instead of spilling out of frame. */
-.sched-h-cell .sched-chip-time,
+.sched-h-cell .sched-chip-title,
 .sched-h-cell .sched-chip-students,
 .sched-h-cell .sched-chip-teacher,
-.sched-table .sched-chip-time,
+.sched-table .sched-chip-title,
 .sched-table .sched-chip-students,
 .sched-table .sched-chip-teacher {
     white-space: normal;
@@ -672,12 +672,13 @@
     color: #dc2626;
 }
 
-.sched-chip-time {
+.sched-chip-title {
     display: block;
-    font-size: 11px;
-    color: var(--text-muted, #64748b);
-    font-weight: 600;
-    white-space: nowrap;
+    font-size: 12px;
+    color: var(--text-color, #0f172a);
+    font-weight: 800;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
 }
 
 .sched-chip-students {
