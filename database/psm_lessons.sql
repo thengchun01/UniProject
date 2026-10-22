@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS `proof_logs` (
   `lesson_id` int(11) DEFAULT NULL,
   `enrollment_id` int(11) DEFAULT NULL,
   `file_path` varchar(255) NOT NULL,
-  `action` enum('UPLOAD','DELETE') NOT NULL,
+  `action` enum('UPLOAD','DELETE','APPROVE','REJECT') NOT NULL,
   `performed_by` int(11) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`log_id`),
@@ -152,3 +152,6 @@ INSERT IGNORE INTO `courses` (`course_name`,`class_mode`,`age_range`,`duration_o
 ('Music Theory','Individual / small group','7+','30 / 45 / 60 min',0.00,'month','Exam or hobby; notation, rhythm, harmony and theory.'),
 ('Music for Little Mozart','Small group','3–5','45 min',70.00,'month','Early music learning through age-appropriate activities.'),
 ('Pop Vocal','Individual','10+','45 min',200.00,'month','Hobby; vocal technique, expression and popular songs.');
+
+-- Proof review audit actions for existing installations.
+ALTER TABLE `proof_logs` MODIFY `action` enum('UPLOAD','DELETE','APPROVE','REJECT') NOT NULL;
