@@ -15,6 +15,7 @@ $txAvailable = ($lessonsManager !== null);
 $loadError = $txAvailable ? null : 'Transaction tables are missing. Import database/psm_lessons.sql, then reload.';
 
 // ---- filters (function.md §4: months multi-select replaces the time range) ----
+$multiMonthMode = isset($_GET['multi_months']) && (string) $_GET['multi_months'] === '1';
 $monthsRaw = $_GET['months'] ?? [];
 if (!is_array($monthsRaw)) {
     $monthsRaw = [$monthsRaw];
@@ -574,16 +575,13 @@ function txn_qs(array $overrides): string
     return http_build_query($q);
 }
 
-// Toggle one month in the multi-month filter (at least one stays selected).
+// Month clicks select one month by default, or toggle months in multi-select mode.
 function txn_qs_months(string $toggle): string
 {
-    global $months, $role;
-
-    // Teachers use the month strip as month navigation, not a multi-month filter.
-    if ($role === 'TEACHER') {
-        return txn_qs(['months' => [$toggle]]);
+    global $months, $multiMonthMode;
+    if (!$multiMonthMode) {
+        return txn_qs(['months' => [$toggle], 'multi_months' => '']);
     }
-
     $cur = is_array($months) ? $months : [];
     if (in_array($toggle, $cur, true)) {
         if (count($cur) > 1) {
@@ -593,7 +591,7 @@ function txn_qs_months(string $toggle): string
         $cur[] = $toggle;
         sort($cur);
     }
-    return txn_qs(['months' => $cur]);
+    return txn_qs(['months' => $cur, 'multi_months' => '1']);
 }
 
 include __DIR__ . '/includes/header.php';
@@ -602,10 +600,36 @@ include __DIR__ . '/includes/header.php';
 <link rel="stylesheet" href="<?= e(BASE_URL . 'assets/css/transactions.css?v=' . filemtime(__DIR__ . '/assets/css/transactions.css')); ?>">
 
 <div class="txn-wrap">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
-        <div>
+    <div class="txn-page-header">
+        <div class="txn-page-title">
             <p class="eyebrow">Finance</p>
             <h1 style="margin:0;">Transactions</h1>
+        </div>
+        <div class="txn-months txn-months-header">
+            <div class="txn-months-now">
+                <a class="txn-year-nav" href="<?= e(url_path('transactions.php?' . txn_qs(['year' => (string) max(2000, (int) $stripYear - 1), 'months' => [], 'multi_months' => $multiMonthMode ? '1' : '']))) ?>" aria-label="Previous year">‹</a>
+                <span>Year <strong><?= e($stripYear) ?></strong> · Current: <strong><?= e(date('F Y')) ?></strong></span>
+                <a class="txn-year-nav" href="<?= e(url_path('transactions.php?' . txn_qs(['year' => (string) min(2100, (int) $stripYear + 1), 'months' => [], 'multi_months' => $multiMonthMode ? '1' : '']))) ?>" aria-label="Next year">›</a>
+            </div>
+            <div class="txn-month-controls">
+                <div class="txn-month-row" role="group" aria-label="Filter by month">
+                    <?php foreach (range(1, 12) as $mm): ?>
+                        <?php
+                        $mkey = sprintf('%04d-%02d', (int) $stripYear, $mm);
+                        $msel = in_array($mkey, $months, true);
+                        $mst = $monthStats[$mkey] ?? null;
+                        $bad = $mst !== null && ($role === 'STUDENT'
+                    ? (float) $mst['unpaid'] > 0
+                    : ($role === 'TEACHER'
+                        ? (int) $mst['comm_open'] > 0
+                        : ((float) $mst['unpaid'] > 0 || (int) $mst['paid_noproof'] > 0 || (int) $mst['comm_open'] > 0)));
+                        $mcls = $mkey >= $curYm ? 'is-grey' : ($bad ? 'is-red' : 'is-green');
+                        ?>
+                        <a class="txn-month<?= $msel ? ' is-selected' : '' ?><?= $mkey === $curYm ? ' is-now' : '' ?> <?= $mcls ?>" href="<?= e(url_path('transactions.php?' . txn_qs_months($mkey))) ?>"><?= e(date('M', mktime(0, 0, 0, $mm, 1))) ?></a>
+                    <?php endforeach; ?>
+                </div>
+                <a class="txn-multi-toggle<?= $multiMonthMode ? ' is-active' : '' ?>" href="<?= e(url_path('transactions.php?' . txn_qs(['multi_months' => $multiMonthMode ? '' : '1']))) ?>" aria-pressed="<?= $multiMonthMode ? 'true' : 'false' ?>"><?= $multiMonthMode ? 'Single month' : 'Select multiple months' ?></a>
+            </div>
         </div>
     </div>
 
@@ -613,29 +637,7 @@ include __DIR__ . '/includes/header.php';
         <div class="alert error"><?= e($loadError) ?></div>
     <?php endif; ?>
 
-    <div class="txn-months">
-        <div class="txn-months-now">
-            <a class="txn-year-nav" href="<?= e(url_path('transactions.php?' . txn_qs(['year' => (string) max(2000, (int) $stripYear - 1), 'months' => []]))) ?>" aria-label="Previous year">‹</a>
-            <span>Year <strong><?= e($stripYear) ?></strong> · Current: <strong><?= e(date('F Y')) ?></strong></span>
-            <a class="txn-year-nav" href="<?= e(url_path('transactions.php?' . txn_qs(['year' => (string) min(2100, (int) $stripYear + 1), 'months' => []]))) ?>" aria-label="Next year">›</a>
-        </div>
-        <div class="txn-month-row" role="group" aria-label="Filter by month">
-            <?php foreach (range(1, 12) as $mm): ?>
-                <?php
-                $mkey = sprintf('%04d-%02d', (int) $stripYear, $mm);
-                $msel = in_array($mkey, $months, true);
-                $mst = $monthStats[$mkey] ?? null;
-                $bad = $mst !== null && ($role === 'STUDENT'
-            ? (float) $mst['unpaid'] > 0
-            : ($role === 'TEACHER'
-                ? (int) $mst['comm_open'] > 0
-                : ((float) $mst['unpaid'] > 0 || (int) $mst['paid_noproof'] > 0 || (int) $mst['comm_open'] > 0)));
-                $mcls = $mkey >= $curYm ? 'is-grey' : ($bad ? 'is-red' : 'is-green');
-                ?>
-                <a class="txn-month<?= $msel ? ' is-selected' : '' ?><?= $mkey === $curYm ? ' is-now' : '' ?> <?= $mcls ?>" href="<?= e(url_path('transactions.php?' . txn_qs_months($mkey))) ?>"><?= e(date('M', mktime(0, 0, 0, $mm, 1))) ?></a>
-            <?php endforeach; ?>
-        </div>
-    </div>
+
 
     <?php
     $teacherPendingGroups = [];
@@ -673,6 +675,8 @@ include __DIR__ . '/includes/header.php';
         <?php foreach ($months as $m): ?>
             <input type="hidden" name="months[]" value="<?= e($m) ?>">
         <?php endforeach; ?>
+        <?php if ($multiMonthMode): ?><input type="hidden" name="multi_months" value="1"><?php endif; ?>
+        <input type="hidden" name="year" value="<?= e($stripYear) ?>">
         <?php if ($role !== 'STUDENT'): ?>
         <label>Lesson status
             <select name="lesson_status">
