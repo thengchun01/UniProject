@@ -1387,7 +1387,7 @@ include __DIR__ . '/includes/header.php';
                             $slotLabel = sprintf('%02d:%02d', (int) ($slotMin / 60), $slotMin % 60);
                             $slotEnd = $slotMin + 30;
                             ?>
-                            <tr>
+                            <tr data-slot-min="<?= (int) $slotMin ?>">
                                 <td class="sched-slot"><?= e($slotLabel) ?></td>
                                 <?php foreach ($hDays as $day): ?>
                                     <?php
@@ -2250,11 +2250,19 @@ include __DIR__ . '/includes/header.php';
             var slotMin = toMin(lessonStart);
             if (hScroll) {
                 var slot = document.querySelector('#schedViewHorizontal .sched-h-time-head[data-slot-min="' + (Math.floor(slotMin / 15) * 15) + '"]');
-                if (slot) hScroll.scrollTo({left: Math.max(0, slot.offsetLeft - 80), behavior: 'smooth'});
+                if (slot) {
+                    var slotRect = slot.getBoundingClientRect();
+                    var scrollRect = hScroll.getBoundingClientRect();
+                    hScroll.scrollTo({left: Math.max(0, hScroll.scrollLeft + slotRect.left - scrollRect.left - 80), behavior: 'smooth'});
+                }
             }
             if (vScroll) {
                 var vSlot = document.querySelector('#schedViewVertical [data-slot-min="' + (Math.floor(slotMin / 15) * 15) + '"]');
-                if (vSlot) vScroll.scrollTo({top: Math.max(0, vSlot.offsetTop - 100), behavior: 'smooth'});
+                if (vSlot) {
+                    var rowRect = vSlot.getBoundingClientRect();
+                    var vScrollRect = vScroll.getBoundingClientRect();
+                    vScroll.scrollTo({top: Math.max(0, vScroll.scrollTop + rowRect.top - vScrollRect.top - 100), behavior: 'smooth'});
+                }
             }
         }, 80);
     }
