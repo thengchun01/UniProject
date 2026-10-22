@@ -782,22 +782,6 @@ include __DIR__ . '/includes/header.php';
                 <h1 class="sched-page-title">Schedule</h1>
                 <span class="role-badge role-<?= strtolower($role) ?>"><?= e($role) ?></span>
             </div>
-            <p class="sched-subtitle">
-                <?php if ($role === 'ADMIN'): ?>15-min slots · weekday 9am–10pm · Sat 9am–6:30pm · closed Sun. Drag across empty cells to schedule lessons; click any lesson chip for details and fees.<?php endif; ?>
-                <?php if ($role === 'TEACHER'): ?>Viewing your assigned lessons. Configure your weekly availability below so administrators can avoid clashes.<?php endif; ?>
-                <?php if ($role === 'STUDENT'): ?>Viewing your enrolled lessons and schedule. Request new bookings directly with the administrator.<?php endif; ?>
-            </p>
-        </div>
-        <div class="sched-header-actions">
-            <a href="<?= e(url_path('transactions.php')) ?>" class="sched-txn-btn" title="View fees, student payments, and commissions">
-                <span aria-hidden="true">💳</span> Transactions &amp; Fees
-            </a>
-            <a href="<?= e(url_path('schedule.php?month=' . $todayMonth . '&week=' . $todayMonday)) ?>" class="btn secondary-btn">
-                Today
-            </a>
-            <a href="<?= e(url_path('account.php')) ?>" class="text-button">
-                ← Back to Account
-            </a>
         </div>
     </div>
 
@@ -1219,10 +1203,10 @@ include __DIR__ . '/includes/header.php';
                 </div>
             </div>
             <div class="sched-view-switcher" role="group" aria-label="Timetable view layout">
-                <button type="button" class="sched-view-btn active" id="schedViewBtnH" data-view="horizontal">
+                <button type="button" class="sched-view-btn" id="schedViewBtnH" data-view="horizontal">
                     <span>⇄</span> Horizontal Timeline
                 </button>
-                <button type="button" class="sched-view-btn" id="schedViewBtnV" data-view="vertical">
+                <button type="button" class="sched-view-btn active" id="schedViewBtnV" data-view="vertical">
                     <span>⇅</span> Vertical Grid
                 </button>
                 <button type="button" class="sched-view-btn" id="schedFitBtn" aria-pressed="false" title="Fit the full timetable into the available width">
@@ -1368,7 +1352,7 @@ include __DIR__ . '/includes/header.php';
         </div>
 
         <!-- VERTICAL GRID VIEW (Time as rows, Days as columns - toggleable) -->
-        <div class="sched-view-vertical" id="schedViewVertical" style="display:none;">
+        <div class="sched-view-vertical" id="schedViewVertical">
             <div class="sched-v-scroll">
                 <table class="sched-table">
                     <thead>
@@ -2288,7 +2272,7 @@ include __DIR__ . '/includes/header.php';
             if (viewV) viewV.style.display = 'block';
             if (viewBtnH) viewBtnH.classList.remove('active');
             if (viewBtnV) viewBtnV.classList.add('active');
-            try { localStorage.setItem('psm_sched_view', 'vertical'); } catch (e) {}
+            try { localStorage.setItem('psm_sched_view_v2', 'vertical'); } catch (e) {}
             var todayCol = document.getElementById('schedTodayCol');
             if (todayCol && todayCol.scrollIntoView) {
                 try { todayCol.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } catch (e) {}
@@ -2298,7 +2282,7 @@ include __DIR__ . '/includes/header.php';
             if (viewV) viewV.style.display = 'none';
             if (viewBtnH) viewBtnH.classList.add('active');
             if (viewBtnV) viewBtnV.classList.remove('active');
-            try { localStorage.setItem('psm_sched_view', 'horizontal'); } catch (e) {}
+            try { localStorage.setItem('psm_sched_view_v2', 'horizontal'); } catch (e) {}
             var todayRow = document.getElementById('schedTodayRow');
             if (todayRow && todayRow.scrollIntoView) {
                 try { todayRow.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' }); } catch (e) {}
@@ -2310,9 +2294,9 @@ include __DIR__ . '/includes/header.php';
     if (viewBtnH) viewBtnH.addEventListener('click', function () { applyViewMode('horizontal'); });
     if (viewBtnV) viewBtnV.addEventListener('click', function () { applyViewMode('vertical'); });
 
-    // Restore saved view preference (default horizontal timeline)
-    var initialView = 'horizontal';
-    try { initialView = localStorage.getItem('psm_sched_view') || 'horizontal'; } catch (e) {}
+    // Restore saved view preference; the vertical grid is the first-load default.
+    var initialView = 'vertical';
+    try { initialView = localStorage.getItem('psm_sched_view_v2') || 'vertical'; } catch (e) {}
     applyViewMode(initialView);
 
     // Issue 31: hold/drag across empty cells of one day to fill the form.
