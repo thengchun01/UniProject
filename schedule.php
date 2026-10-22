@@ -2045,7 +2045,7 @@ include __DIR__ . '/includes/header.php';
             var seen = {};
             chips.forEach(function (chip) {
                 var id = chip.getAttribute('data-lesson-id');
-                if (!id || seen[id]) return;
+                if (!id || seen[id] || chip.classList.contains('is-cancelled')) return;
                 seen[id] = true;
                 var start = parseInt(chip.getAttribute('data-start-min'), 10);
                 var end = parseInt(chip.getAttribute('data-end-min'), 10);
@@ -2061,6 +2061,7 @@ include __DIR__ . '/includes/header.php';
             todayNextBtn.innerHTML = (current ? 'Current class ' : 'Next class today ') + '<span aria-hidden="true">→</span>';
             todayNextBtn.title = current ? 'Jump to the class currently in progress' : 'Jump to the next upcoming class today';
             todayNextBtn.onclick = function () {
+                if (typeof applyViewMode === 'function') applyViewMode('horizontal');
                 var row = document.getElementById('schedTodayRow');
                 var scroll = document.querySelector('#schedViewHorizontal .sched-h-scroll');
                 var head = document.querySelector('.sched-h-time-head[data-slot-min="' + Math.floor(next.start / 15) * 15 + '"]');
