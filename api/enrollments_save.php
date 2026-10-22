@@ -69,6 +69,9 @@ try {
         if ($lessonId <= 0 || !in_array($status, ['UNPAID', 'PENDING', 'PAID'], true)) {
             enroll_error('Invalid lesson or status.');
         }
+        if ($status === 'PAID') {
+            enroll_error('Commission can be marked PAID only when the assigned teacher approves its proof.');
+        }
         $stmt = $db->prepare('UPDATE lessons SET commission_status = :st WHERE lesson_id = :id');
         $stmt->execute(['st' => $status, 'id' => $lessonId]);
         echo json_encode(['success' => true, 'data' => ['lesson_id' => $lessonId, 'status' => $status]]);
