@@ -711,9 +711,9 @@ include __DIR__ . '/includes/header.php';
     <div class="sched-controls-deck">
         <div class="sched-panel sched-cal-panel">
             <div class="sched-cal-head">
-                <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $prevMonth, 'week' => '', 'lesson_id' => ''])) . '#schedGrid') ?>" aria-label="Previous month">‹ Prev</a>
+                <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $prevMonth, 'week' => '', 'lesson_id' => '', 'teacher_id' => '', 'student_id' => ''])) . '#schedGrid') ?>" aria-label="Previous month">‹ Prev</a>
                 <strong><?= e(date('F Y', strtotime($monthStart . 'T12:00:00'))) ?></strong>
-                <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $nextMonth, 'week' => '', 'lesson_id' => ''])) . '#schedGrid') ?>" aria-label="Next month">Next ›</a>
+                <a class="text-button" href="<?= e(url_path('schedule.php?' . sched_qs(['month' => $nextMonth, 'week' => '', 'lesson_id' => '', 'teacher_id' => '', 'student_id' => ''])) . '#schedGrid') ?>" aria-label="Next month">Next ›</a>
             </div>
             <table class="sched-cal" aria-label="Month calendar">
                 <thead><tr><th>Mo</th><th>Tu</th><th>We</th><th>Th</th><th>Fr</th><th>Sa</th><th>Su</th></tr></thead>
@@ -897,7 +897,7 @@ include __DIR__ . '/includes/header.php';
                             <?php else: ?>
                                 <?php foreach ($studentList as $stSid => $stRow): ?>
                                     <?php $mf = $monthFees[$g][(int) $stSid] ?? null; ?>
-                                    <span class="stud-fee"><?= $mf !== null ? 'RM ' . e(number_format((float) $mf['amount'], 2)) . ' · ' . e($mf['status']) : '—' ?></span>
+                                    <span class="stud-fee"><?= $mf !== null ? 'RM ' . e(number_format((float) $mf['amount'], 2))  : '—' ?></span>
                                 <?php endforeach; ?>
                             <?php endif; ?>
                         </td>
@@ -1140,24 +1140,17 @@ include __DIR__ . '/includes/header.php';
                                                 $chipNames = $lessonStudents[$lid] ?? [];
                                                 $chipShown = array_slice($chipNames, 0, 3);
                                                 $chipMore = count($chipNames) - count($chipShown);
-                                                $chipDur = sched_min((string) $l['end_time']) - sched_min((string) $l['start_time']);
                                                 $courseLabel = trim((string) ($l['course_name'] ?? ''));
                                                 $lessonTitle = trim((string) ($l['title'] ?? ''));
                                                 $chipTitle = $courseLabel !== ''
                                                     ? ($lessonTitle !== '' && $lessonTitle !== $courseLabel ? $courseLabel . ' · ' . $lessonTitle : $courseLabel)
                                                     : ($lessonTitle !== '' ? $lessonTitle : 'Lesson');
-                                                $chipStCls = $l['status'] === 'COMPLETED' ? 'is-ok' : ($l['status'] === 'CANCELLED' ? 'is-bad' : 'is-muted');
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
                                                 <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
-                                                    <?php $chipGroup = (string) ($l['recurrence_group'] ?? ''); ?>
-                                                    <?php if ($chipGroup !== ''): ?>
-                                                        <span class="sched-chip-series"><?= e($seriesNames[$chipGroup] ?? ('#' . substr($chipGroup, 0, 8))) ?></span>
-                                                    <?php endif; ?>
-                                                    <span class="sched-chip-time"><?= e(substr((string) $l['start_time'], 0, 5)) ?>–<?= e(substr((string) $l['end_time'], 0, 5)) ?> · <?= $chipDur ?>m · <?= e($chipTitle) ?></span>
+                                                    <span class="sched-chip-title"><?= e($chipTitle) ?></span>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
                                                     <span class="sched-chip-teacher"><?= !empty($l['teacher_name']) ? e($l['teacher_name']) : 'Unassigned' ?></span>
-                                                    <span class="sched-chip-status <?= $chipStCls ?>"><?= e($l['status']) ?></span>
                                                 </a>
                                             <?php endforeach; ?>
                                         <?php endif; ?>
