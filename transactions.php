@@ -606,17 +606,6 @@ include __DIR__ . '/includes/header.php';
         <div>
             <p class="eyebrow">Finance</p>
             <h1 style="margin:0;">Transactions</h1>
-            <p style="color:var(--text-muted,#666);margin:6px 0 0;">
-                <?php if ($role === 'ADMIN'): ?>Per-student-per-lesson rows with lesson totals. Proofs are admin-uploaded; every upload/delete is date-logged below.<?php endif; ?>
-                <?php if ($role === 'TEACHER'): ?>Read-only rows for your lessons. You can upload commission proof; student payment files are admin-only.<?php endif; ?>
-                <?php if ($role === 'STUDENT'): ?>Only your outstanding payments are shown. This page is view-only.<?php endif; ?>
-            </p>
-        </div>
-        <div style="display:flex;gap:10px;align-items:center;">
-            <a href="<?= e(url_path('schedule.php')); ?>" class="btn secondary-btn" style="display:inline-flex;align-items:center;gap:6px;font-weight:600;padding:8px 16px;">
-                <span aria-hidden="true">📅</span> View Timetable Schedule
-            </a>
-            <a href="<?= e(url_path('account.php')); ?>" class="text-button">← Account</a>
         </div>
     </div>
 
