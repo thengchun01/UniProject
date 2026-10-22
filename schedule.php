@@ -1246,13 +1246,13 @@ include __DIR__ . '/includes/header.php';
                                                 $chipMore = count($chipNames) - count($chipShown);
                                                 $courseLabel = trim((string) ($l['course_name'] ?? ''));
                                                 $lessonTitle = trim((string) ($l['title'] ?? ''));
-                                                $chipTitle = $courseLabel !== ''
-                                                    ? ($lessonTitle !== '' && $lessonTitle !== $courseLabel ? $courseLabel . ' · ' . $lessonTitle : $courseLabel)
-                                                    : ($lessonTitle !== '' ? $lessonTitle : 'Lesson');
+                                                $chipTitle = $courseLabel !== '' ? $courseLabel : ($lessonTitle !== '' ? $lessonTitle : 'Lesson');
+                                                $chipSubtitle = ($courseLabel !== '' && $lessonTitle !== '' && $lessonTitle !== $courseLabel) ? $lessonTitle : '';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
                                                 <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
+                                                    <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
                                                     <span class="sched-chip-teacher"><?= !empty($l['teacher_name']) ? e($l['teacher_name']) : 'Unassigned' ?></span>
                                                 </a>
@@ -1318,13 +1318,13 @@ include __DIR__ . '/includes/header.php';
                                                 $chipMore = count($chipNames) - count($chipShown);
                                                 $courseLabel = trim((string) ($l['course_name'] ?? ''));
                                                 $lessonTitle = trim((string) ($l['title'] ?? ''));
-                                                $chipTitle = $courseLabel !== ''
-                                                    ? ($lessonTitle !== '' && $lessonTitle !== $courseLabel ? $courseLabel . ' · ' . $lessonTitle : $courseLabel)
-                                                    : ($lessonTitle !== '' ? $lessonTitle : 'Lesson');
+                                                $chipTitle = $courseLabel !== '' ? $courseLabel : ($lessonTitle !== '' ? $lessonTitle : 'Lesson');
+                                                $chipSubtitle = ($courseLabel !== '' && $lessonTitle !== '' && $lessonTitle !== $courseLabel) ? $lessonTitle : '';
                                                 $chipEmpty = ((int) ($l['student_count'] ?? 0) === 0);
                                                 ?>
                                                 <a class="sched-chip <?= $cancelled ? 'is-cancelled' : '' ?><?= $chipEmpty ? ' is-empty' : '' ?>" href="<?= e(url_path('schedule.php?' . $qs) . '#schedGrid') ?>">
                                                     <span class="sched-chip-title"><?= e($chipTitle) ?></span>
+                                                    <?php if ($chipSubtitle !== ''): ?><span class="sched-chip-subtitle"><?= e($chipSubtitle) ?></span><?php endif; ?>
                                                     <span class="sched-chip-students"><?= $chipShown ? e(implode(', ', $chipShown)) . ($chipMore > 0 ? e(' +' . $chipMore . ' more') : '') : 'No students' ?></span>
                                                     <span class="sched-chip-teacher"><?= !empty($l['teacher_name']) ? e($l['teacher_name']) : 'Unassigned' ?></span>
                                                 </a>
