@@ -602,7 +602,7 @@ include __DIR__ . '/includes/header.php';
             <h1 style="margin:0;">Transactions</h1>
             <p style="color:var(--text-muted,#666);margin:6px 0 0;">
                 <?php if ($role === 'ADMIN'): ?>Per-student-per-lesson rows with lesson totals. Proofs are admin-uploaded; every upload/delete is date-logged below.<?php endif; ?>
-                <?php if ($role === 'TEACHER'): ?>Rows for your lessons only.<?php endif; ?>
+                <?php if ($role === 'TEACHER'): ?>Read-only rows for your lessons. You can upload commission proof; student payment files are admin-only.<?php endif; ?>
                 <?php if ($role === 'STUDENT'): ?>Only your outstanding payments are shown. This page is view-only.<?php endif; ?>
             </p>
         </div>
