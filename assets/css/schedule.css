@@ -597,11 +597,13 @@
 }
 
 .sched-slot {
+    font-size: 11px;
     font-weight: 700;
     white-space: nowrap;
     color: var(--text-muted, #666);
     background: #fafafa;
-    width: 56px;
+    width: 94px;
+    min-width: 94px;
 }
 
 /* Selection and Drag */
