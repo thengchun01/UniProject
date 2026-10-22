@@ -577,7 +577,13 @@ function txn_qs(array $overrides): string
 // Toggle one month in the multi-month filter (at least one stays selected).
 function txn_qs_months(string $toggle): string
 {
-    global $months;
+    global $months, $role;
+
+    // Teachers use the month strip as month navigation, not a multi-month filter.
+    if ($role === 'TEACHER') {
+        return txn_qs(['months' => [$toggle]]);
+    }
+
     $cur = is_array($months) ? $months : [];
     if (in_array($toggle, $cur, true)) {
         if (count($cur) > 1) {
