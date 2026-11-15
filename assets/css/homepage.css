@@ -404,8 +404,9 @@ body::before {
 html[data-theme="dark"] body::before { opacity: .10; mix-blend-mode: screen; }
 body > .site-content, body > .site-footer, body > #user-float-widget { position: relative; z-index: 1; }
 .topnav-home {
-    position: absolute !important;
+    position: sticky !important;
     top: 0;
+    margin-bottom: -76px;
     left: 0;
     background: transparent !important;
     border-bottom-color: transparent !important;
@@ -439,6 +440,20 @@ html[data-theme="dark"] .text-button.secondary { background: #302a3b; color: #f4
 html[data-theme="dark"] .secondary-btn:hover,
 html[data-theme="dark"] .text-button.secondary:hover { background: #3b3150; color: #fff; }
 @media (max-width: 768px) {
-    .topnav-home { position: absolute !important; }
+    .topnav-home { position: sticky !important; margin-bottom: -66px; }
     .topnav-home .nav-main { background: rgba(25,20,35,.88); border-radius: 14px; padding: 12px; }
+}
+
+
+/* Discover header overlays the hero while remaining sticky during scrolling. */
+.topnav-home {
+    z-index: 1100;
+    align-self: stretch;
+    min-height: 76px;
+}
+html[data-theme="dark"] .topnav-home {
+    background: rgba(20, 17, 27, .16) !important;
+}
+@media (max-width: 768px) {
+    .topnav-home { min-height: 66px; }
 }
