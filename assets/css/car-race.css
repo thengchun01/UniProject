@@ -254,3 +254,29 @@
         gap: 8px;
     }
 }
+
+
+/* Dark theme surfaces for the Piano Race page; notation remains on paper-white
+   so VexFlow staff lines and noteheads retain clear contrast. */
+html[data-theme="dark"] .race-hud,
+html[data-theme="dark"] .race-feedback-bar {
+    background: var(--surface-color, #211d29);
+    color: var(--text-color, #f4f1fa);
+    border-color: var(--border-color, #40384b);
+}
+html[data-theme="dark"] .race-hud-title,
+html[data-theme="dark"] .fb-stats {
+    color: var(--text-color, #f4f1fa);
+}
+html[data-theme="dark"] #race-visualizer {
+    background: #f8faf8;
+    border-color: var(--border-color, #40384b);
+}
+html[data-theme="dark"] .race-page .piano-wrapper {
+    background: var(--studio-panel, #211d29);
+    border-color: var(--studio-border, #40384b);
+}
+html[data-theme="dark"] .race-page .scroll-zone {
+    background: rgba(33, 29, 41, .9);
+    color: #f4f1fa;
+}
