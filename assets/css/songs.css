@@ -475,3 +475,40 @@
         animation: none;
     }
 }
+
+
+/* Dark theme for song catalogue, rows, upload form and version picker. */
+html[data-theme="dark"] .songs-list,
+html[data-theme="dark"] .songs-upload,
+html[data-theme="dark"] .songs-picker,
+html[data-theme="dark"] .songs-piece-card {
+    background: var(--surface-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .songs-list-header {
+    background: #302a3b;
+    color: #d5cede;
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .songs-row {
+    background: var(--surface-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .songs-row:hover { background: #302a3b; }
+html[data-theme="dark"] .col-song,
+html[data-theme="dark"] .col-piece,
+html[data-theme="dark"] .songs-picker h2,
+html[data-theme="dark"] .songs-piece-card h3 { color: var(--text-color); }
+html[data-theme="dark"] .songs-search,
+html[data-theme="dark"] .songs-select,
+html[data-theme="dark"] #midi-upload-form input,
+html[data-theme="dark"] #midi-upload-form select {
+    background: #211e29;
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .songs-picker-sub,
+html[data-theme="dark"] .songs-piece-meta,
+html[data-theme="dark"] .songs-upload-hint { color: var(--text-muted); }
