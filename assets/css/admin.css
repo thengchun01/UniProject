@@ -1079,3 +1079,85 @@ body.modal-open {
     .users-expand-hint { font-size: 11px; }
     .users-panel-title { padding: 13px 12px; }
 }
+
+
+/* Dark theme: user management panels and tables. */
+html[data-theme="dark"] .users-panel {
+    background: var(--surface-color, #211d29);
+    border-color: var(--border-color, #40384b);
+}
+html[data-theme="dark"] .users-panel-title {
+    background: #302a3b;
+    color: var(--text-color, #f4f1fa);
+    border-color: var(--border-color, #40384b);
+}
+html[data-theme="dark"] .users-count {
+    background: #514263;
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .users-expand-hint {
+    color: #c0b7cc;
+}
+html[data-theme="dark"] .users-panel .table-wrapper,
+html[data-theme="dark"] .table-wrapper {
+    background: var(--surface-color, #211d29);
+    border-color: var(--border-color, #40384b);
+}
+html[data-theme="dark"] .modern-table thead tr,
+html[data-theme="dark"] .modern-table th {
+    background: #302a3b;
+    color: #f4f1fa;
+    border-color: #514263;
+}
+html[data-theme="dark"] .modern-table th:hover {
+    background: #40344f;
+}
+html[data-theme="dark"] .modern-table td {
+    background: #211d29;
+    color: #eee9f5;
+    border-bottom-color: #40384b;
+}
+html[data-theme="dark"] .modern-table tbody tr:nth-child(even) td {
+    background: #282331;
+}
+html[data-theme="dark"] .modern-table tbody tr:hover td {
+    background: #393044;
+    color: #fff;
+}
+html[data-theme="dark"] .user-editable-cell:hover {
+    background: #40344f !important;
+    box-shadow: inset 0 0 0 1px #8065a6;
+}
+html[data-theme="dark"] .user-editable-cell::after {
+    color: #c4b5fd;
+}
+html[data-theme="dark"] .users-empty {
+    color: #c0b7cc;
+}
+html[data-theme="dark"] .role-admin {
+    background: #514263;
+    color: #f4eaff;
+}
+html[data-theme="dark"] .role-teacher {
+    background: #234b68;
+    color: #d7efff;
+}
+html[data-theme="dark"] .role-student {
+    background: #28533f;
+    color: #d9fbe7;
+}
+html[data-theme="dark"] .action-btn {
+    background: #302a3b;
+    border-color: #514263;
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .action-btn:hover {
+    background: #40344f;
+    border-color: #8b5cf6;
+    color: #fff;
+}
+html[data-theme="dark"] .classroom-btn.disabled {
+    background: #403a49 !important;
+    color: #aaa2b5 !important;
+    border-color: #514b5b;
+}
