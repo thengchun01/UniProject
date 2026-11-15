@@ -53,9 +53,9 @@ window.PSM_CONFIG = {
 $navPage = basename($_SERVER['PHP_SELF'] ?? '');
 $navRole = normalize_role($currentUser['role'] ?? 'GUEST');
 $workspace = 'discover';
-if (in_array($navPage, ['manage.php', 'schedule.php', 'transactions.php', 'courses.php', 'users.php'], true)) {
+if (in_array($navPage, ['manage.php', 'schedule.php', 'transactions.php', 'courses.php', 'users.php'], true) || ($navPage === 'account.php' && $currentUser)) {
     $workspace = 'manage';
-} elseif (in_array($navPage, ['studio.php', 'tutorial.php', 'songs.php', 'piano.php', 'game.php', 'car_race.php', 'rankings.php'], true)) {
+} elseif (in_array($navPage, ['studio.php', 'tutorial.php', 'lesson.php', 'songs.php', 'piano.php', 'game.php', 'car_race.php', 'rankings.php'], true)) {
     $workspace = 'studio';
 }
 $workspaceLinks = [
