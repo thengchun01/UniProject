@@ -367,3 +367,78 @@
         animation: none;
     }
 }
+
+
+/* Homepage surfaces follow the shared theme instead of retaining white paint. */
+.homepage-information {
+    background: var(--surface-color);
+    border-color: var(--border-color);
+}
+.homepage-information .journey-section { border-bottom-color: var(--border-color); }
+.info-card {
+    background: color-mix(in srgb, var(--surface-color) 88%, var(--bg-color));
+    border-color: var(--border-color);
+}
+.offered-courses-section { margin: 0 0 64px; }
+.offered-course-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.offered-course-card { padding: 24px; display: flex; flex-direction: column; align-items: flex-start; }
+.offered-course-card h3 { margin: 18px 0 8px; }
+.offered-course-card p { color: var(--text-muted); flex: 1; }
+.offered-course-topline { width: 100%; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; color: var(--primary-color); font-size: 12px; font-weight: 700; }
+.offered-course-meta { display: flex; flex-wrap: wrap; gap: 7px; margin: 16px 0; }
+.offered-course-meta span { padding: 5px 9px; border-radius: 999px; background: rgba(124,58,237,.1); color: var(--text-muted); font-size: 12px; }
+.offered-courses-empty { padding: 28px; text-align: center; border: 1px dashed var(--border-color); border-radius: var(--radius-lg); color: var(--text-muted); }
+
+/* Music-inspired low-contrast grain and staff-line texture. */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    opacity: .13;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 240 160' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.78' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.23'/%3E%3Cg fill='none' stroke='%237c3aed' stroke-opacity='.22' stroke-width='1'%3E%3Cpath d='M12 32h70M12 38h70M12 44h70M12 50h70M12 56h70'/%3E%3C/g%3E%3Cpath d='M74 25v29c-8-4-16 1-16 7 0 7 12 8 16 1V25l18-4v25c-8-4-16 1-16 7 0 7 12 8 16 1V17z' fill='%237c3aed' fill-opacity='.18'/%3E%3C/svg%3E");
+    background-size: 240px 160px;
+    mix-blend-mode: multiply;
+}
+html[data-theme="dark"] body::before { opacity: .10; mix-blend-mode: screen; }
+body > .site-content, body > .site-footer, body > #user-float-widget { position: relative; z-index: 1; }
+.topnav-home {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+.topnav-home .logo,
+.topnav-home .nav-links a,
+.topnav-home .mobile-menu-toggle { color: #fff !important; text-shadow: 0 1px 8px rgba(0,0,0,.45); }
+.topnav-home .nav-links a.active { color: #fff !important; background: rgba(255,255,255,.18); }
+.topnav-home .workspace-switcher,
+.topnav-home .account-nav-link,
+.topnav-home .theme-toggle {
+    background: rgba(20,16,30,.32) !important;
+    border-color: rgba(255,255,255,.28) !important;
+    color: #fff !important;
+}
+.topnav-home .workspace-switcher a { color: #fff !important; }
+html[data-theme="dark"] .homepage-information { background: var(--surface-color); }
+html[data-theme="dark"] .info-card { background: #292433; color: var(--text-color); border-color: var(--border-color); }
+html[data-theme="dark"] .info-card h3,
+html[data-theme="dark"] .info-card p { color: var(--text-color); }
+html[data-theme="dark"] .offered-course-card,
+html[data-theme="dark"] .feature-card { background: var(--surface-color); color: var(--text-color); }
+html[data-theme="dark"] .offered-course-card p,
+html[data-theme="dark"] .feature-card p { color: var(--text-muted); }
+html[data-theme="dark"] .offered-course-meta span { background: rgba(167,139,250,.16); color: #ddd4f5; }
+html[data-theme="dark"] .secondary-btn,
+html[data-theme="dark"] .text-button.secondary { background: #302a3b; color: #f4f1fa; border-color: #51465f; }
+html[data-theme="dark"] .secondary-btn:hover,
+html[data-theme="dark"] .text-button.secondary:hover { background: #3b3150; color: #fff; }
+@media (max-width: 768px) {
+    .topnav-home { position: absolute !important; }
+    .topnav-home .nav-main { background: rgba(25,20,35,.88); border-radius: 14px; padding: 12px; }
+}
