@@ -87,7 +87,7 @@ $workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in',
         <span><?= e(SITE_NAME) ?></span>
     </a>
 
-    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu" aria-expanded="false">☰</button>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
 
     <div class="nav-main" id="navMain">
         <div class="workspace-switcher" aria-label="Workspaces">
@@ -103,11 +103,11 @@ $workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in',
                 <a href="<?= e(url_path('logout.php')) ?>" data-logout-confirm>Logout</a>
             <?php endif; ?>
         </div>
-        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to dark theme" title="Switch theme">
-            <span class="theme-toggle-icon" aria-hidden="true">☾</span>
-            <span class="theme-toggle-label">Dark mode</span>
-        </button>
     </div>
+
+    <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to dark theme" title="Switch theme" aria-pressed="false">
+        <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+    </button>
 </nav>
 
 <?php
