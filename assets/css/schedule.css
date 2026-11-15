@@ -2760,3 +2760,124 @@ table.sched-class-table {
     background: #f0fdf4;
     color: #166534;
 }
+
+
+/* Schedule page dark-theme palette. The schedule stylesheet contains several
+   intentionally light-mode literals; override them here with shared tokens. */
+html[data-theme="dark"] .sched-panel,
+html[data-theme="dark"] .sched-main-stage,
+html[data-theme="dark"] .sched-series-panel,
+html[data-theme="dark"] .sched-workspace-panel {
+    background: var(--surface-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .sched-cal,
+html[data-theme="dark"] .sched-cal tbody,
+html[data-theme="dark"] .sched-cal tr,
+html[data-theme="dark"] .sched-cal td {
+    background-color: transparent;
+}
+html[data-theme="dark"] .sched-cal-day,
+html[data-theme="dark"] .sched-cal-day.is-sun {
+    background: #292532;
+    color: #d5cede;
+}
+html[data-theme="dark"] .sched-cal-day.is-dim { color: #81798d; }
+html[data-theme="dark"] .sched-cal-week:hover td,
+html[data-theme="dark"] .sched-cal-week:focus-visible td {
+    background: #332d40;
+}
+html[data-theme="dark"] .sched-cal-week.is-selected td {
+    background: #382d50;
+    color: #d8c7ff;
+}
+html[data-theme="dark"] .sched-filter-grid select,
+html[data-theme="dark"] .sched-filter-grid input {
+    background: var(--bg-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .sched-filter-actions { border-top-color: var(--border-color); }
+html[data-theme="dark"] .sched-view-switcher { background: #302a3b; }
+html[data-theme="dark"] .sched-view-btn { color: var(--text-muted); }
+html[data-theme="dark"] .sched-view-btn:hover { color: var(--text-color); }
+html[data-theme="dark"] .sched-view-btn.active {
+    background: #494054;
+    color: #d8c7ff;
+}
+html[data-theme="dark"] .sched-h-scroll,
+html[data-theme="dark"] .sched-v-scroll,
+html[data-theme="dark"] .sched-table,
+html[data-theme="dark"] .sched-h-table {
+    background: var(--bg-color);
+    color: var(--text-color);
+}
+html[data-theme="dark"] .sched-h-day-head,
+html[data-theme="dark"] .sched-v-scroll .sched-table tbody th,
+html[data-theme="dark"] .sched-v-scroll .sched-table tbody td {
+    background-color: #211e29;
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .sched-h-day-row.is-today-row .sched-h-day-head,
+html[data-theme="dark"] .sched-today-cell {
+    background: #332941 !important;
+}
+html[data-theme="dark"] .sched-v-scroll .sched-table thead th:not(:first-child),
+html[data-theme="dark"] .sched-v-scroll .sched-table thead th.is-sun {
+    background: #302a3b;
+    color: #e5def0;
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .sched-v-scroll .sched-table thead th .sched-h-day,
+html[data-theme="dark"] .sched-v-scroll .sched-table thead th .sched-day-count {
+    color: #b4adbf;
+}
+html[data-theme="dark"] .sched-v-scroll .sched-table thead th .sched-h-date {
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .sched-today-strip {
+    background: linear-gradient(110deg, #30263e, #211e29 72%);
+    border-color: #514263;
+}
+html[data-theme="dark"] .sched-today-slide,
+html[data-theme="dark"] .sched-today-arrow,
+html[data-theme="dark"] .sched-today-open,
+html[data-theme="dark"] .sched-next-open {
+    background: #292532;
+    color: #d8c7ff;
+    border-color: #514263;
+}
+html[data-theme="dark"] .sched-today-slide-time,
+html[data-theme="dark"] .sched-today-slide-meta b,
+html[data-theme="dark"] .sched-next-heading h2,
+html[data-theme="dark"] .sched-next-meta strong {
+    color: var(--text-color);
+}
+html[data-theme="dark"] .sched-today-status {
+    background: #393342;
+    color: #d5cede;
+}
+html[data-theme="dark"] .sched-freq .sched-weekday-label {
+    background: #393342;
+    color: #c4bdce;
+}
+html[data-theme="dark"] .sched-freq .sched-weekday-label.is-on {
+    background: #17432f;
+    color: #86efac;
+}
+html[data-theme="dark"] .sched-freq .sched-weekday-label.is-clash {
+    background: #4b252d;
+    color: #fca5a5;
+}
+html[data-theme="dark"] .sched-txn-btn {
+    background: #30263e;
+    color: #d8c7ff;
+    border-color: #514263;
+}
+html[data-theme="dark"] .sched-week-chip {
+    background: #30263e;
+    color: #d8c7ff;
+    border-color: #514263;
+}
