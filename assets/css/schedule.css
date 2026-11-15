@@ -2926,3 +2926,23 @@ html[data-theme="dark"] .sched-class-filter-form .dd-item.is-active {
 html[data-theme="dark"] .sched-class-filter-actions .text-button {
     color: #d8c7ff;
 }
+
+/* Keep the class search and custom filter controls readable in dark mode. */
+html[data-theme="dark"] .sched-class-tools label,
+html[data-theme="dark"] .sched-class-filter-form label {
+    color: var(--text-color);
+}
+html[data-theme="dark"] .sched-class-search input::placeholder,
+html[data-theme="dark"] .sched-class-filter-form input::placeholder {
+    color: #aaa2b5;
+    opacity: 1;
+}
+html[data-theme="dark"] .sched-class-filter-form .dd-label {
+    color: var(--text-color);
+}
+html[data-theme="dark"] .sched-class-filter-form .dd-chev {
+    color: #c4b5fd;
+}
+html[data-theme="dark"] .sched-class-filter-form .dd-item {
+    color: var(--text-color);
+}
