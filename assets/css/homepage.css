@@ -584,3 +584,38 @@ html[data-theme="dark"] .topnav.topnav-home {
         padding: 12px;
     }
 }
+
+
+/* Explicit stacking order for the Discover hero.
+   The navbar is a sibling of .site-content, while the hero background is
+   nested inside it. Keep the whole content layer below the navbar and
+   isolate the hero's own background/overlay/content layers. */
+body > .topnav.topnav-home {
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 9999 !important;
+}
+
+body > .site-content {
+    z-index: 0 !important;
+}
+
+.site-content > .hero-section {
+    position: relative;
+    z-index: 0;
+    isolation: isolate;
+    margin-top: 0 !important;
+}
+
+.site-content > .hero-section > .hero-background {
+    z-index: 0;
+}
+
+.site-content > .hero-section > .hero-overlay {
+    z-index: 1;
+}
+
+.site-content > .hero-section > .hero-content {
+    position: relative;
+    z-index: 2;
+}
