@@ -49,22 +49,7 @@ if (!empty($currentUser) && is_database_connected()) {
     </div>
 </section>
 
-<script>
-/*
- * Keep the Discover hero outside the navigation element.
- * This also repairs an incorrectly nested hero if an old/cached header
- * response or another script places it inside the navbar.
- */
-document.addEventListener('DOMContentLoaded', function () {
-    const nav = document.querySelector('nav.topnav-home');
-    const hero = nav ? nav.querySelector('.hero-section') : null;
-    const content = document.querySelector('body > .site-content');
 
-    if (nav && hero && content) {
-        content.insertBefore(hero, content.firstChild);
-    }
-});
-</script>
 
 <div class="container">
     <div class="homepage-information">
