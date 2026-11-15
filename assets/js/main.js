@@ -220,7 +220,7 @@ function initializeGlobalTheme() {
             const dark = nextTheme === 'dark';
             const icon = toggle.querySelector('.theme-toggle-icon');
             const label = toggle.querySelector('.theme-toggle-label');
-            if (icon) icon.textContent = dark ? '☀' : '☾';
+            if (icon) icon.textContent = dark ? '☾' : '☀';
             if (label) label.textContent = dark ? 'Light mode' : 'Dark mode';
             toggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
             toggle.setAttribute('title', dark ? 'Switch to light theme' : 'Switch to dark theme');
