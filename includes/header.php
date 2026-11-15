@@ -61,6 +61,7 @@ if (in_array($navPage, ['manage.php', 'schedule.php', 'transactions.php', 'cours
 $workspaceLinks = [
     'discover' => [
         ['label' => 'Home', 'path' => 'index.php', 'pages' => ['index.php']],
+        ['label' => 'Courses', 'path' => 'courses.php', 'pages' => ['courses.php']],
     ],
     'manage' => [
         ['label' => 'Overview', 'path' => 'manage.php', 'pages' => ['manage.php']],
@@ -79,9 +80,9 @@ if ($currentUser && $navRole === 'ADMIN') {
     $workspaceLinks['manage'][] = ['label' => 'Courses', 'path' => 'courses.php', 'pages' => ['courses.php']];
     $workspaceLinks['manage'][] = ['label' => 'Users', 'path' => 'admin/users.php', 'pages' => ['users.php']];
 }
-$workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in', 'path' => $currentUser ? 'account.php' : 'account.php?mode=login', 'pages' => ['account.php']];
+$isDiscoverHome = $navPage === 'index.php';
 ?>
-<nav class="topnav">
+<nav class="topnav<?= $isDiscoverHome ? ' topnav-home' : '' ?>">
     <a class="logo" href="<?= e(url_path($workspace === 'manage' ? 'manage.php' : ($workspace === 'studio' ? 'studio.php' : 'index.php'))) ?>">
         <img src="<?= e(BASE_URL . 'assets/images/piano-icon.svg') ?>" alt="" width="28" height="28">
         <span><?= e(SITE_NAME) ?></span>
@@ -94,10 +95,7 @@ $workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in',
             <?php foreach ($workspaceLinks[$workspace] as $navItem): ?>
                 <a href="<?= e(url_path($navItem['path'])) ?>" <?= in_array($navPage, $navItem['pages'], true) ? 'class="active"' : '' ?>><?= e($navItem['label']) ?></a>
             <?php endforeach; ?>
-            <?php if ($currentUser): ?>
-                <a href="<?= e(url_path('logout.php')) ?>" data-logout-confirm>Logout</a>
-            <?php endif; ?>
-        </div>
+         </div>
     </div>
 
     <?php if ($currentUser): ?>
@@ -107,6 +105,15 @@ $workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in',
         <a href="<?= e(url_path('studio.php')) ?>" class="<?= $workspace === 'studio' ? 'active' : '' ?>">Studio</a>
     </div>
     <?php endif; ?>
+
+    <div class="account-actions">
+        <?php if ($currentUser): ?>
+            <a href="<?= e(url_path('account.php')) ?>" class="account-nav-link<?= $navPage === 'account.php' ? ' active' : '' ?>">Account</a>
+            <a href="<?= e(url_path('logout.php')) ?>" class="account-nav-link logout-nav-link" data-logout-confirm>Log out</a>
+        <?php else: ?>
+            <a href="<?= e(url_path('account.php?mode=login')) ?>" class="account-nav-link">Log in</a>
+        <?php endif; ?>
+    </div>
 
     <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to dark theme" title="Switch theme" aria-pressed="false">
         <span class="theme-toggle-icon" aria-hidden="true">☾</span>
