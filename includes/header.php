@@ -69,7 +69,7 @@ $workspaceLinks = [
     ],
     'studio' => [
         ['label' => 'Overview', 'path' => 'studio.php', 'pages' => ['studio.php']],
-        ['label' => 'Tutorials', 'path' => 'tutorial.php', 'pages' => ['tutorial.php']],
+        ['label' => 'Tutorials', 'path' => 'tutorial.php', 'pages' => ['tutorial.php', 'lesson.php']],
         ['label' => 'Songs', 'path' => 'songs.php', 'pages' => ['songs.php']],
         ['label' => 'Piano', 'path' => 'piano.php', 'pages' => ['piano.php']],
         ['label' => 'Games', 'path' => 'game.php', 'pages' => ['game.php', 'car_race.php', 'rankings.php']],
