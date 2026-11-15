@@ -1673,3 +1673,162 @@
         display:flex!important;
     }
 }
+
+
+/* Dark theme palette for the Piano Practice Studio and training games. */
+html[data-theme="dark"] {
+    --studio-bg: #17141e;
+    --studio-panel: #211d29;
+    --studio-panel-2: #302a3b;
+    --studio-border: #40384b;
+    --studio-text: #f4f1fa;
+    --studio-muted: #b8afc4;
+    --studio-accent: #a78bfa;
+    --studio-accent-2: #8b5cf6;
+    --studio-danger: #fb7185;
+    --key-white: #f8f7fb;
+    --key-white-active: #e9ddff;
+    --key-black: #17141e;
+    --key-black-active: #8b5cf6;
+}
+html[data-theme="dark"] .piano-page,
+html[data-theme="dark"] .game-page {
+    background: var(--studio-bg);
+    color: var(--studio-text);
+    border-color: var(--studio-border);
+}
+html[data-theme="dark"] .piano-hero,
+html[data-theme="dark"] .piano-wrapper,
+html[data-theme="dark"] .piano-controls {
+    background: var(--studio-panel);
+    border-color: var(--studio-border);
+}
+html[data-theme="dark"] .tabs,
+html[data-theme="dark"] .gm-tab-group,
+html[data-theme="dark"] .gi-mode-tabs {
+    background: var(--studio-panel-2);
+    border-color: var(--studio-border);
+}
+html[data-theme="dark"] .tab,
+html[data-theme="dark"] .gm-tab,
+html[data-theme="dark"] .gi-mode-tab,
+html[data-theme="dark"] .mode-toggle-btn,
+html[data-theme="dark"] .diff-btn {
+    color: var(--studio-muted);
+}
+html[data-theme="dark"] .tab.active,
+html[data-theme="dark"] .tab:hover,
+html[data-theme="dark"] .gm-tab.active,
+html[data-theme="dark"] .gm-tab:hover,
+html[data-theme="dark"] .gi-mode-tab.active,
+html[data-theme="dark"] .gi-mode-tab:hover,
+html[data-theme="dark"] .mode-toggle-btn.active,
+html[data-theme="dark"] .mode-toggle-btn:hover,
+html[data-theme="dark"] .diff-btn.active,
+html[data-theme="dark"] .diff-btn:hover {
+    background: #40344f;
+    border-color: #66517f;
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .btn,
+html[data-theme="dark"] .btn-icon,
+html[data-theme="dark"] .round-btn,
+html[data-theme="dark"] .mini-btn,
+html[data-theme="dark"] .game-stepper-btn,
+html[data-theme="dark"] .scroll-zone,
+html[data-theme="dark"] .sheet-zoom-btn,
+html[data-theme="dark"] .discard-song-btn {
+    background: var(--studio-panel-2);
+    border-color: var(--studio-border);
+    color: var(--studio-text);
+}
+html[data-theme="dark"] .btn:hover,
+html[data-theme="dark"] .btn-icon:hover,
+html[data-theme="dark"] .round-btn:hover,
+html[data-theme="dark"] .mini-btn:hover,
+html[data-theme="dark"] .game-stepper-btn:hover,
+html[data-theme="dark"] .scroll-zone:hover,
+html[data-theme="dark"] .sheet-zoom-btn:hover {
+    background: #40344f;
+    border-color: var(--studio-accent);
+    color: #fff;
+}
+html[data-theme="dark"] .btn.primary,
+html[data-theme="dark"] .game-start-btn {
+    background: #7c3aed;
+    border-color: #7c3aed;
+    color: #fff;
+}
+html[data-theme="dark"] .btn.primary:hover,
+html[data-theme="dark"] .game-start-btn:hover {
+    background: #6d28d9;
+}
+html[data-theme="dark"] .stat-card,
+html[data-theme="dark"] .analysis-chart-card,
+html[data-theme="dark"] .track-card,
+html[data-theme="dark"] .song-info-card,
+html[data-theme="dark"] .play-live-card,
+html[data-theme="dark"] .settings-card,
+html[data-theme="dark"] .game-setting-card,
+html[data-theme="dark"] .game-stat-item,
+html[data-theme="dark"] .game-end-card,
+html[data-theme="dark"] .gi-prompt,
+html[data-theme="dark"] .modal {
+    background: var(--studio-panel);
+    border-color: var(--studio-border);
+    color: var(--studio-text);
+}
+html[data-theme="dark"] .game-menu-card {
+    background: var(--studio-panel);
+    border-color: var(--studio-border);
+    color: var(--studio-text);
+}
+html[data-theme="dark"] .game-menu-card:hover {
+    background: var(--studio-panel-2);
+    border-color: var(--studio-accent);
+}
+html[data-theme="dark"] .visualizer,
+html[data-theme="dark"] .gr-sheet-wrap,
+html[data-theme="dark"] .gi-staff-box {
+    background: #f8faf8;
+    border-color: var(--studio-border);
+}
+html[data-theme="dark"] .sheet-zoom-controls {
+    background: #302a3b;
+    border-color: #514263;
+}
+html[data-theme="dark"] .sheet-zoom-btn {
+    background: #40344f;
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .sheet-zoom-label {
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .scroll-zone {
+    background: rgba(33, 29, 41, .9);
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .keybind-row,
+html[data-theme="dark"] .kb-preset {
+    background: var(--studio-panel-2);
+    border-color: var(--studio-border);
+    color: var(--studio-text);
+}
+html[data-theme="dark"] .keybind-row input,
+html[data-theme="dark"] .kb-key input {
+    background: #211d29;
+    border-color: var(--studio-border);
+    color: var(--studio-text);
+}
+html[data-theme="dark"] .kb-preset:has(input:checked) {
+    background: #40344f;
+    border-color: var(--studio-accent);
+    color: #f4f1fa;
+}
+html[data-theme="dark"] .kb-note {
+    color: #607080;
+}
+html[data-theme="dark"] .piano-hero .section-title,
+html[data-theme="dark"] .game-end-card h3 {
+    color: var(--studio-text);
+}
