@@ -1754,3 +1754,19 @@ html[data-theme="dark"] dialog { background: var(--surface-color); color: var(--
     .workspace-shortcuts { gap: 8px; }
     .workspace-shortcuts a { padding: 12px; }
 }
+
+@media (max-width: 768px) {
+    .nav-main .nav-links {
+        position: static;
+        top: auto;
+        left: auto;
+        width: 100%;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+        flex-direction: row;
+        align-items: center;
+        justify-content: center;
+    }
+    .nav-main .nav-links.show { display: flex; }
+}
