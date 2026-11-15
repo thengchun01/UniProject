@@ -2881,3 +2881,48 @@ html[data-theme="dark"] .sched-week-chip {
     color: #d8c7ff;
     border-color: #514263;
 }
+
+
+/* Dark surfaces for schedule cards and controls missed by earlier overrides. */
+html[data-theme="dark"] .sched-next-card,
+html[data-theme="dark"] .sched-next-card .sched-next-content,
+html[data-theme="dark"] .sched-next-card .sched-next-heading {
+    background: #292532;
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .sched-next-card .sched-next-icon {
+    background: #393044;
+    color: #d8c7ff;
+}
+html[data-theme="dark"] .sched-next-card .sched-next-eyebrow,
+html[data-theme="dark"] .sched-next-card .sched-next-empty,
+html[data-theme="dark"] .sched-next-card p {
+    color: var(--text-muted);
+}
+html[data-theme="dark"] .sched-class-tools,
+html[data-theme="dark"] .sched-class-filter-form,
+html[data-theme="dark"] .sched-class-search {
+    color: var(--text-color);
+}
+html[data-theme="dark"] .sched-class-search input,
+html[data-theme="dark"] .sched-class-filter-form input,
+html[data-theme="dark"] .sched-class-filter-form select {
+    background: #211e29 !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .sched-class-filter-form .dd-btn,
+html[data-theme="dark"] .sched-class-filter-form .dd-list {
+    background: #292532 !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+}
+html[data-theme="dark"] .sched-class-filter-form .dd-item:hover,
+html[data-theme="dark"] .sched-class-filter-form .dd-item.is-active {
+    background: #40344f !important;
+    color: #e9ddff !important;
+}
+html[data-theme="dark"] .sched-class-filter-actions .text-button {
+    color: #d8c7ff;
+}
