@@ -1770,3 +1770,142 @@ html[data-theme="dark"] dialog { background: var(--surface-color); color: var(--
     }
     .nav-main .nav-links.show { display: flex; }
 }
+
+
+/* Refined top bar: centered navigation, right-aligned icon toggle,
+   and a softly translucent glass surface. */
+.topnav {
+    position: sticky;
+    isolation: isolate;
+    justify-content: space-between;
+    min-height: 76px;
+    padding: 14px 5%;
+    background: rgba(252, 252, 252, .68);
+    border-bottom: 1px solid rgba(234, 234, 234, .58);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+}
+.topnav .logo { flex: 0 0 auto; z-index: 2; }
+.topnav .nav-main {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    width: max-content;
+    max-width: calc(100% - 240px);
+}
+.topnav .workspace-switcher {
+    flex: 0 0 auto;
+    background: rgba(255, 255, 255, .48);
+    border-color: rgba(180, 180, 180, .24);
+}
+.topnav .nav-links {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+    gap: 3px;
+}
+.topnav .nav-links a {
+    white-space: nowrap;
+    font-size: 14px;
+    padding: 7px 11px;
+}
+.topnav .theme-toggle {
+    z-index: 2;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    padding: 0;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(180, 180, 180, .28);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .5);
+    color: var(--text-color);
+    box-shadow: none;
+}
+.topnav .theme-toggle:hover {
+    background: rgba(124, 58, 237, .09);
+    border-color: rgba(124, 58, 237, .35);
+    color: var(--primary-color);
+    transform: none;
+    box-shadow: none;
+}
+.theme-toggle-icon { font-size: 20px; line-height: 1; }
+html[data-theme="dark"] .topnav {
+    background: rgba(23, 21, 29, .68);
+    border-bottom-color: rgba(70, 64, 80, .55);
+}
+html[data-theme="dark"] .topnav .workspace-switcher {
+    background: rgba(33, 30, 41, .55);
+    border-color: rgba(110, 100, 125, .3);
+}
+html[data-theme="dark"] .topnav .theme-toggle {
+    background: rgba(33, 30, 41, .58);
+    border-color: rgba(110, 100, 125, .35);
+    color: var(--text-color);
+}
+@media (max-width: 1100px) and (min-width: 769px) {
+    .topnav { padding-left: 3%; padding-right: 3%; }
+    .topnav .nav-main { gap: 8px; max-width: calc(100% - 190px); }
+    .topnav .workspace-switcher a { padding: 7px 9px; font-size: 12px; }
+    .topnav .nav-links a { padding: 7px 8px; font-size: 13px; }
+}
+@media (max-width: 768px) {
+    .topnav {
+        min-height: 66px;
+        padding: 12px 5%;
+        flex-wrap: wrap;
+    }
+    .topnav .mobile-menu-toggle {
+        display: inline-flex;
+        margin-left: auto;
+        margin-right: 10px;
+        z-index: 3;
+        padding: 7px 10px;
+        background: transparent;
+        color: var(--text-color);
+        box-shadow: none;
+    }
+    .topnav .theme-toggle { margin-left: 0; }
+    .topnav .nav-main {
+        position: static;
+        left: auto;
+        top: auto;
+        transform: none;
+        display: none;
+        order: 4;
+        width: 100%;
+        max-width: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+        padding: 14px 0 4px;
+    }
+    .topnav .nav-main.show { display: flex; }
+    .topnav .workspace-switcher { width: 100%; justify-content: center; }
+    .topnav .workspace-switcher a { flex: 1; text-align: center; }
+    .topnav .nav-links {
+        position: static;
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 4px;
+        padding: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+    .topnav .nav-links a { font-size: 13px; padding: 8px 10px; }
+}
+@media (prefers-reduced-transparency: reduce) {
+    .topnav { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
