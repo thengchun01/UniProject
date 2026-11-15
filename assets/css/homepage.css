@@ -402,7 +402,7 @@ body::before {
     mix-blend-mode: multiply;
 }
 html[data-theme="dark"] body::before { opacity: .10; mix-blend-mode: screen; }
-body > .site-content, body > .site-footer, body > #user-float-widget { position: relative; z-index: 1; }
+body > .site-content, body > .site-footer { position: relative; z-index: 1; }
 .topnav-home {
     position: sticky !important;
     top: 0;
