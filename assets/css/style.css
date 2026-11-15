@@ -2116,3 +2116,16 @@ html[data-theme="dark"] .role-pill {
     color: #d8c7ff;
     border-color: #514263;
 }
+
+/* Dark-mode contrast for primary text links rendered as buttons (e.g. Browse Songs / Get Started). */
+html[data-theme="dark"] a.text-button:not(.secondary),
+html[data-theme="dark"] .text-button:not(.secondary) {
+    background: var(--primary-color, #7c3aed);
+    color: #fff !important;
+    border-color: transparent;
+}
+html[data-theme="dark"] a.text-button:not(.secondary):hover,
+html[data-theme="dark"] .text-button:not(.secondary):hover {
+    background: var(--primary-hover, #6d28d9);
+    color: #fff !important;
+}
