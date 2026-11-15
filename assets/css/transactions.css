@@ -618,3 +618,20 @@ dialog.sched-dialog.txn-comm-dialog .sched-x-btn {
     line-height: 1.2;
     white-space: nowrap;
 }
+
+/* Year navigation and empty-result rows need explicit dark-theme contrast. */
+html[data-theme="dark"] .txn-year-nav {
+    background: #292532;
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .txn-year-nav:hover {
+    background: #40344f;
+    color: #e9ddff;
+    border-color: #8b5cf6;
+}
+html[data-theme="dark"] .txn-wrap .modern-table tbody td[colspan] {
+    background: var(--surface-color);
+    color: var(--text-muted);
+    border-color: var(--border-color);
+}
