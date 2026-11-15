@@ -1944,3 +1944,38 @@ html[data-theme="dark"] .topnav > .workspace-switcher {
 @media (prefers-reduced-transparency: reduce) {
     .topnav { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--bg-color); }
 }
+
+
+/* Shared dark-theme contrast fixes for common page surfaces and controls. */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .form-panel,
+html[data-theme="dark"] .view-panel,
+html[data-theme="dark"] .modal-content,
+html[data-theme="dark"] .dropdown-menu,
+html[data-theme="dark"] .table-container {
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .card h1,
+html[data-theme="dark"] .card h2,
+html[data-theme="dark"] .card h3,
+html[data-theme="dark"] .card p,
+html[data-theme="dark"] .panel h1,
+html[data-theme="dark"] .panel h2,
+html[data-theme="dark"] .panel h3,
+html[data-theme="dark"] .panel p,
+html[data-theme="dark"] .form-panel label { color: var(--text-color); }
+html[data-theme="dark"] button:not(.primary-btn):not(.theme-toggle):not(.mobile-menu-toggle),
+html[data-theme="dark"] .btn.secondary-btn,
+html[data-theme="dark"] .text-button.secondary {
+    background-color: #302a3b;
+    color: #f4f1fa;
+    border-color: #51465f;
+}
+html[data-theme="dark"] button:not(.primary-btn):not(.theme-toggle):not(.mobile-menu-toggle):hover,
+html[data-theme="dark"] .btn.secondary-btn:hover {
+    background-color: #40344f;
+    color: #fff;
+}
