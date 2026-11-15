@@ -619,3 +619,15 @@ body > .site-content {
     position: relative;
     z-index: 2;
 }
+
+
+/* The homepage hero is the first child of the shared .container.site-content.
+   Remove the container's top padding so the hero image starts behind the
+   sticky navbar rather than 84px below it. */
+body:has(> .topnav.topnav-home) > .site-content {
+    padding-top: 0 !important;
+}
+
+body:has(> .topnav.topnav-home) > .site-content > .hero-section {
+    margin-top: 0 !important;
+}
