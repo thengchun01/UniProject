@@ -202,3 +202,45 @@ if (document.readyState === 'loading') {
 } else {
     initializeScrollTop();
 }
+
+
+/* Shared light/dark theme preference for Discover, Manage and Studio. */
+function initializeGlobalTheme() {
+    const root = document.documentElement;
+    const toggle = document.getElementById('themeToggle');
+    const storedTheme = (() => {
+        try { return localStorage.getItem('psm-theme'); } catch (error) { return null; }
+    })();
+    const initialTheme = storedTheme === 'dark' ? 'dark' : 'light';
+
+    const applyTheme = (theme, persist = false) => {
+        const nextTheme = theme === 'dark' ? 'dark' : 'light';
+        root.setAttribute('data-theme', nextTheme);
+        if (toggle) {
+            const dark = nextTheme === 'dark';
+            const icon = toggle.querySelector('.theme-toggle-icon');
+            const label = toggle.querySelector('.theme-toggle-label');
+            if (icon) icon.textContent = dark ? '☀' : '☾';
+            if (label) label.textContent = dark ? 'Light mode' : 'Dark mode';
+            toggle.setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+            toggle.setAttribute('title', dark ? 'Switch to light theme' : 'Switch to dark theme');
+            toggle.setAttribute('aria-pressed', dark ? 'true' : 'false');
+        }
+        if (persist) {
+            try { localStorage.setItem('psm-theme', nextTheme); } catch (error) {}
+        }
+    };
+
+    applyTheme(root.getAttribute('data-theme') || initialTheme);
+    if (toggle) {
+        toggle.addEventListener('click', () => {
+            applyTheme(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark', true);
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeGlobalTheme, { once: true });
+} else {
+    initializeGlobalTheme();
+}
