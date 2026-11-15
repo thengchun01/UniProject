@@ -651,3 +651,22 @@ body > .topnav.topnav-home {
         margin-bottom: -66px !important;
     }
 }
+
+
+/* Final overlap method: keep the navbar in sticky flow, then pull the
+   homepage content up by the navbar's exact height. This is independent
+   of the floating widget/dialog/script elements emitted by the header. */
+body > .topnav.topnav-home {
+    margin-bottom: 0 !important;
+}
+
+body > .site-content {
+    margin-top: -76px !important;
+    padding-top: 0 !important;
+}
+
+@media (max-width: 768px) {
+    body > .site-content {
+        margin-top: -66px !important;
+    }
+}
