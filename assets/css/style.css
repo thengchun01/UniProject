@@ -2076,3 +2076,43 @@ html[data-theme="dark"] .account-nav-link.active { color: #c4b5fd; background: r
     .topnav > .account-actions { order: 3; margin: 0 8px 0 auto; }
     .topnav > .theme-toggle { order: 4; margin: 0; }
 }
+
+
+/* Shared dark styling for custom dropdowns and frequently reused components. */
+html[data-theme="dark"] .dd-wrap { color: var(--text-color); }
+html[data-theme="dark"] .dd-btn,
+html[data-theme="dark"] .dd-list {
+    background: #292532 !important;
+    color: var(--text-color) !important;
+    border-color: var(--border-color) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,.32);
+}
+html[data-theme="dark"] .dd-item {
+    color: var(--text-color) !important;
+    background: transparent;
+}
+html[data-theme="dark"] .dd-item:hover,
+html[data-theme="dark"] .dd-item.is-active,
+html[data-theme="dark"] .dd-item[aria-selected="true"] {
+    background: #40344f !important;
+    color: #e9ddff !important;
+}
+html[data-theme="dark"] .account-header,
+html[data-theme="dark"] .account-summary,
+html[data-theme="dark"] .account-details,
+html[data-theme="dark"] .account-stat-card {
+    background: var(--surface-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .account-header :is(h1,h2,h3,p,div,b,span),
+html[data-theme="dark"] .account-summary :is(h1,h2,h3,p,div,b,span),
+html[data-theme="dark"] .account-details :is(h1,h2,h3,p,div,b,span) {
+    color: inherit;
+}
+html[data-theme="dark"] .account-header .eyebrow { color: var(--text-muted); }
+html[data-theme="dark"] .role-pill {
+    background: #393044;
+    color: #d8c7ff;
+    border-color: #514263;
+}
