@@ -61,7 +61,7 @@ if (in_array($navPage, ['manage.php', 'schedule.php', 'transactions.php', 'cours
 $workspaceLinks = [
     'discover' => [
         ['label' => 'Home', 'path' => 'index.php', 'pages' => ['index.php']],
-        ['label' => 'Courses', 'path' => 'index.php#offered-courses', 'pages' => []],
+        ['label' => 'Courses', 'path' => 'discover-courses.php', 'pages' => ['discover-courses.php']],
     ],
     'manage' => [
         ['label' => 'Overview', 'path' => 'manage.php', 'pages' => ['manage.php']],
