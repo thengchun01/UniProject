@@ -21,6 +21,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<script>
+(function(){try{var t=localStorage.getItem("psm-theme");if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();
+</script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><?php echo e(SITE_NAME); ?></title>
@@ -46,32 +49,64 @@ window.PSM_CONFIG = {
 
 <body>
 
+<?php
+$navPage = basename($_SERVER['PHP_SELF'] ?? '');
+$navRole = normalize_role($currentUser['role'] ?? 'GUEST');
+$workspace = 'discover';
+if (in_array($navPage, ['manage.php', 'schedule.php', 'transactions.php', 'courses.php', 'users.php'], true)) {
+    $workspace = 'manage';
+} elseif (in_array($navPage, ['studio.php', 'tutorial.php', 'songs.php', 'piano.php', 'game.php', 'car_race.php', 'rankings.php'], true)) {
+    $workspace = 'studio';
+}
+$workspaceLinks = [
+    'discover' => [
+        ['label' => 'Home', 'path' => 'index.php', 'pages' => ['index.php']],
+    ],
+    'manage' => [
+        ['label' => 'Overview', 'path' => 'manage.php', 'pages' => ['manage.php']],
+        ['label' => 'Schedule', 'path' => 'schedule.php', 'pages' => ['schedule.php']],
+        ['label' => 'Transactions', 'path' => 'transactions.php', 'pages' => ['transactions.php']],
+    ],
+    'studio' => [
+        ['label' => 'Overview', 'path' => 'studio.php', 'pages' => ['studio.php']],
+        ['label' => 'Tutorials', 'path' => 'tutorial.php', 'pages' => ['tutorial.php']],
+        ['label' => 'Songs', 'path' => 'songs.php', 'pages' => ['songs.php']],
+        ['label' => 'Piano', 'path' => 'piano.php', 'pages' => ['piano.php']],
+        ['label' => 'Games', 'path' => 'game.php', 'pages' => ['game.php', 'car_race.php', 'rankings.php']],
+    ],
+];
+if ($currentUser && $navRole === 'ADMIN') {
+    $workspaceLinks['manage'][] = ['label' => 'Courses', 'path' => 'courses.php', 'pages' => ['courses.php']];
+    $workspaceLinks['manage'][] = ['label' => 'Users', 'path' => 'admin/users.php', 'pages' => ['users.php']];
+}
+$workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in', 'path' => $currentUser ? 'account.php' : 'account.php?mode=login', 'pages' => ['account.php']];
+?>
 <nav class="topnav">
-    <div class="logo"><img src="<?php echo e(BASE_URL . 'assets/images/piano-icon.svg'); ?>" alt="" width="28" height="28"><span><?php echo e(SITE_NAME); ?></span></div>
-    
-    <!-- Mobile menu toggle button -->
-    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu">☰</button>
-    
-    <div class="nav-links" id="navLinks">
-        <a href="<?php echo BASE_URL . 'index.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'index.php' ? 'class="active"' : ''; ?>>Home</a>
-        <a href="<?php echo BASE_URL . 'tutorial.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'tutorial.php' ? 'class="active"' : ''; ?>>Tutorial</a>
-        <a href="<?php echo BASE_URL . 'songs.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'songs.php' ? 'class="active"' : ''; ?>>Songs</a>
-        <a href="<?php echo BASE_URL . 'piano.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'piano.php' ? 'class="active"' : ''; ?>>Piano</a>
-        <a href="<?php echo BASE_URL . 'game.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'game.php' ? 'class="active"' : ''; ?>>Game</a>
-        <?php if ($currentUser): ?>
-            <a href="<?php echo BASE_URL . 'schedule.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'schedule.php' ? 'class="active"' : ''; ?>>Schedule</a>
-            <a href="<?php echo BASE_URL . 'transactions.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'transactions.php' ? 'class="active"' : ''; ?>>Transactions</a>
-            <?php if ($currentUser && normalize_role($currentUser['role'] ?? '') === 'ADMIN'): ?>
-            <a href="<?php echo BASE_URL . 'courses.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'courses.php' ? 'class="active"' : ''; ?>>Courses</a>
+    <a class="logo" href="<?= e(url_path($workspace === 'manage' ? 'manage.php' : ($workspace === 'studio' ? 'studio.php' : 'index.php'))) ?>">
+        <img src="<?= e(BASE_URL . 'assets/images/piano-icon.svg') ?>" alt="" width="28" height="28">
+        <span><?= e(SITE_NAME) ?></span>
+    </a>
+
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Menu" aria-expanded="false">☰</button>
+
+    <div class="nav-main" id="navMain">
+        <div class="workspace-switcher" aria-label="Workspaces">
+            <a href="<?= e(url_path('index.php')) ?>" class="<?= $workspace === 'discover' ? 'active' : '' ?>">Discover</a>
+            <a href="<?= e(url_path('manage.php')) ?>" class="<?= $workspace === 'manage' ? 'active' : '' ?>">Manage</a>
+            <a href="<?= e(url_path('studio.php')) ?>" class="<?= $workspace === 'studio' ? 'active' : '' ?>">Studio</a>
+        </div>
+        <div class="nav-links" id="navLinks">
+            <?php foreach ($workspaceLinks[$workspace] as $navItem): ?>
+                <a href="<?= e(url_path($navItem['path'])) ?>" <?= in_array($navPage, $navItem['pages'], true) ? 'class="active"' : '' ?>><?= e($navItem['label']) ?></a>
+            <?php endforeach; ?>
+            <?php if ($currentUser): ?>
+                <a href="<?= e(url_path('logout.php')) ?>" data-logout-confirm>Logout</a>
             <?php endif; ?>
-            <?php if ($currentUser && normalize_role($currentUser['role'] ?? '') === 'ADMIN'): ?>
-            <a href="<?php echo BASE_URL . 'admin/users.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'users.php' ? 'class="active"' : ''; ?>>Users</a>
-            <?php endif; ?>
-        <?php endif; ?>
-        <a href="<?php echo BASE_URL . 'account.php'; ?>" <?php echo basename($_SERVER['PHP_SELF']) == 'account.php' ? 'class="active"' : ''; ?>>Account</a>
-        <?php if ($currentUser): ?>
-            <a href="<?php echo BASE_URL . 'logout.php'; ?>" data-logout-confirm>Logout</a>
-        <?php endif; ?>
+        </div>
+        <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to dark theme" title="Switch theme">
+            <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+            <span class="theme-toggle-label">Dark mode</span>
+        </button>
     </div>
 </nav>
 
@@ -219,10 +254,13 @@ endif; // !$_ufw_hide
 <script>
     const mobileMenuToggle = document.getElementById('mobileMenuToggle');
     const navLinks = document.getElementById('navLinks');
+    const navMain = document.getElementById('navMain');
     
     if (mobileMenuToggle) {
         mobileMenuToggle.addEventListener('click', function() {
             navLinks.classList.toggle('show');
+            navMain.classList.toggle('show');
+            this.setAttribute('aria-expanded', navMain.classList.contains('show') ? 'true' : 'false');
             // Change toggle icon
             this.textContent = navLinks.classList.contains('show') ? '✕' : '☰';
         });
@@ -234,6 +272,8 @@ endif; // !$_ufw_hide
         item.addEventListener('click', () => {
             if (window.innerWidth <= 768) {
                 navLinks.classList.remove('show');
+                navMain.classList.remove('show');
+                mobileMenuToggle.setAttribute('aria-expanded', 'false');
                 if (mobileMenuToggle) mobileMenuToggle.textContent = '☰';
             }
         });
