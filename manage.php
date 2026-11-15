@@ -62,7 +62,7 @@ if ($db) {
             ];
         } else {
             $id = (int) $user['user_id'];
-            $stmt = $db->prepare("SELECT COUNT(DISTINCT COALESCE(c.course_id, l.title)) FROM lesson_enrollments e INNER JOIN lessons l ON l.lesson_id=e.lesson_id LEFT JOIN courses c ON c.course_id=l.course_id WHERE e.student_id=?");
+            $stmt = $db->prepare("SELECT COUNT(DISTINCT CASE WHEN c.course_id IS NOT NULL THEN CONCAT('C', c.course_id) ELSE CONCAT('T', l.title) END) FROM lesson_enrollments e INNER JOIN lessons l ON l.lesson_id=e.lesson_id LEFT JOIN courses c ON c.course_id=l.course_id WHERE e.student_id=?");
             $stmt->execute([$id]);
             $enrolled = (int) $stmt->fetchColumn();
             $stmt = $db->prepare("SELECT COUNT(*),COALESCE(SUM(amount),0) FROM monthly_fees WHERE student_id=? AND UPPER(status)<>'PAID'");
