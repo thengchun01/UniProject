@@ -2981,3 +2981,43 @@ html[data-theme="dark"] .sched-class-filter-form .dd-item:focus-visible {
     outline: 2px solid #8b5cf6;
     outline-offset: -2px;
 }
+
+/* Dark theme: the class-tools toolbar has its own muted surface inside the
+   series panel, so it needs an explicit dark surface as well. */
+html[data-theme="dark"] .sched-series-panel .sched-class-tools {
+    background: #211e29 !important;
+    color: #f3effa;
+    border-color: #453c50 !important;
+}
+html[data-theme="dark"] .sched-series-panel .sched-class-search input {
+    background: #292532 !important;
+    color: #f3effa !important;
+    border-color: #51465f !important;
+}
+html[data-theme="dark"] .sched-series-panel .sched-class-search input:focus {
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+}
+html[data-theme="dark"] .sched-series-panel .sched-class-search input::placeholder {
+    color: #aaa2b5 !important;
+    opacity: 1;
+}
+html[data-theme="dark"] .sched-series-panel .sched-class-filter-form .dd-wrap {
+    background: transparent !important;
+}
+html[data-theme="dark"] .sched-series-panel .sched-class-filter-form .dd-btn,
+html[data-theme="dark"] .sched-series-panel .sched-class-filter-form .dd-list {
+    background: #292532 !important;
+    color: #f3effa !important;
+    border-color: #51465f !important;
+}
+html[data-theme="dark"] .sched-series-panel .sched-class-filter-form .dd-item {
+    background: transparent !important;
+    color: #f3effa !important;
+}
+html[data-theme="dark"] .sched-series-panel .sched-class-filter-form .dd-item:hover,
+html[data-theme="dark"] .sched-series-panel .sched-class-filter-form .dd-item.is-active,
+html[data-theme="dark"] .sched-series-panel .sched-class-filter-form .dd-item[aria-selected="true"] {
+    background: #40344f !important;
+    color: #ffffff !important;
+}
