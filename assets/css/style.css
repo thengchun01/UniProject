@@ -1919,7 +1919,8 @@ html[data-theme="dark"] .topnav .theme-toggle {
     margin-left: auto;
     margin-right: 10px;
 }
-.topnav > .theme-toggle { margin-left: 0; }
+.topnav > .theme-toggle { margin-left: auto; }
+.topnav > .workspace-switcher + .theme-toggle { margin-left: 0; }
 html[data-theme="dark"] .topnav {
     background: rgba(23, 21, 29, .34);
     border-bottom-color: rgba(120, 110, 135, .3);
