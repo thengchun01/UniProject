@@ -647,3 +647,32 @@
 #keyboardModal .kb-modal-close:active {
     background: rgba(0, 0, 0, 0.12);
 }
+
+/* Dark theme for tutorial catalogue and lesson reading surfaces. */
+html[data-theme="dark"] .tutorial-card,
+html[data-theme="dark"] .lesson-sidebar,
+html[data-theme="dark"] .lesson-content,
+html[data-theme="dark"] .practice-box,
+html[data-theme="dark"] .lesson-section {
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+html[data-theme="dark"] .tutorial-card h2,
+html[data-theme="dark"] .tutorial-card p,
+html[data-theme="dark"] .lesson-sidebar h2,
+html[data-theme="dark"] .lesson-section h1,
+html[data-theme="dark"] .lesson-section h3,
+html[data-theme="dark"] .lesson-section p,
+html[data-theme="dark"] .lesson-section ul,
+html[data-theme="dark"] .lesson-section ol {
+    color: var(--text-color);
+}
+html[data-theme="dark"] .tutorial-card .card-footer { border-top-color: var(--border-color); }
+html[data-theme="dark"] .tutorial-card .difficulty-badge {
+    background: #393342;
+    color: #d5cede;
+}
+html[data-theme="dark"] .lesson-sidebar a { color: #d5cede; }
+html[data-theme="dark"] .lesson-sidebar a:hover { background: #393044; color: #d8c7ff; }
+html[data-theme="dark"] .practice-box { background: #292532; }
