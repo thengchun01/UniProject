@@ -90,11 +90,6 @@ $workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in',
     <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open navigation" aria-expanded="false">☰</button>
 
     <div class="nav-main" id="navMain">
-        <div class="workspace-switcher" aria-label="Workspaces">
-            <a href="<?= e(url_path('index.php')) ?>" class="<?= $workspace === 'discover' ? 'active' : '' ?>">Discover</a>
-            <a href="<?= e(url_path('manage.php')) ?>" class="<?= $workspace === 'manage' ? 'active' : '' ?>">Manage</a>
-            <a href="<?= e(url_path('studio.php')) ?>" class="<?= $workspace === 'studio' ? 'active' : '' ?>">Studio</a>
-        </div>
         <div class="nav-links" id="navLinks">
             <?php foreach ($workspaceLinks[$workspace] as $navItem): ?>
                 <a href="<?= e(url_path($navItem['path'])) ?>" <?= in_array($navPage, $navItem['pages'], true) ? 'class="active"' : '' ?>><?= e($navItem['label']) ?></a>
@@ -104,6 +99,14 @@ $workspaceLinks[$workspace][] = ['label' => $currentUser ? 'Account' : 'Log in',
             <?php endif; ?>
         </div>
     </div>
+
+    <?php if ($currentUser): ?>
+    <div class="workspace-switcher" aria-label="Workspaces">
+        <a href="<?= e(url_path('index.php')) ?>" class="<?= $workspace === 'discover' ? 'active' : '' ?>">Discover</a>
+        <a href="<?= e(url_path('manage.php')) ?>" class="<?= $workspace === 'manage' ? 'active' : '' ?>">Manage</a>
+        <a href="<?= e(url_path('studio.php')) ?>" class="<?= $workspace === 'studio' ? 'active' : '' ?>">Studio</a>
+    </div>
+    <?php endif; ?>
 
     <button type="button" class="theme-toggle" id="themeToggle" aria-label="Switch to dark theme" title="Switch theme" aria-pressed="false">
         <span class="theme-toggle-icon" aria-hidden="true">☾</span>
