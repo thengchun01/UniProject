@@ -206,6 +206,9 @@ include __DIR__ . '/includes/header.php';
                                     </label>
                                     <?php if (empty($request['scheduled_lesson_id'])): ?><button type="submit" class="course-primary-btn">Save teacher</button><?php endif; ?>
                                 </form>
+                                <?php if (!$requestTeachers): ?>
+                                    <p class="course-request-next-step">No teacher accounts are available yet. <a href="<?= e(url_path('admin/users.php')) ?>">Create a teacher account in User Management</a>, then return here.</p>
+                                <?php endif; ?>
                                 <?php if (!empty($request['scheduled_lesson_id'])): ?>
                                     <span class="course-request-scheduled">Already added to schedule · Lesson #<?= (int)$request['scheduled_lesson_id'] ?></span>
                                 <?php elseif (!empty($request['assigned_teacher_id']) && !empty($request['student_id'])): ?>
