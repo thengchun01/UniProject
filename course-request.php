@@ -2,6 +2,7 @@
 require_once __DIR__ . '/includes/config.php';
 
 $user = current_user();
+$isStudent = $user && normalize_role($user['role'] ?? '') === 'STUDENT';
 $dbReady = is_database_connected();
 $courses = [];
 $selectedCourse = null;
@@ -57,6 +58,7 @@ if (empty($_SESSION['course_request_token'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
+    if (!$isStudent) redirect_to('account.php?mode=login');
     try {
         if (!hash_equals((string) $_SESSION['course_request_token'], (string) ($_POST['csrf_token'] ?? ''))) {
             throw new RuntimeException('Your form session expired. Please refresh the page and try again.');
@@ -73,8 +75,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
             throw new RuntimeException('Please choose an available course.');
         }
 
-        $name = trim((string) ($_POST['full_name'] ?? ''));
-        $email = trim((string) ($_POST['email'] ?? ''));
+        $studentId = (int) ($user['user_id'] ?? 0);
+        $name = trim((string) ($user['username'] ?? ''));
+        $email = trim((string) ($user['email'] ?? ''));
+        if ($studentId <= 0 || $name === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('Please make sure your student account has a valid email address before submitting a course request.');
+        }
         $phone = trim((string) ($_POST['phone'] ?? ''));
         $age = trim((string) ($_POST['student_age'] ?? ''));
         $days = $_POST['preferred_days'] ?? [];
@@ -120,13 +126,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
 
         $insert = db()->prepare(
             "INSERT INTO course_requests
-             (course_id, course_name, full_name, email, phone, student_age, lesson_duration,
+             (student_id, course_id, course_name, full_name, email, phone, student_age, lesson_duration,
               preferred_days, preferred_time_start, preferred_time_end, preferred_start_date, notes)
              VALUES
-             (:course_id, :course_name, :full_name, :email, :phone, :student_age, :lesson_duration,
+             (:student_id, :course_id, :course_name, :full_name, :email, :phone, :student_age, :lesson_duration,
               :preferred_days, :time_start, :time_end, :start_date, :notes)"
         );
         $insert->execute([
+            'student_id' => $studentId,
             'course_id' => (int) $selectedCourse['course_id'],
             'course_name' => $selectedCourse['course_name'],
             'full_name' => $name,
@@ -168,6 +175,15 @@ include __DIR__ . '/includes/header.php';
         <div class="courses-alert error">The course request form is temporarily unavailable because the database is not connected.</div>
     <?php elseif (!$courses): ?>
         <div class="courses-alert">There are no active courses available for requests at the moment.</div>
+    <?php elseif (!$isStudent): ?>
+        <div class="courses-alert">
+            <strong>A student account is required.</strong>
+            <p>Please sign up or log in with your student account before submitting a course request. Your request will be linked to your account automatically.</p>
+            <div class="course-request-auth-actions">
+                <a class="course-primary-btn" href="<?= e(url_path('account.php?mode=register')) ?>">Sign up</a>
+                <a class="course-secondary-btn" href="<?= e(url_path('account.php?mode=login')) ?>">Log in</a>
+            </div>
+        </div>
     <?php else: ?>
     <form method="post" class="course-request-form">
         <input type="hidden" name="csrf_token" value="<?= e($_SESSION['course_request_token']) ?>">
@@ -184,7 +200,7 @@ include __DIR__ . '/includes/header.php';
                         <?php endforeach; ?>
                     </select>
                 </label>
-                <label class="request-field">Student's name<input name="full_name" maxlength="120" required value="<?= e($old['full_name'] ?? ($user['username'] ?? '')) ?>" placeholder="Full name"></label>
+                <div class="request-field"><span>Student account</span><strong><?= e($user['username']) ?></strong><small><?= e($user['email'] ?? '') ?></small></div>
                 <label class="request-field">Student's age (optional)<input name="student_age" maxlength="30" value="<?= e($old['student_age'] ?? '') ?>" placeholder="e.g. 12"></label>
                 <label class="request-field">Lesson duration
                     <select name="lesson_duration" id="requestDuration" required>
@@ -214,7 +230,6 @@ include __DIR__ . '/includes/header.php';
         <section class="course-request-section">
             <div class="course-request-section-title"><span>03</span><div><h2>Contact details</h2><p>How can we reach you about this request?</p></div></div>
             <div class="course-request-fields">
-                <label class="request-field">Email address<input type="email" name="email" maxlength="190" required value="<?= e($old['email'] ?? ($user['email'] ?? '')) ?>" placeholder="you@example.com"></label>
                 <label class="request-field">Phone number<input type="tel" name="phone" maxlength="40" required value="<?= e($old['phone'] ?? '') ?>" placeholder="+60 12-345 6789"></label>
                 <label class="request-field request-notes">Additional information (optional)<textarea name="notes" rows="3" maxlength="3000" placeholder="Previous experience, special requests, or anything else we should know"><?= e($old['notes'] ?? '') ?></textarea></label>
             </div>
