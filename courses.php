@@ -97,7 +97,7 @@ $courses = $db->query(
 $courseRequests = [];
 $requestTableReady = true;
 try {
-    $courseRequests = $db->query("SELECT * FROM course_requests ORDER BY FIELD(status,'PENDING','CONTACTED','APPROVED','REJECTED','CLOSED'), created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+    $courseRequests = $db->query("SELECT * FROM course_requests ORDER BY FIELD(status,'PENDING','CONTACTED','SCHEDULED','APPROVED','REJECTED','CLOSED'), created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Throwable $e) {
     $requestTableReady = false;
 }
