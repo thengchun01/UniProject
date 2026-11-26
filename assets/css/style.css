@@ -2129,3 +2129,41 @@ html[data-theme="dark"] .text-button:not(.secondary):hover {
     background: var(--primary-hover, #6d28d9);
     color: #fff !important;
 }
+
+
+/* TASTO PAGE BACKGROUND — flowing purple gradient */
+body {
+    background-color: var(--bg-color);
+    background-image:
+        radial-gradient(ellipse 58% 42% at 8% 8%, rgba(196, 181, 253, .48) 0%, rgba(196, 181, 253, 0) 100%),
+        radial-gradient(ellipse 52% 46% at 94% 24%, rgba(221, 214, 254, .42) 0%, rgba(221, 214, 254, 0) 100%),
+        radial-gradient(ellipse 60% 48% at 48% 100%, rgba(233, 213, 255, .34) 0%, rgba(233, 213, 255, 0) 100%),
+        linear-gradient(135deg, #faf8ff 0%, #f8f7fc 48%, #fdfaff 100%);
+    background-attachment: fixed;
+}
+
+html[data-theme="dark"] body {
+    background-color: var(--bg-color);
+    background-image:
+        radial-gradient(ellipse 58% 42% at 8% 8%, rgba(109, 40, 217, .22) 0%, rgba(109, 40, 217, 0) 100%),
+        radial-gradient(ellipse 52% 46% at 94% 24%, rgba(124, 58, 237, .18) 0%, rgba(124, 58, 237, 0) 100%),
+        radial-gradient(ellipse 60% 48% at 48% 100%, rgba(91, 33, 182, .16) 0%, rgba(91, 33, 182, 0) 100%),
+        linear-gradient(135deg, #17151f 0%, #1b1824 48%, #17151d 100%);
+    background-attachment: fixed;
+}
+
+/* Keep large content surfaces readable above the more visible page backdrop. */
+.workspace-stat-card,
+.workspace-panel,
+.workspace-progress-panel,
+.form-panel,
+.card {
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    body {
+        background-attachment: scroll;
+    }
+}
