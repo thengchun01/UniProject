@@ -26,10 +26,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $name = trim((string)($_POST['course_name'] ?? ''));
             $mode = trim((string)($_POST['class_mode'] ?? 'Individual'));
             $age = trim((string)($_POST['age_range'] ?? ''));
-            $duration = trim((string)($_POST['duration_options'] ?? ''));
+            $durationValues = $_POST['duration_options'] ?? [];
+            if (!is_array($durationValues)) $durationValues = [$durationValues];
+            $durationValues = array_values(array_unique(array_filter(array_map(static function ($value) {
+                $value = trim((string) $value);
+                return preg_match('/^\\d{1,3}$/', $value) ? (int) $value : 0;
+            }, $durationValues), static fn($value) => $value >= 1 && $value <= 480)));
+            sort($durationValues);
+            $duration = implode(', ', $durationValues);
             $feeRaw = trim((string)($_POST['minimum_fee'] ?? '0'));
             $description = trim((string)($_POST['description'] ?? ''));
             if ($name === '' || mb_strlen($name) > 120) throw new RuntimeException('Enter a course name (maximum 120 characters).');
+            if (!$durationValues) throw new RuntimeException('Add at least one valid lesson duration (1–480 minutes).');
             if (!is_numeric($feeRaw) || (float)$feeRaw < 0) throw new RuntimeException('Minimum monthly fee must be zero or more.');
             if ($action === 'create') {
                 $stmt = $db->prepare('INSERT INTO courses (course_name,class_mode,age_range,duration_options,minimum_fee,description) VALUES (:n,:m,:a,:d,:f,:x)');
@@ -96,8 +104,28 @@ if ($courses) {
     $stmt->execute($ids);
     foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $teacher) $teacherMap[(int)$teacher['course_id']][] = $teacher;
 }
+function course_duration_values($value): array {
+    // Also recognizes the older slash-separated format when editing existing courses.
+    $parts = preg_split('/[,;|\\/\\r\\n]+/', (string) $value);
+    $durations = [];
+    foreach ($parts ?: [] as $part) {
+        if (preg_match('/^\\s*(\\d{1,3})\\s*(?:minutes?|mins?|m)?\\s*$/i', $part, $match)) {
+            $minutes = (int) $match[1];
+            if ($minutes >= 1 && $minutes <= 480 && !in_array($minutes, $durations, true)) {
+                $durations[] = $minutes;
+            }
+        }
+    }
+    sort($durations);
+    return $durations;
+}
 function course_min_duration($value): int {
-    return preg_match('/\d+/', (string)$value, $m) ? (int)$m[0] : 0;
+    $durations = course_duration_values($value);
+    return $durations[0] ?? 0;
+}
+function course_duration_inputs($value): array {
+    $durations = course_duration_values($value);
+    return $durations ?: [''];
 }
 $pageTitle = 'Courses';
 include __DIR__ . '/includes/header.php';
@@ -161,14 +189,20 @@ include __DIR__ . '/includes/header.php';
         </section>
     <?php else: ?>
     <section class="courses-panel">
-        <div class="courses-panel-title"><div><h2>Create a course</h2><p>The first duration listed is treated as the minimum lesson duration.</p></div></div>
+        <div class="courses-panel-title"><div><h2>Create a course</h2><p>Add each available lesson duration in its own field.</p></div></div>
         <form method="post" class="course-form">
             <input type="hidden" name="action" value="create">
             <label>Course name<input name="course_name" maxlength="120" required placeholder="e.g. Drums"></label>
             <label>Class format<select name="class_mode"><option>Individual</option><option>Individual / small group</option><option>Small group</option></select></label>
             <label>Minimum monthly fee (RM)<input type="number" name="minimum_fee" min="0" step="0.01" value="0.00" required></label>
             <label>Recommended age<input name="age_range" maxlength="40" placeholder="e.g. 7+"></label>
-            <label>Available lesson durations (minutes)<input name="duration_options" maxlength="80" placeholder="e.g. 30, 45, 60" required></label>
+            <div class="course-duration-field">
+                <span>Available lesson durations (minutes)</span>
+                <div class="course-duration-inputs">
+                    <input type="number" name="duration_options[]" min="1" max="480" step="1" placeholder="e.g. 30" required>
+                </div>
+                <button type="button" class="course-add-duration">＋ Add another duration</button>
+            </div>
             <label class="course-description">Description / learning focus<textarea name="description" rows="2" placeholder="Course overview and learning goals"></textarea></label>
             <div class="course-form-actions"><button type="submit" class="course-primary-btn">＋ Create course</button></div>
         </form>
@@ -182,13 +216,14 @@ include __DIR__ . '/includes/header.php';
     <div class="course-cards" id="courseCards">
     <?php foreach ($courses as $course):
         $cid=(int)$course['course_id'];
-        $minDuration=course_min_duration($course['duration_options'] ?? '');
+        $courseDurations=course_duration_values($course['duration_options'] ?? '');
+        $minDuration=$courseDurations[0] ?? 0;
         $recentTeachers=$teacherMap[$cid] ?? [];
     ?>
         <details class="course-card" data-name="<?= e(mb_strtolower($course['course_name'])) ?>" data-duration="<?= $minDuration ?>" data-students="<?= (int)$course['enrolled_count'] ?>" data-course-id="<?= $cid ?>">
             <summary>
                 <span class="course-card-name"><?= e($course['course_name']) ?></span>
-                <span class="course-card-meta"><?= e($course['class_mode']) ?> · Minimum RM <?= number_format((float)$course['minimum_fee'],2) ?>/month · <?= $minDuration ? $minDuration.' min minimum' : 'Duration not set' ?></span>
+                <span class="course-card-meta"><?= e($course['class_mode']) ?> · Minimum RM <?= number_format((float)$course['minimum_fee'],2) ?>/month · Available durations: <?= $courseDurations ? e(implode(', ', $courseDurations)).' min' : 'Not set' ?></span>
                 <span class="course-enrollment-count" title="Currently enrolled students"><strong><?= (int)$course['enrolled_count'] ?></strong><small>students</small></span>
                 <span class="course-status <?= (int)$course['is_active']===1?'active':'inactive' ?>"><?= (int)$course['is_active']===1?'Active':'Inactive' ?></span>
             </summary>
@@ -196,7 +231,7 @@ include __DIR__ . '/includes/header.php';
                 <?php if (!empty($course['description'])): ?><p class="course-card-description"><?= e($course['description']) ?></p><?php endif; ?>
                 <div class="course-card-info">
                     <div><span class="course-info-label">Recommended age</span><strong><?= e($course['age_range'] ?: 'Not specified') ?></strong></div>
-                    <div><span class="course-info-label">Minimum lesson</span><strong><?= $minDuration ? $minDuration.' minutes' : 'Not set' ?></strong></div>
+                    <div><span class="course-info-label">Available lesson durations</span><strong><?= $courseDurations ? e(implode(' · ', array_map(static fn($minutes) => $minutes.' min', $courseDurations))) : 'Not set' ?></strong></div>
                     <div><span class="course-info-label">Enrolled students</span><a class="course-schedule-link" href="<?= e(url_path('schedule.php?course_id='.$cid)) ?>"><?= (int)$course['enrolled_count'] ?> student<?= (int)$course['enrolled_count']===1?'':'s' ?> · View schedule ↗</a></div>
                     <div><span class="course-info-label">Recently taught by</span>
                         <?php if ($recentTeachers): ?><div class="course-teacher-list">
@@ -214,7 +249,15 @@ include __DIR__ . '/includes/header.php';
                         <label>Class format<select name="class_mode"><?php foreach (['Individual','Individual / small group','Small group'] as $m): ?><option <?= $course['class_mode']===$m?'selected':'' ?>><?= e($m) ?></option><?php endforeach; ?></select></label>
                         <label>Minimum monthly fee (RM)<input type="number" name="minimum_fee" min="0" step="0.01" required value="<?= e(number_format((float)$course['minimum_fee'],2,'.','')) ?>"></label>
                         <label>Recommended age<input name="age_range" maxlength="40" value="<?= e($course['age_range']??'') ?>"></label>
-                        <label>Available lesson durations (minutes)<input name="duration_options" maxlength="80" placeholder="e.g. 30, 45, 60" required value="<?= e($course['duration_options']??'') ?>"></label>
+                        <div class="course-duration-field">
+                            <span>Available lesson durations (minutes)</span>
+                            <div class="course-duration-inputs">
+                                <?php foreach (course_duration_inputs($course['duration_options'] ?? '') as $durationInput): ?>
+                                    <input type="number" name="duration_options[]" min="1" max="480" step="1" placeholder="e.g. 30" required value="<?= e((string) $durationInput) ?>">
+                                <?php endforeach; ?>
+                            </div>
+                            <button type="button" class="course-add-duration">＋ Add another duration</button>
+                        </div>
                         <label class="course-description">Description / learning focus<textarea name="description" rows="2"><?= e($course['description']??'') ?></textarea></label>
                     </div>
                     <div class="course-edit-actions"><button type="submit" class="course-primary-btn">Save course</button></div>
@@ -227,6 +270,29 @@ include __DIR__ . '/includes/header.php';
 </section>
 <script>
 (function () {
+    document.querySelectorAll('.course-duration-field').forEach(function (field) {
+        var list = field.querySelector('.course-duration-inputs');
+        var addButton = field.querySelector('.course-add-duration');
+        if (!list || !addButton) return;
+        addButton.addEventListener('click', function () {
+            var input = document.createElement('input');
+            input.type = 'number';
+            input.name = 'duration_options[]';
+            input.min = '1';
+            input.max = '480';
+            input.step = '1';
+            input.placeholder = 'e.g. 45';
+            input.required = true;
+            list.appendChild(input);
+            input.focus();
+        });
+        list.addEventListener('input', function (event) {
+            if (event.target.matches('input') && event.target.value.trim() !== '') {
+                event.target.setCustomValidity('');
+            }
+        });
+    });
+
     var cards = document.getElementById('courseCards');
     var sort = document.getElementById('courseSort');
     var direction = document.getElementById('courseSortDirection');
