@@ -39,6 +39,16 @@ $preferredDays = array_values(array_intersect($allowedDays, $preferredDays));
 $defaultDay = $preferredDays[0] ?? 'Monday';
 $defaultDate = !empty($request['preferred_start_date']) && $request['preferred_start_date'] >= date('Y-m-d')
     ? $request['preferred_start_date'] : date('Y-m-d');
+if ($preferredDays) {
+    for ($offset = 0; $offset <= 7; $offset++) {
+        $candidate = date('Y-m-d', strtotime($defaultDate . ' +' . $offset . ' days'));
+        if (in_array(date('l', strtotime($candidate)), $preferredDays, true)) {
+            $defaultDate = $candidate;
+            $defaultDay = date('l', strtotime($candidate));
+            break;
+        }
+    }
+}
 $defaultTime = substr((string) ($request['preferred_time_start'] ?? '15:00'), 0, 5);
 $duration = (int) preg_replace('/[^0-9]/', '', (string) ($request['lesson_duration'] ?? '0'));
 $csrfKey = 'course_request_schedule_token';
@@ -182,4 +192,24 @@ include __DIR__ . '/includes/header.php';
         </section>
     <?php endif; ?>
 </main>
+<script>
+(function () {
+    var daySelect = document.querySelector('select[name="preferred_day"]');
+    var dateInput = document.querySelector('input[name="lesson_date"]');
+    if (!daySelect || !dateInput) return;
+    daySelect.addEventListener('change', function () {
+        if (!dateInput.value) return;
+        var selected = new Date(dateInput.value + 'T12:00:00');
+        var names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        var target = names.indexOf(daySelect.value);
+        var offset = (target - selected.getDay() + 7) % 7;
+        if (offset === 0) return;
+        selected.setDate(selected.getDate() + offset);
+        var yyyy = selected.getFullYear();
+        var mm = String(selected.getMonth() + 1).padStart(2, '0');
+        var dd = String(selected.getDate()).padStart(2, '0');
+        dateInput.value = yyyy + '-' + mm + '-' + dd;
+    });
+})();
+</script>
 <?php include __DIR__ . '/includes/footer.php'; ?>
