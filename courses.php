@@ -30,7 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $requestId = (int) ($_POST['request_id'] ?? 0);
             $status = strtoupper(trim((string) ($_POST['status'] ?? 'PENDING')));
             $adminNote = trim((string) ($_POST['admin_note'] ?? ''));
-            $allowedStatuses = ['PENDING', 'CONTACTED', 'APPROVED', 'REJECTED', 'CLOSED'];
+            $allowedStatuses = ['PENDING', 'CONTACTED', 'APPROVED', 'REJECTED', 'CLOSED', 'SCHEDULED'];
             if ($requestId <= 0 || !in_array($status, $allowedStatuses, true)) throw new RuntimeException('Invalid course request update.');
             if (mb_strlen($adminNote) > 3000) throw new RuntimeException('Admin note is too long.');
             $stmt = $db->prepare("UPDATE course_requests SET status=?, admin_note=?, reviewed_by=?, reviewed_at=NOW() WHERE request_id=?");
@@ -208,10 +208,10 @@ include __DIR__ . '/includes/header.php';
                                 </form>
                                 <?php if (!empty($request['scheduled_lesson_id'])): ?>
                                     <span class="course-request-scheduled">Already added to schedule · Lesson #<?= (int)$request['scheduled_lesson_id'] ?></span>
-                                <?php elseif (!empty($request['assigned_teacher_id'])): ?>
+                                <?php elseif (!empty($request['assigned_teacher_id']) && !empty($request['student_id'])): ?>
                                     <a class="course-primary-btn" href="<?= e(url_path('course-request-schedule.php?request_id='.(int)$request['request_id'])) ?>">＋ Add to Schedule</a>
                                 <?php else: ?>
-                                    <p class="course-request-next-step">Assign a teacher before adding this request to the schedule.</p>
+                                    <?php if (empty($request['student_id'])): ?><p class="course-request-next-step">This older request is not linked to a student account. Ask the student to sign up and submit a new request.</p><?php else: ?><p class="course-request-next-step">Assign a teacher before adding this request to the schedule.</p><?php endif; ?>
                                 <?php endif; ?>
                                 <form method="post" class="request-admin-note-form">
                                     <input type="hidden" name="action" value="request_update">
