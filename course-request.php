@@ -12,7 +12,7 @@ $old = $_POST;
 if ($dbReady) {
     try {
         $courses = db()->query(
-            "SELECT course_id, course_name, class_mode, duration_options
+            "SELECT course_id, course_name
              FROM courses WHERE is_active = 1 ORDER BY course_name"
         )->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
         }
 
         $courseId = (int) ($_POST['course_id'] ?? 0);
-        $stmt = db()->prepare('SELECT course_id, course_name, class_mode, duration_options FROM courses WHERE course_id=? AND is_active=1');
+        $stmt = db()->prepare('SELECT course_id, course_name FROM courses WHERE course_id=? AND is_active=1');
         $stmt->execute([$courseId]);
         $selectedCourse = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if (!$selectedCourse) {
@@ -53,7 +53,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
         $email = trim((string) ($_POST['email'] ?? ''));
         $phone = trim((string) ($_POST['phone'] ?? ''));
         $age = trim((string) ($_POST['student_age'] ?? ''));
-        $duration = trim((string) ($_POST['lesson_duration'] ?? ''));
         $days = $_POST['preferred_days'] ?? [];
         $timeStart = trim((string) ($_POST['preferred_time_start'] ?? ''));
         $timeEnd = trim((string) ($_POST['preferred_time_end'] ?? ''));
@@ -73,16 +72,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
         if ($startDate !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate) || $startDate < date('Y-m-d'))) {
             throw new RuntimeException('Please choose a start date from today onwards.');
         }
-        if (mb_strlen($age) > 30 || mb_strlen($duration) > 40 || mb_strlen($notes) > 3000) {
+        if (mb_strlen($age) > 30 || mb_strlen($notes) > 3000) {
             throw new RuntimeException('One of your answers is too long. Please shorten it and try again.');
         }
 
         $insert = db()->prepare(
             "INSERT INTO course_requests
-             (course_id, course_name, full_name, email, phone, student_age, class_mode, lesson_duration,
+             (course_id, course_name, full_name, email, phone, student_age,
               preferred_days, preferred_time_start, preferred_time_end, preferred_start_date, notes)
              VALUES
-             (:course_id, :course_name, :full_name, :email, :phone, :student_age, :class_mode, :lesson_duration,
+             (:course_id, :course_name, :full_name, :email, :phone, :student_age,
               :preferred_days, :time_start, :time_end, :start_date, :notes)"
         );
         $insert->execute([
@@ -92,8 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
             'email' => $email,
             'phone' => $phone,
             'student_age' => $age ?: null,
-            'class_mode' => $selectedCourse['class_mode'] ?: null,
-            'lesson_duration' => $duration ?: null,
             'preferred_days' => implode(', ', $days),
             'time_start' => $timeStart . ':00',
             'time_end' => $timeEnd . ':00',
@@ -109,11 +106,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
             ? $e->getMessage()
             : 'We could not save your request. Please check that the course request database migration has been installed.';
     }
-}
-
-function course_request_duration_options(?string $value): array {
-    $parts = preg_split('/\s*[,;|\/]\s*/', (string) $value);
-    return array_values(array_filter(array_map('trim', $parts ?: []), static fn($part) => $part !== ''));
 }
 
 $pageTitle = 'Course Request';
@@ -151,15 +143,6 @@ include __DIR__ . '/includes/header.php';
                 </label>
                 <label class="request-field">Student's name<input name="full_name" maxlength="120" required value="<?= e($old['full_name'] ?? ($user['username'] ?? '')) ?>" placeholder="Full name"></label>
                 <label class="request-field">Student's age (optional)<input name="student_age" maxlength="30" value="<?= e($old['student_age'] ?? '') ?>" placeholder="e.g. 12"></label>
-                <label class="request-field">Class format<input id="requestClassMode" value="<?= e($selectedCourse['class_mode'] ?? '') ?>" readonly placeholder="Selected course format"></label>
-                <label class="request-field">Lesson duration
-                    <select name="lesson_duration" id="requestDuration">
-                        <option value="">No preference</option>
-                        <?php foreach (course_request_duration_options($selectedCourse['duration_options'] ?? '') as $duration): ?>
-                            <option value="<?= e($duration) ?>" <?= ($old['lesson_duration'] ?? '') === $duration ? 'selected' : '' ?>><?= e($duration) ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </label>
             </div>
         </section>
 
@@ -171,9 +154,9 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </div>
             <div class="course-request-fields schedule-fields">
-                <label class="request-field">Earliest preferred time<input type="time" name="preferred_time_start" required value="<?= e($old['preferred_time_start'] ?? '15:00') ?>"></label>
-                <label class="request-field">Latest preferred time<input type="time" name="preferred_time_end" required value="<?= e($old['preferred_time_end'] ?? '18:00') ?>"></label>
-                <label class="request-field">Preferred start date (optional)<input type="date" name="preferred_start_date" min="<?= date('Y-m-d') ?>" value="<?= e($old['preferred_start_date'] ?? '') ?>"></label>
+                <label class="request-field">Preferred class start time<input type="time" name="preferred_time_start" required value="<?= e($old['preferred_time_start'] ?? '15:00') ?>"></label>
+                <label class="request-field">Preferred class end time<input type="time" name="preferred_time_end" required value="<?= e($old['preferred_time_end'] ?? '18:00') ?>"></label>
+                <label class="request-field">Preferred start date<input type="date" name="preferred_start_date" min="<?= date('Y-m-d') ?>" value="<?= e($old['preferred_start_date'] ?? date('Y-m-d')) ?>"></label>
             </div>
         </section>
 
@@ -193,30 +176,5 @@ include __DIR__ . '/includes/header.php';
     </form>
     <?php endif; ?>
 </main>
-<script>
-(function () {
-    var courses = <?= json_encode(array_map(static fn($course) => [
-        'id' => (int) $course['course_id'],
-        'mode' => (string) ($course['class_mode'] ?? ''),
-        'durations' => course_request_duration_options($course['duration_options'] ?? ''),
-    ], $courses), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
-    var select = document.getElementById('requestCourse');
-    var mode = document.getElementById('requestClassMode');
-    var duration = document.getElementById('requestDuration');
-    if (!select || !mode || !duration) return;
-    select.addEventListener('change', function () {
-        var course = courses.find(function (item) { return item.id === Number(select.value); });
-        mode.value = course ? course.mode : '';
-        var previous = duration.value;
-        duration.innerHTML = '<option value="">No preference</option>';
-        (course ? course.durations : []).forEach(function (item) {
-            var option = document.createElement('option');
-            option.value = item;
-            option.textContent = item;
-            duration.appendChild(option);
-        });
-        if (course && course.durations.indexOf(previous) !== -1) duration.value = previous;
-    });
-})();
-</script>
+
 <?php include __DIR__ . '/includes/footer.php'; ?>
