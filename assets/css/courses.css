@@ -130,3 +130,10 @@ html[data-theme="dark"] .request-status-badge.rejected{background:rgba(239,68,68
 html[data-theme="dark"] .request-status-badge.closed{background:rgba(148,163,184,.15);color:#cbd5e1}
 @media(max-width:900px){.course-request-admin-details{grid-template-columns:repeat(3,minmax(0,1fr))}.course-request-review-form{grid-template-columns:160px minmax(0,1fr)}.course-request-review-form button{grid-column:2;justify-self:end}}
 @media(max-width:600px){.courses-tabs{width:100%}.courses-tabs a{flex:1;justify-content:center;padding:10px 8px}.course-request-admin-card{padding:16px}.course-request-admin-details{grid-template-columns:repeat(2,minmax(0,1fr))}.course-request-review-form{grid-template-columns:1fr}.course-request-review-form button{grid-column:auto;width:100%}.course-request-admin-top{align-items:flex-start}}
+
+
+/* Calculated lesson end-time preview */
+.request-time-preview{display:flex;align-items:center;min-height:42px;padding:10px 12px;border:1px solid var(--border-color);border-radius:10px;background:rgba(124,58,237,.07);color:var(--primary-color);font-size:14px;font-weight:800}
+.course-request-admin-details{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media(max-width:900px){.course-request-admin-details{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.course-request-admin-details{grid-template-columns:repeat(2,minmax(0,1fr))}}
