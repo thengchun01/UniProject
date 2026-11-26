@@ -12,7 +12,7 @@ $old = $_POST;
 if ($dbReady) {
     try {
         $courses = db()->query(
-            "SELECT course_id, course_name
+            "SELECT course_id, course_name, duration_options
              FROM courses WHERE is_active = 1 ORDER BY course_name"
         )->fetchAll(PDO::FETCH_ASSOC);
     } catch (Throwable $e) {
@@ -26,6 +26,30 @@ foreach ($courses as $course) {
         $selectedCourse = $course;
         break;
     }
+}
+
+function course_request_duration_options(?string $value): array {
+    $parts = preg_split('/[,;|\\/\\r\\n]+/', (string) $value);
+    $options = [];
+    foreach ($parts ?: [] as $part) {
+        $label = trim($part);
+        if ($label === '') continue;
+
+        if (!preg_match('/^(\\d+(?:\\.\\d+)?)\\s*(minutes?|mins?|m|hours?|hrs?|h)?$/i', $label, $match)) {
+            continue;
+        }
+
+        $amount = (float) $match[1];
+        $unit = strtolower($match[2] ?? '');
+        $minutes = (int) round(in_array($unit, ['hour', 'hours', 'hr', 'hrs', 'h'], true) ? $amount * 60 : $amount);
+        if ($minutes <= 0 || $minutes > 480) continue;
+
+        $display = $minutes . ' min';
+        if (!in_array($minutes, array_column($options, 'minutes'), true)) {
+            $options[] = ['label' => $display, 'minutes' => $minutes];
+        }
+    }
+    return $options;
 }
 
 if (empty($_SESSION['course_request_token'])) {
@@ -42,7 +66,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
         }
 
         $courseId = (int) ($_POST['course_id'] ?? 0);
-        $stmt = db()->prepare('SELECT course_id, course_name FROM courses WHERE course_id=? AND is_active=1');
+        $stmt = db()->prepare('SELECT course_id, course_name, duration_options FROM courses WHERE course_id=? AND is_active=1');
         $stmt->execute([$courseId]);
         $selectedCourse = $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
         if (!$selectedCourse) {
@@ -55,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
         $age = trim((string) ($_POST['student_age'] ?? ''));
         $days = $_POST['preferred_days'] ?? [];
         $timeStart = trim((string) ($_POST['preferred_time_start'] ?? ''));
-        $timeEnd = trim((string) ($_POST['preferred_time_end'] ?? ''));
+        $duration = (int) ($_POST['lesson_duration'] ?? 0);
         $startDate = trim((string) ($_POST['preferred_start_date'] ?? ''));
         $notes = trim((string) ($_POST['notes'] ?? ''));
 
@@ -66,9 +90,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
         $allowedDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
         $days = array_values(array_unique(array_intersect($allowedDays, array_map('strval', $days))));
         if (!$days) throw new RuntimeException('Please select at least one preferred day.');
-        if (!preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $timeStart) || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $timeEnd) || $timeEnd <= $timeStart) {
-            throw new RuntimeException('Please choose a valid time range. The end time must be later than the start time.');
+        $availableDurations = course_request_duration_options($selectedCourse['duration_options'] ?? '');
+        $validDuration = false;
+        foreach ($availableDurations as $option) {
+            if ($option['minutes'] === $duration) {
+                $validDuration = true;
+                break;
+            }
         }
+        if (!$validDuration) {
+            throw new RuntimeException('Please choose one of the available lesson durations for this course.');
+        }
+        if (!preg_match('/^([01]\\d|2[0-3]):[0-5]\\d$/', $timeStart)) {
+            throw new RuntimeException('Please choose a valid class start time.');
+        }
+        [$startHour, $startMinute] = array_map('intval', explode(':', $timeStart));
+        $endTotalMinutes = ($startHour * 60) + $startMinute + $duration;
+        if ($endTotalMinutes >= 24 * 60) {
+            throw new RuntimeException('This lesson would finish after midnight. Please choose an earlier start time.');
+        }
+        $timeEnd = sprintf('%02d:%02d', intdiv($endTotalMinutes, 60), $endTotalMinutes % 60);
+        $durationLabel = $duration . ' min';
         if ($startDate !== '' && (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate) || $startDate < date('Y-m-d'))) {
             throw new RuntimeException('Please choose a start date from today onwards.');
         }
@@ -91,6 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
             'email' => $email,
             'phone' => $phone,
             'student_age' => $age ?: null,
+            'lesson_duration' => $durationLabel,
             'preferred_days' => implode(', ', $days),
             'time_start' => $timeStart . ':00',
             'time_end' => $timeEnd . ':00',
@@ -143,6 +186,14 @@ include __DIR__ . '/includes/header.php';
                 </label>
                 <label class="request-field">Student's name<input name="full_name" maxlength="120" required value="<?= e($old['full_name'] ?? ($user['username'] ?? '')) ?>" placeholder="Full name"></label>
                 <label class="request-field">Student's age (optional)<input name="student_age" maxlength="30" value="<?= e($old['student_age'] ?? '') ?>" placeholder="e.g. 12"></label>
+                <label class="request-field">Lesson duration
+                    <select name="lesson_duration" id="requestDuration" required>
+                        <option value="">Select a duration</option>
+                        <?php foreach (course_request_duration_options($selectedCourse['duration_options'] ?? '') as $durationOption): ?>
+                            <option value="<?= (int) $durationOption['minutes'] ?>" <?= (int)($old['lesson_duration'] ?? 0) === $durationOption['minutes'] ? 'selected' : '' ?>><?= e($durationOption['label']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </label>
             </div>
         </section>
 
@@ -154,8 +205,8 @@ include __DIR__ . '/includes/header.php';
                 <?php endforeach; ?>
             </div>
             <div class="course-request-fields schedule-fields">
-                <label class="request-field">Preferred class start time<input type="time" name="preferred_time_start" required value="<?= e($old['preferred_time_start'] ?? '15:00') ?>"></label>
-                <label class="request-field">Preferred class end time<input type="time" name="preferred_time_end" required value="<?= e($old['preferred_time_end'] ?? '18:00') ?>"></label>
+                <label class="request-field">Preferred class start time<input type="time" id="requestStartTime" name="preferred_time_start" required value="<?= e($old['preferred_time_start'] ?? '15:00') ?>"></label>
+                <div class="request-field"><span>Calculated class end time</span><output id="requestEndTime" class="request-time-preview">Select a lesson duration and start time</output></div>
                 <label class="request-field">Preferred start date<input type="date" name="preferred_start_date" min="<?= date('Y-m-d') ?>" value="<?= e($old['preferred_start_date'] ?? date('Y-m-d')) ?>"></label>
             </div>
         </section>
@@ -176,5 +227,59 @@ include __DIR__ . '/includes/header.php';
     </form>
     <?php endif; ?>
 </main>
+
+<script>
+(function () {
+    var courses = <?= json_encode(array_map(static fn($course) => [
+        'id' => (int) $course['course_id'],
+        'durations' => course_request_duration_options($course['duration_options'] ?? ''),
+    ], $courses), JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+    var courseSelect = document.getElementById('requestCourse');
+    var durationSelect = document.getElementById('requestDuration');
+    var startInput = document.getElementById('requestStartTime');
+    var endOutput = document.getElementById('requestEndTime');
+
+    function updateEndTime() {
+        if (!durationSelect || !startInput || !endOutput) return;
+        var minutes = Number(durationSelect.value);
+        var match = /^(\\d{2}):(\\d{2})$/.exec(startInput.value);
+        if (!minutes || !match) {
+            endOutput.textContent = 'Select a lesson duration and start time';
+            return;
+        }
+        var total = (Number(match[1]) * 60) + Number(match[2]) + minutes;
+        if (total >= 1440) {
+            endOutput.textContent = 'End time would be after midnight';
+            return;
+        }
+        var hour = Math.floor(total / 60);
+        var minute = total % 60;
+        var date = new Date(2000, 0, 1, hour, minute);
+        endOutput.textContent = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function updateDurations() {
+        if (!courseSelect || !durationSelect) return;
+        var course = courses.find(function (item) { return item.id === Number(courseSelect.value); });
+        var previous = durationSelect.value;
+        durationSelect.innerHTML = '<option value="">Select a duration</option>';
+        (course ? course.durations : []).forEach(function (item) {
+            var option = document.createElement('option');
+            option.value = item.minutes;
+            option.textContent = item.label;
+            durationSelect.appendChild(option);
+        });
+        if (course && course.durations.some(function (item) { return String(item.minutes) === previous; })) {
+            durationSelect.value = previous;
+        }
+        updateEndTime();
+    }
+
+    if (courseSelect) courseSelect.addEventListener('change', updateDurations);
+    if (durationSelect) durationSelect.addEventListener('change', updateEndTime);
+    if (startInput) startInput.addEventListener('input', updateEndTime);
+    updateEndTime();
+})();
+</script>
 
 <?php include __DIR__ . '/includes/footer.php'; ?>
