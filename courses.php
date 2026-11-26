@@ -134,14 +134,14 @@ include __DIR__ . '/includes/header.php';
                         <?php $requestStatus = strtoupper((string) $request['status']); ?>
                         <article class="course-request-admin-card">
                             <div class="course-request-admin-top">
-                                <div><span class="request-reference">REQUEST #<?= (int) $request['request_id'] ?> · <?= e(date('d M Y, g:i a', strtotime($request['created_at']))) ?></span><h3><?= e($request['full_name']) ?></h3><p><?= e($request['course_name']) ?><?= !empty($request['class_mode']) ? ' · ' . e($request['class_mode']) : '' ?></p></div>
+                                <div><span class="request-reference">REQUEST #<?= (int) $request['request_id'] ?> · <?= e(date('d M Y, g:i a', strtotime($request['created_at']))) ?></span><h3><?= e($request['full_name']) ?></h3><p><?= e($request['course_name']) ?></p></div>
                                 <span class="request-status-badge <?= e(strtolower($requestStatus)) ?>"><?= e($requestStatus) ?></span>
                             </div>
                             <div class="course-request-admin-details">
                                 <div><small>Contact</small><a href="mailto:<?= e($request['email']) ?>"><?= e($request['email']) ?></a><a href="tel:<?= e($request['phone']) ?>"><?= e($request['phone']) ?></a></div>
-                                <div><small>Student</small><strong><?= e($request['student_age'] ?: 'Age not provided') ?></strong><strong><?= e($request['lesson_duration'] ?: 'Duration flexible') ?></strong></div>
+                                <div><small>Student age</small><strong><?= e($request['student_age'] ?: 'Not provided') ?></strong></div>
                                 <div><small>Preferred days</small><strong><?= e($request['preferred_days']) ?></strong></div>
-                                <div><small>Preferred time</small><strong><?= e(date('g:i a', strtotime($request['preferred_time_start']))) ?> – <?= e(date('g:i a', strtotime($request['preferred_time_end']))) ?></strong></div>
+                                <div><small>Preferred class time</small><strong><?= e(date('g:i a', strtotime($request['preferred_time_start']))) ?> – <?= e(date('g:i a', strtotime($request['preferred_time_end']))) ?></strong></div>
                                 <div><small>Preferred start</small><strong><?= !empty($request['preferred_start_date']) ? e(date('d M Y', strtotime($request['preferred_start_date']))) : 'Flexible' ?></strong></div>
                             </div>
                             <?php if (!empty($request['notes'])): ?><div class="course-request-admin-note"><small>Message from applicant</small><p><?= nl2br(e($request['notes'])) ?></p></div><?php endif; ?>
