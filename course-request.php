@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
         if (!filter_var($email, FILTER_VALIDATE_EMAIL) || mb_strlen($email) > 190) throw new RuntimeException('Please enter a valid email address.');
         if ($phone === '' || mb_strlen($phone) > 40) throw new RuntimeException('Please enter a contact number.');
         if (!is_array($days)) $days = [];
-        $allowedDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+        $allowedDays = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
         $days = array_values(array_unique(array_intersect($allowedDays, array_map('strval', $days))));
         if (!$days) throw new RuntimeException('Please select at least one preferred day.');
         $availableDurations = course_request_duration_options($selectedCourse['duration_options'] ?? '');
