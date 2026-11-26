@@ -6,11 +6,22 @@ if (!is_database_connected()) redirect_to('index.php');
 $db = db();
 $message = '';
 $error = '';
+$activeTab = (($_POST['tab'] ?? $_GET['tab'] ?? 'courses') === 'requests') ? 'requests' : 'courses';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim((string)($_POST['action'] ?? ''));
     try {
-        if ($action === 'create' || $action === 'update') {
+        if ($action === 'request_update') {
+            $requestId = (int) ($_POST['request_id'] ?? 0);
+            $status = strtoupper(trim((string) ($_POST['status'] ?? 'PENDING')));
+            $adminNote = trim((string) ($_POST['admin_note'] ?? ''));
+            $allowedStatuses = ['PENDING', 'CONTACTED', 'APPROVED', 'REJECTED', 'CLOSED'];
+            if ($requestId <= 0 || !in_array($status, $allowedStatuses, true)) throw new RuntimeException('Invalid course request update.');
+            if (mb_strlen($adminNote) > 3000) throw new RuntimeException('Admin note is too long.');
+            $stmt = $db->prepare("UPDATE course_requests SET status=?, admin_note=?, reviewed_by=?, reviewed_at=NOW() WHERE request_id=?");
+            $stmt->execute([$status, $adminNote ?: null, (int) $user['user_id'], $requestId]);
+            $message = 'Course request updated.';
+        } elseif ($action === 'create' || $action === 'update') {
             $courseId = (int)($_POST['course_id'] ?? 0);
             $name = trim((string)($_POST['course_name'] ?? ''));
             $mode = trim((string)($_POST['class_mode'] ?? 'Individual'));
@@ -37,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Throwable $e) {
         $error = $e instanceof PDOException && (string)$e->getCode() === '23000'
             ? 'A course with that name already exists.'
-            : ($e instanceof RuntimeException ? $e->getMessage() : 'Unable to save this course. Please check the database migration.');
+            : ($e instanceof RuntimeException ? $e->getMessage() : 'Unable to save this change. Please check that the course request database migration has been installed.');
     }
 }
 
@@ -58,6 +69,16 @@ $courses = $db->query(
            )) AS enrolled_count
      FROM courses c ORDER BY c.is_active DESC, c.course_name"
 )->fetchAll(PDO::FETCH_ASSOC);
+
+
+$courseRequests = [];
+$requestTableReady = true;
+try {
+    $courseRequests = $db->query("SELECT * FROM course_requests ORDER BY FIELD(status,'PENDING','CONTACTED','APPROVED','REJECTED','CLOSED'), created_at DESC")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Throwable $e) {
+    $requestTableReady = false;
+}
+$pendingRequestCount = count(array_filter($courseRequests, static fn($request) => strtoupper((string) $request['status']) === 'PENDING'));
 
 $teacherMap = [];
 if ($courses) {
@@ -90,6 +111,54 @@ include __DIR__ . '/includes/header.php';
     <?php if ($message !== ''): ?><div class="courses-alert success"><?= e($message) ?></div><?php endif; ?>
     <?php if ($error !== ''): ?><div class="courses-alert error"><?= e($error) ?></div><?php endif; ?>
 
+
+    <nav class="courses-tabs" aria-label="Course management sections">
+        <a href="<?= e(url_path('courses.php?tab=requests')) ?>" class="<?= $activeTab === 'requests' ? 'active' : '' ?>">
+            Course requests <span><?= $pendingRequestCount ?></span>
+        </a>
+        <a href="<?= e(url_path('courses.php?tab=courses')) ?>" class="<?= $activeTab === 'courses' ? 'active' : '' ?>">All courses</a>
+    </nav>
+    <?php if ($activeTab === 'requests'): ?>
+        <section class="course-requests-admin">
+            <div class="courses-list-heading">
+                <div><h2>Enquiry inbox</h2><p>Review preferred course schedules and contact prospective students.</p></div>
+                <span><?= count($courseRequests) ?> total requests</span>
+            </div>
+            <?php if (!$requestTableReady): ?>
+                <div class="courses-alert error">The course request table has not been created yet. Run <code>database/course_requests.sql</code> in phpMyAdmin first.</div>
+            <?php elseif (!$courseRequests): ?>
+                <div class="course-request-empty"><strong>No course requests yet</strong><p>New enquiries submitted from the public course catalogue will appear here.</p></div>
+            <?php else: ?>
+                <div class="course-request-admin-list">
+                    <?php foreach ($courseRequests as $request): ?>
+                        <?php $requestStatus = strtoupper((string) $request['status']); ?>
+                        <article class="course-request-admin-card">
+                            <div class="course-request-admin-top">
+                                <div><span class="request-reference">REQUEST #<?= (int) $request['request_id'] ?> · <?= e(date('d M Y, g:i a', strtotime($request['created_at']))) ?></span><h3><?= e($request['full_name']) ?></h3><p><?= e($request['course_name']) ?><?= !empty($request['class_mode']) ? ' · ' . e($request['class_mode']) : '' ?></p></div>
+                                <span class="request-status-badge <?= e(strtolower($requestStatus)) ?>"><?= e($requestStatus) ?></span>
+                            </div>
+                            <div class="course-request-admin-details">
+                                <div><small>Contact</small><a href="mailto:<?= e($request['email']) ?>"><?= e($request['email']) ?></a><a href="tel:<?= e($request['phone']) ?>"><?= e($request['phone']) ?></a></div>
+                                <div><small>Student</small><strong><?= e($request['student_age'] ?: 'Age not provided') ?></strong><strong><?= e($request['lesson_duration'] ?: 'Duration flexible') ?></strong></div>
+                                <div><small>Preferred days</small><strong><?= e($request['preferred_days']) ?></strong></div>
+                                <div><small>Preferred time</small><strong><?= e(date('g:i a', strtotime($request['preferred_time_start']))) ?> – <?= e(date('g:i a', strtotime($request['preferred_time_end']))) ?></strong></div>
+                                <div><small>Preferred start</small><strong><?= !empty($request['preferred_start_date']) ? e(date('d M Y', strtotime($request['preferred_start_date']))) : 'Flexible' ?></strong></div>
+                            </div>
+                            <?php if (!empty($request['notes'])): ?><div class="course-request-admin-note"><small>Message from applicant</small><p><?= nl2br(e($request['notes'])) ?></p></div><?php endif; ?>
+                            <form method="post" class="course-request-review-form">
+                                <input type="hidden" name="action" value="request_update">
+                                <input type="hidden" name="tab" value="requests">
+                                <input type="hidden" name="request_id" value="<?= (int) $request['request_id'] ?>">
+                                <label>Status<select name="status"><?php foreach (['PENDING','CONTACTED','APPROVED','REJECTED','CLOSED'] as $statusOption): ?><option value="<?= $statusOption ?>" <?= $requestStatus === $statusOption ? 'selected' : '' ?>><?= ucfirst(strtolower($statusOption)) ?></option><?php endforeach; ?></select></label>
+                                <label class="request-admin-note-field">Admin note / follow-up<textarea name="admin_note" rows="2" maxlength="3000" placeholder="Record contact attempts, agreed schedule, or reason for rejection"><?= e($request['admin_note'] ?? '') ?></textarea></label>
+                                <button type="submit" class="course-primary-btn">Save review</button>
+                            </form>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+        </section>
+    <?php else: ?>
     <section class="courses-panel">
         <div class="courses-panel-title"><div><h2>Create a course</h2><p>The first duration listed is treated as the minimum lesson duration.</p></div></div>
         <form method="post" class="course-form">
@@ -179,4 +248,5 @@ include __DIR__ . '/includes/header.php';
     renderSort();
 })();
 </script>
+    <?php endif; ?>
 <?php include __DIR__ . '/includes/footer.php'; ?>
