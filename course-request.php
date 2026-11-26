@@ -120,10 +120,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $dbReady && $error === '') {
 
         $insert = db()->prepare(
             "INSERT INTO course_requests
-             (course_id, course_name, full_name, email, phone, student_age,
+             (course_id, course_name, full_name, email, phone, student_age, lesson_duration,
               preferred_days, preferred_time_start, preferred_time_end, preferred_start_date, notes)
              VALUES
-             (:course_id, :course_name, :full_name, :email, :phone, :student_age,
+             (:course_id, :course_name, :full_name, :email, :phone, :student_age, :lesson_duration,
               :preferred_days, :time_start, :time_end, :start_date, :notes)"
         );
         $insert->execute([
