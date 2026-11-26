@@ -137,3 +137,14 @@ html[data-theme="dark"] .request-status-badge.closed{background:rgba(148,163,184
 .course-request-admin-details{grid-template-columns:repeat(6,minmax(0,1fr))}
 @media(max-width:900px){.course-request-admin-details{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:600px){.course-request-admin-details{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Separate lesson-duration fields in course management */
+.course-duration-field{display:flex;flex-direction:column;gap:8px;min-width:0;font-size:12px;font-weight:750;color:var(--text-muted,#64748b)}
+.course-duration-inputs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.course-duration-inputs input{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--border-color,#dbe1ea);border-radius:9px;padding:10px 11px;background:var(--bg-color,#fff);color:var(--text-color,#172033);font:inherit;font-size:14px}
+.course-duration-inputs input:focus{outline:2px solid #ddd6fe;border-color:#8b5cf6}
+.course-add-duration{align-self:flex-start;border:0;background:transparent;color:var(--primary-color,#7c3aed);font:inherit;font-size:11px;font-weight:850;cursor:pointer;padding:2px 0}
+.course-add-duration:hover{text-decoration:underline}
+.course-card-meta{line-height:1.5}
+@media(max-width:600px){.course-duration-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}}
