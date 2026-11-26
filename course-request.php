@@ -242,7 +242,7 @@ include __DIR__ . '/includes/header.php';
     function updateEndTime() {
         if (!durationSelect || !startInput || !endOutput) return;
         var minutes = Number(durationSelect.value);
-        var match = /^(\\d{2}):(\\d{2})$/.exec(startInput.value);
+        var match = /^(\d{2}):(\d{2})$/.exec(startInput.value);
         if (!minutes || !match) {
             endOutput.textContent = 'Select a lesson duration and start time';
             return;
