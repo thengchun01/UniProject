@@ -40,7 +40,7 @@ include __DIR__ . '/includes/header.php';
                             <?php if (!empty($course['age_range'])): ?><span><?= e($course['age_range']) ?></span><?php endif; ?>
                             <?php if (!empty($course['duration_options'])): ?><span><?= e($course['duration_options']) ?></span><?php endif; ?>
                         </div>
-                        <a href="<?= e(url_path('account.php?mode=register')) ?>" class="text-button">Get Started</a>
+                        <a href="<?= e(url_path('course-request.php?course_id=' . (int) $course['course_id'])) ?>" class="text-button">Get Started</a>
                     </article>
                 <?php endforeach; ?>
             </div>
