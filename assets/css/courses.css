@@ -148,3 +148,16 @@ html[data-theme="dark"] .request-status-badge.closed{background:rgba(148,163,184
 .course-add-duration:hover{text-decoration:underline}
 .course-card-meta{line-height:1.5}
 @media(max-width:600px){.course-duration-inputs{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+
+/* Course request account and scheduling actions */
+.course-request-auth-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.course-request-review-form{display:flex;flex-direction:column;align-items:stretch;gap:14px}
+.course-request-teacher-form{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.course-request-teacher-form label{min-width:220px;flex:1}
+.course-request-teacher-form button{min-height:40px}
+.request-admin-note-form{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:10px}
+.request-admin-note-form label{min-width:0}
+.course-request-scheduled{display:inline-flex;align-items:center;align-self:flex-start;padding:9px 12px;border-radius:9px;background:#dcfce7;color:#166534;font-size:12px;font-weight:800}
+.course-request-next-step{margin:0;color:var(--text-muted);font-size:12px}
+@media(max-width:600px){.request-admin-note-form{grid-template-columns:1fr}.course-request-teacher-form{align-items:stretch;flex-direction:column}.course-request-teacher-form label{min-width:0}}
