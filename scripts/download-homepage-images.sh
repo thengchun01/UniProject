@@ -31,7 +31,7 @@ download_image "hero-piano.jpg" \
 download_image "tutorials.jpg" \
     "https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?fit=crop&fm=jpg&q=85&w=700"
 download_image "song-library.jpg" \
-    "https://images.unsplash.com/photo-1684086974736-85b4bce4345a?fit=crop&fm=jpg&q=85&w=700"
+    "https://images.pexels.com/photos/7521296/pexels-photo-7521296.jpeg?cs=srgb&dl=pexels-pavel-danilyuk-7521296.jpg&fm=jpg"
 download_image "virtual-piano.jpg" \
     "https://images.unsplash.com/photo-1550684848-fac1c5b4e853?fit=crop&fm=jpg&q=85&w=700"
 download_image "learning-games.jpg" \
