@@ -141,6 +141,7 @@ include __DIR__ . '/includes/header.php';
                                 <div><small>Contact</small><a href="mailto:<?= e($request['email']) ?>"><?= e($request['email']) ?></a><a href="tel:<?= e($request['phone']) ?>"><?= e($request['phone']) ?></a></div>
                                 <div><small>Student age</small><strong><?= e($request['student_age'] ?: 'Not provided') ?></strong></div>
                                 <div><small>Preferred days</small><strong><?= e($request['preferred_days']) ?></strong></div>
+                                <div><small>Lesson duration</small><strong><?= e($request['lesson_duration'] ?: 'Not specified') ?></strong></div>
                                 <div><small>Preferred class time</small><strong><?= e(date('g:i a', strtotime($request['preferred_time_start']))) ?> – <?= e(date('g:i a', strtotime($request['preferred_time_end']))) ?></strong></div>
                                 <div><small>Preferred start</small><strong><?= !empty($request['preferred_start_date']) ? e(date('d M Y', strtotime($request['preferred_start_date']))) : 'Flexible' ?></strong></div>
                             </div>
@@ -167,7 +168,7 @@ include __DIR__ . '/includes/header.php';
             <label>Class format<select name="class_mode"><option>Individual</option><option>Individual / small group</option><option>Small group</option></select></label>
             <label>Minimum monthly fee (RM)<input type="number" name="minimum_fee" min="0" step="0.01" value="0.00" required></label>
             <label>Recommended age<input name="age_range" maxlength="40" placeholder="e.g. 7+"></label>
-            <label>Lesson durations<input name="duration_options" maxlength="80" placeholder="e.g. 30 / 45 min" required></label>
+            <label>Available lesson durations (minutes)<input name="duration_options" maxlength="80" placeholder="e.g. 30, 45, 60" required></label>
             <label class="course-description">Description / learning focus<textarea name="description" rows="2" placeholder="Course overview and learning goals"></textarea></label>
             <div class="course-form-actions"><button type="submit" class="course-primary-btn">＋ Create course</button></div>
         </form>
@@ -213,7 +214,7 @@ include __DIR__ . '/includes/header.php';
                         <label>Class format<select name="class_mode"><?php foreach (['Individual','Individual / small group','Small group'] as $m): ?><option <?= $course['class_mode']===$m?'selected':'' ?>><?= e($m) ?></option><?php endforeach; ?></select></label>
                         <label>Minimum monthly fee (RM)<input type="number" name="minimum_fee" min="0" step="0.01" required value="<?= e(number_format((float)$course['minimum_fee'],2,'.','')) ?>"></label>
                         <label>Recommended age<input name="age_range" maxlength="40" value="<?= e($course['age_range']??'') ?>"></label>
-                        <label>Lesson durations<input name="duration_options" maxlength="80" required value="<?= e($course['duration_options']??'') ?>"></label>
+                        <label>Available lesson durations (minutes)<input name="duration_options" maxlength="80" placeholder="e.g. 30, 45, 60" required value="<?= e($course['duration_options']??'') ?>"></label>
                         <label class="course-description">Description / learning focus<textarea name="description" rows="2"><?= e($course['description']??'') ?></textarea></label>
                     </div>
                     <div class="course-edit-actions"><button type="submit" class="course-primary-btn">Save course</button></div>
