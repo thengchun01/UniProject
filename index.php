@@ -28,7 +28,7 @@ if (!empty($currentUser) && is_database_connected()) {
 <link rel="stylesheet" href="<?php echo e(url_path('assets/css/homepage.css') . '?v=' . filemtime(__DIR__ . '/assets/css/homepage.css')); ?>">
 
 <section class="hero-section">
-    <div class="hero-background" style="background-image: url('https://images.unsplash.com/photo-1552422535-c45813c61732?auto=format&fit=crop&q=80&w=1600');"></div>
+    <div class="hero-background" style="background-image: url('<?= e(url_path('assets/images/homepage/hero-piano.jpg')) ?>');"></div>
     <div class="hero-overlay"></div>
     <div class="hero-content hero-entrance">
         <p class="hero-kicker">Interactive piano learning</p>
@@ -114,7 +114,7 @@ if (!empty($currentUser) && is_database_connected()) {
         <div class="card-grid feature-grid">
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="0">
                 <div class="placeholder">
-                    <img src="https://images.unsplash.com/photo-1520523839897-bd0b52f945a0?auto=format&fit=crop&q=80&w=500" alt="Tutorials">
+                    <img src="<?= e(url_path('assets/images/homepage/tutorials.jpg')) ?>" alt="Tutorials">
                 </div>
                 <h3>Tutorials</h3>
                 <p>Follow structured lessons that teach piano fundamentals step by step.</p>
@@ -122,7 +122,7 @@ if (!empty($currentUser) && is_database_connected()) {
             </div>
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="100">
                 <div class="placeholder">
-                    <img src="https://images.unsplash.com/photo-1507838153428-9d983cbc9f41?auto=format&fit=crop&q=80&w=500" alt="Song Library">
+                    <img src="<?= e(url_path('assets/images/homepage/song-library.jpg')) ?>" alt="Song Library">
                 </div>
                 <h3>Song Library</h3>
                 <p>Practice piano pieces and learn through guided song exercises.</p>
@@ -130,7 +130,7 @@ if (!empty($currentUser) && is_database_connected()) {
             </div>
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="200">
                 <div class="placeholder">
-                    <img src="https://images.unsplash.com/photo-1550684848-fac1c5b4e853?auto=format&fit=crop&q=80&w=500" alt="Piano">
+                    <img src="<?= e(url_path('assets/images/homepage/virtual-piano.jpg')) ?>" alt="Piano">
                 </div>
                 <h3>Piano</h3>
                 <p>Play directly in your browser using your keyboard, mouse, or MIDI device.</p>
@@ -138,7 +138,7 @@ if (!empty($currentUser) && is_database_connected()) {
             </div>
             <div class="card feature-card" data-reveal="jump" data-reveal-delay="300">
                 <div class="placeholder">
-                    <img src="https://images.unsplash.com/photo-1611339555312-e607c8352fd7?auto=format&fit=crop&q=80&w=500" alt="Learning Games">
+                    <img src="<?= e(url_path('assets/images/homepage/learning-games.jpg')) ?>" alt="Learning Games">
                 </div>
                 <h3>Learning Games</h3>
                 <p>Test note recognition and strengthen your understanding through challenges.</p>
