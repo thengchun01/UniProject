@@ -11,7 +11,22 @@ $activeTab = (($_POST['tab'] ?? $_GET['tab'] ?? 'courses') === 'requests') ? 're
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim((string)($_POST['action'] ?? ''));
     try {
-        if ($action === 'request_update') {
+        if ($action === 'request_assign_teacher') {
+            $requestId = (int) ($_POST['request_id'] ?? 0);
+            $teacherId = (int) ($_POST['teacher_id'] ?? 0);
+            if ($requestId <= 0 || $teacherId <= 0) throw new RuntimeException('Choose a request and a teacher.');
+            $teacherCheck = $db->prepare("SELECT COUNT(*) FROM users WHERE user_id=? AND role='TEACHER'");
+            $teacherCheck->execute([$teacherId]);
+            if ((int) $teacherCheck->fetchColumn() !== 1) throw new RuntimeException('The selected teacher account is not valid.');
+            $requestCheck = $db->prepare('SELECT scheduled_lesson_id FROM course_requests WHERE request_id=?');
+            $requestCheck->execute([$requestId]);
+            $requestRow = $requestCheck->fetch(PDO::FETCH_ASSOC);
+            if (!$requestRow) throw new RuntimeException('Course request not found.');
+            if (!empty($requestRow['scheduled_lesson_id'])) throw new RuntimeException('This request has already been added to the schedule.');
+            $db->prepare("UPDATE course_requests SET assigned_teacher_id=?, status='CONTACTED', reviewed_by=?, reviewed_at=NOW() WHERE request_id=?")
+                ->execute([$teacherId, (int) $user['user_id'], $requestId]);
+            $message = 'Teacher assigned to the course request.';
+        } elseif ($action === 'request_update') {
             $requestId = (int) ($_POST['request_id'] ?? 0);
             $status = strtoupper(trim((string) ($_POST['status'] ?? 'PENDING')));
             $adminNote = trim((string) ($_POST['admin_note'] ?? ''));
@@ -87,6 +102,8 @@ try {
     $requestTableReady = false;
 }
 $pendingRequestCount = count(array_filter($courseRequests, static fn($request) => strtoupper((string) $request['status']) === 'PENDING'));
+
+$requestTeachers = $db->query("SELECT user_id, username FROM users WHERE role='TEACHER' ORDER BY username ASC")->fetchAll(PDO::FETCH_ASSOC);
 
 $teacherMap = [];
 if ($courses) {
@@ -174,14 +191,37 @@ include __DIR__ . '/includes/header.php';
                                 <div><small>Preferred start</small><strong><?= !empty($request['preferred_start_date']) ? e(date('d M Y', strtotime($request['preferred_start_date']))) : 'Flexible' ?></strong></div>
                             </div>
                             <?php if (!empty($request['notes'])): ?><div class="course-request-admin-note"><small>Message from applicant</small><p><?= nl2br(e($request['notes'])) ?></p></div><?php endif; ?>
-                            <form method="post" class="course-request-review-form">
-                                <input type="hidden" name="action" value="request_update">
-                                <input type="hidden" name="tab" value="requests">
-                                <input type="hidden" name="request_id" value="<?= (int) $request['request_id'] ?>">
-                                <label>Status<select name="status"><?php foreach (['PENDING','CONTACTED','APPROVED','REJECTED','CLOSED'] as $statusOption): ?><option value="<?= $statusOption ?>" <?= $requestStatus === $statusOption ? 'selected' : '' ?>><?= ucfirst(strtolower($statusOption)) ?></option><?php endforeach; ?></select></label>
-                                <label class="request-admin-note-field">Admin note / follow-up<textarea name="admin_note" rows="2" maxlength="3000" placeholder="Record contact attempts, agreed schedule, or reason for rejection"><?= e($request['admin_note'] ?? '') ?></textarea></label>
-                                <button type="submit" class="course-primary-btn">Save review</button>
-                            </form>
+                            <div class="course-request-review-form">
+                                <form method="post" class="course-request-teacher-form">
+                                    <input type="hidden" name="action" value="request_assign_teacher">
+                                    <input type="hidden" name="tab" value="requests">
+                                    <input type="hidden" name="request_id" value="<?= (int) $request['request_id'] ?>">
+                                    <label>Assign teacher
+                                        <select name="teacher_id" required <?= !empty($request['scheduled_lesson_id']) ? 'disabled' : '' ?>>
+                                            <option value="">Choose a teacher</option>
+                                            <?php foreach ($requestTeachers as $teacherOption): ?>
+                                                <option value="<?= (int) $teacherOption['user_id'] ?>" <?= (int)($request['assigned_teacher_id'] ?? 0) === (int)$teacherOption['user_id'] ? 'selected' : '' ?>><?= e($teacherOption['username']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </label>
+                                    <?php if (empty($request['scheduled_lesson_id'])): ?><button type="submit" class="course-primary-btn">Save teacher</button><?php endif; ?>
+                                </form>
+                                <?php if (!empty($request['scheduled_lesson_id'])): ?>
+                                    <span class="course-request-scheduled">Already added to schedule · Lesson #<?= (int)$request['scheduled_lesson_id'] ?></span>
+                                <?php elseif (!empty($request['assigned_teacher_id'])): ?>
+                                    <a class="course-primary-btn" href="<?= e(url_path('course-request-schedule.php?request_id='.(int)$request['request_id'])) ?>">＋ Add to Schedule</a>
+                                <?php else: ?>
+                                    <p class="course-request-next-step">Assign a teacher before adding this request to the schedule.</p>
+                                <?php endif; ?>
+                                <form method="post" class="request-admin-note-form">
+                                    <input type="hidden" name="action" value="request_update">
+                                    <input type="hidden" name="tab" value="requests">
+                                    <input type="hidden" name="request_id" value="<?= (int) $request['request_id'] ?>">
+                                    <input type="hidden" name="status" value="<?= e($requestStatus) ?>">
+                                    <label class="request-admin-note-field">Admin note / follow-up<textarea name="admin_note" rows="2" maxlength="3000" placeholder="Record contact attempts or agreed details"><?= e($request['admin_note'] ?? '') ?></textarea></label>
+                                    <button type="submit" class="course-secondary-btn">Save note</button>
+                                </form>
+                            </div>
                         </article>
                     <?php endforeach; ?>
                 </div>
