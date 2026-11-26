@@ -29,7 +29,7 @@ foreach ($courses as $course) {
 }
 
 function course_request_duration_options(?string $value): array {
-    $parts = preg_split('/[,;|\\/\\r\\n]+/', (string) $value);
+    $parts = preg_split('/[,;|\\r\\n]+/', (string) $value);
     $options = [];
     foreach ($parts ?: [] as $part) {
         $label = trim($part);
