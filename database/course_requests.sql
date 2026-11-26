@@ -3,6 +3,9 @@
 
 CREATE TABLE IF NOT EXISTS course_requests (
     request_id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    student_id INT(11) NULL,
+    assigned_teacher_id INT(11) NULL,
+    scheduled_lesson_id INT(11) NULL,
     course_id INT UNSIGNED NULL,
     course_name VARCHAR(120) NOT NULL,
     full_name VARCHAR(120) NOT NULL,
@@ -24,5 +27,8 @@ CREATE TABLE IF NOT EXISTS course_requests (
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (request_id),
     KEY idx_course_requests_status_created (status, created_at),
-    KEY idx_course_requests_course (course_id)
+    KEY idx_course_requests_course (course_id),
+    KEY idx_course_requests_student (student_id),
+    KEY idx_course_requests_teacher (assigned_teacher_id),
+    UNIQUE KEY uq_course_requests_scheduled_lesson (scheduled_lesson_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
